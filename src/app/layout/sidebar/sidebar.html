@@ -1,0 +1,42 @@
+@if (layoutService.sidebarOpen()) {
+  <div
+    class="fixed inset-0 bg-foreground/20 z-30 md:hidden transition-opacity"
+    (click)="layoutService.closeSidebar()"
+    aria-hidden="true"
+  ></div>
+}
+
+<aside
+  class="absolute inset-y-0 left-0 z-40 w-64 bg-background border-r border-border transform transition-transform duration-200 ease-in-out md:relative md:translate-x-0 md:h-full overflow-y-auto"
+  [class.-translate-x-full]="!layoutService.sidebarOpen()"
+  [class.translate-x-0]="layoutService.sidebarOpen()"
+>
+  <nav class="flex flex-col gap-6 p-4">
+    @for (section of navSections(); track section.title) {
+      <div>
+        <h3 class="mb-2 px-3 text-xs font-semibold tracking-wider text-body uppercase opacity-70">
+          {{ section.title }}
+        </h3>
+        <ul class="flex flex-col gap-1">
+          @for (item of section.items; track item.route) {
+            <li>
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="bg-primary text-primary-foreground font-medium"
+                [routerLinkActiveOptions]="{ exact: false }"
+                #rla="routerLinkActive"
+                [class]="rla.isActive ? 'bg-primary text-primary-foreground' : 'text-body hover:bg-secondary hover:text-secondary-foreground'"
+                class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer"
+                [attr.aria-current]="rla.isActive ? 'page' : null"
+                (click)="layoutService.closeSidebar()"
+              >
+                <i [class]="'pi ' + item.icon + ' text-base w-4 text-center'"></i>
+                <span class="truncate">{{ item.label }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </nav>
+</aside>
