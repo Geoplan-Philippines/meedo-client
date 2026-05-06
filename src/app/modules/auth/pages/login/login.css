@@ -1,0 +1,4 @@
+/* Ensure password panel doesn't show strength meter */
+:host ::ng-deep .p-password-panel {
+  display: none;
+}

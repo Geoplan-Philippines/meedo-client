@@ -36,6 +36,7 @@ export class Sidebar {
     {
       title: 'Maintenance',
       items: [
+        { label: 'Categories', route: '/categories', icon: 'pi-tags' },
         { label: 'Users', route: '/users', icon: 'pi-users' },
         { label: 'Departments', route: '/departments', icon: 'pi-sitemap' },
         { label: 'Projects', route: '/projects', icon: 'pi-briefcase' },

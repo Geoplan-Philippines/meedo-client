@@ -4,28 +4,28 @@
 @import "primeicons/primeicons.css";
 
 :root {
-  --background: #f8fbff;
-  --foreground: #0b161f;
-  --text-heading: #0b161f;
+  --background: #F8FBFF;
+  --foreground: #0B161F;
+  --text-heading: #0B161F;
   --text-body: #365261;
 
-  --primary: #0b4ea2;
-  --color-primary-hover: #083f84;
-  --primary-foreground: #ffffff;
-  --secondary: #e8f1ff;
-  --secondary-foreground: #0b4ea2;
-  --accent: #22d3ee;
+  --primary: #0B4EA2;
+  --primary-hover: #03285A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8F1FF;
+  --secondary-foreground: #0B4EA2;
+  --accent: #22D3EE;
   --accent-foreground: #083344;
 
-  --border: #dbe5f0;
-  --input: #dbe5f0;
-  --ring: #22d3ee;
+  --border: #DBE5F0;
+  --input: #DBE5F0;
+  --ring: #22D3EE;
 
   --destructive: #FF4B4B;
   --muted-destructive: #FFE1DE;
   --success: #3DBE81;
   --muted-success: #D1EDE0;
-  --success-foreground: #ffffff;
+  --success-foreground: #FFFFFF;
 
   --radius: 0.25rem;
 }
@@ -36,7 +36,7 @@
   --color-heading: var(--text-heading);
   --color-body: var(--text-body);
   --color-primary: var(--primary);
-  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -65,13 +65,11 @@ html {
 body {
   font-family: var(--font-body);
   background: var(--color-background);
-  color: var(--text-body);
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 600;
-  color: var(--text-heading);
 }
 
 button, input, textarea, select {
@@ -80,8 +78,4 @@ button, input, textarea, select {
 
 .main-container {
   @apply px-4 mx-auto max-w-7xl w-full;
-}
-
-.p-component {
-  font-family: var(--font-body);
 }

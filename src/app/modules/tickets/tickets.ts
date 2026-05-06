@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
-
-import { Button } from '../../shared/ui/button/button';
+import { Button } from 'primeng/button';
 
 @Component({
   selector: 'app-tickets',
