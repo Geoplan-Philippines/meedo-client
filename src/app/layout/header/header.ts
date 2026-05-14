@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { LayoutService } from '../layout.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -14,4 +15,7 @@ import { LayoutService } from '../layout.service';
 })
 export class Header {
   layoutService = inject(LayoutService);
+  private readonly authService = inject(AuthService);
+
+  currentUser = this.authService.getCurrentUser();
 }

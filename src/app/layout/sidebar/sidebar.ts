@@ -34,9 +34,24 @@ export class Sidebar {
       ],
     },
     {
+      title: 'Timekeeping',
+      items: [
+        { label: 'Dashboard', route: '/timekeeping/dashboard', icon: 'pi-chart-line' },
+        { label: 'Attendance', route: '/timekeeping/attendance', icon: 'pi-clock' },
+        { label: 'Timesheet', route: '/timekeeping/timesheet', icon: 'pi-calendar' },
+      ],
+    },
+    {
+      title: 'CRM',
+      items: [
+        { label: 'Leads', route: '/crm/leads', icon: 'pi-address-book' },
+        { label: 'Newsletter', route: '/crm/newsletter', icon: 'pi-envelope' },
+      ],
+    }, 
+    {
       title: 'Maintenance',
       items: [
-        { label: 'Categories', route: '/categories', icon: 'pi-tags' },
+        { label: 'Categories', route: '/maintenance/categories', icon: 'pi-tags' },
         { label: 'Users', route: '/users', icon: 'pi-users' },
         { label: 'Departments', route: '/departments', icon: 'pi-sitemap' },
         { label: 'Projects', route: '/projects', icon: 'pi-briefcase' },

@@ -18,9 +18,7 @@
 
       <header class="space-y-2">
         <h1 class="text-2xl font-bold">Welcome back!</h1>
-        <p class="text-sm">
-          Enter your credentials to access your account.
-        </p>
+        <p class="text-sm">Enter your credentials to access your account.</p>
       </header>
 
       <form
@@ -62,7 +60,6 @@
             [toggleMask]="true"
             [feedback]="false"
             autocomplete="current-password"
-            styleClass="w-full"
             inputStyleClass="w-full"
             [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
             aria-describedby="password-error"
@@ -97,12 +94,19 @@
           </a>
         </div>
 
+        @if (errorMessage) {
+          <div class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+            {{ errorMessage }}
+          </div>
+        }
+
         <p-button
           id="login-submit"
           type="submit"
           label="Login"
           styleClass="w-full"
-          [disabled]="loginForm.invalid"
+          [loading]="isSubmitting"
+          [disabled]="loginForm.invalid || isSubmitting"
         />
       </form>
 

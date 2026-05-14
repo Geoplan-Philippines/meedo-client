@@ -1,0 +1,39 @@
+<main class="p-4 md:p-8">
+  <h1>Welcome back</h1>
+
+  <div class="mt-2">
+    <div class="flex gap-4 items-start">
+      <webcam
+        [trigger]="trigger$"
+        (imageCapture)="handleImage($event)"
+      ></webcam>
+
+      @if (previewImage(); as image) {
+        <img [src]="image" alt="Preview" height="250" width="250" />
+      }
+    </div>
+
+    <p-button
+      label="Capture"
+      class="mt-2"
+      [loading]="recognizing()"
+      (onClick)="capture()"
+    />
+
+    @if (recognizing()) {
+      <p class="mt-2">Recognizing...</p>
+    }
+
+    @if (result(); as result) {
+      <div class="mt-2" role="status" aria-live="polite">
+        <p>Matched: {{ result.matched ? 'Yes' : 'No' }}</p>
+        <p>Similarity: {{ result.similarity }}</p>
+        <p>Threshold: {{ result.threshold }}</p>
+      </div>
+    }
+
+    @if (error(); as e) {
+      <p class="mt-2 text-red-600" role="alert">{{ e }}</p>
+    }
+  </div>
+</main>
