@@ -1,14 +1,12 @@
 <main class="p-4 md:p-8">
   <h2 class="text-xl font-semibold mb-4">Subscribers</h2>
 
-  <ng-container *ngIf="subscribers$ | async as subscribers">
-
     <p class="mb-3">Total: {{ subscribers.length }}</p>
 
     <p-table 
       [value]="subscribers"
       [tableStyle]="{ 'min-width': '50rem' }"
-      stripedRows
+      
     >
 
       <!-- HEADER -->
@@ -31,5 +29,4 @@
 
     </p-table>
 
-  </ng-container>
 </main>

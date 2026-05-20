@@ -1,11 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment.dev';
 
 @Injectable({
   providedIn: 'root',
 })
+
 export class CrmService {
-  private baseUrl = 'http://localhost:8000/api/v1/crm';
+  private baseUrl = `${environment.apiBaseUrl}/crm`;
 
   constructor(private http: HttpClient) {}
 

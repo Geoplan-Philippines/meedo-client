@@ -1,11 +1,10 @@
-<ng-container *ngIf="leads$ | async as leads">
 
   <p>Total: {{ leads.length }}</p>
 
   <p-table 
     [value]="leads"
     [tableStyle]="{ 'min-width': '60rem' }"
-    stripedRows
+    
   >
 
     <ng-template pTemplate="header">
@@ -25,11 +24,9 @@
         <td>{{ lead.email }}</td>
         <td>{{ lead.phoneNumber || '—' }}</td>
         <td>{{ lead.company || '—' }}</td>
-        <td>{{ lead.message }}</td>
-        <td>{{ lead.status }}</td>
+        <td>{{ lead.message || '—' }}</td>
+        <td>{{ lead.status || '—' }}</td>
       </tr>
-    </ng-template>
+    </ng-template>  
 
   </p-table>
-
-</ng-container>
