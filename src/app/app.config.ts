@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { providePrimeNG } from 'primeng/config';
 
 import { routes } from './app.routes';
-import { AppPreset } from './app.presets';
+import { AppPreset } from './app.preset';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './core/auth/auth.interceptor';
 
@@ -15,10 +15,10 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     providePrimeNG({
         theme: {
-            preset: AppPreset,
-            options: {
-              darkModeSelector: false
-            }
+          preset: AppPreset,
+          options: {
+            darkModeSelector: false
+          }
         }
     })
   ]

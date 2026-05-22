@@ -7,7 +7,8 @@ import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DividerModule } from 'primeng/divider';
-import { AuthService } from '../../../../core/auth/auth.service';
+
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-login',

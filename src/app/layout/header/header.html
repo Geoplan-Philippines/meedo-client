@@ -9,7 +9,7 @@
       aria-label="Toggle Menu" 
     />
     
-    <span class="text-xl font-bold tracking-tight text-heading">MeedoV3</span>
+    <span class="text-xl font-bold text-heading">MeedoV3</span>
   </div>
 
   <div class="flex items-center gap-2">
@@ -21,6 +21,13 @@
       class="w-8 h-8 cursor-pointer border-border border-2 hover:border-primary transition-colors ml-2"
       [attr.aria-label]="'User profile'"
     />
-    <span>{{ currentUser?.name }}</span>
+    <span>{{ currentUser()?.name }}</span>
+    <p-button
+      icon="pi pi-sign-out"
+      [text]="true"
+      severity="secondary"
+      (onClick)="logout()"
+      aria-label="Sign out"
+    />
   </div>
 </header>

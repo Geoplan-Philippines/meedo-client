@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy} from '@angular/core';
-import { CrmService } from '../../../services/crm.service';
+import { CrmService } from '../../services/crm.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs';
 import { TableModule } from 'primeng/table';
