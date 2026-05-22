@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy} from '@angular/core';
-import { CrmService } from '../../services/crm.service';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DatePipe } from '@angular/common';
+
 import { TableModule } from 'primeng/table';
-import { CommonModule, DatePipe } from '@angular/common';
+
+import { CrmService } from '../../services/crm.service';
 
 interface Subscriber {
   id: string;
@@ -19,43 +20,31 @@ interface SubscriberResponse {
 @Component({
   selector: 'app-subscribers',
   templateUrl: './subscribers.html',
-  standalone: true,
-  imports: [CommonModule, TableModule, DatePipe],
+  imports: [TableModule, DatePipe],
   styleUrl: './subscribers.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
+export class Subscribers implements OnInit {
+  private readonly crmService = inject(CrmService);
+  private readonly destroyRef = inject(DestroyRef);
 
-export class Subscribers implements OnInit, OnDestroy{
-  
-  subscribers: Subscriber[] = [];
-  private destroy$ = new Subject<void>();
-  isLoading = false;
+  readonly subscribers = signal<Subscriber[]>([]);
+  readonly isLoading = signal(false);
 
-  constructor(private crmService: CrmService) {}
-    
-  ngOnInit(){
-    this.isLoading = true;
+  ngOnInit(): void {
+    this.isLoading.set(true);
 
     this.crmService.getSubscribers()
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: (res: SubscriberResponse) => {
-        console.log('RAW response:', res); 
-        this.subscribers = res.data;
-
-        console.log('subs', this.subscribers);
-        
-        this.isLoading = false;
-    },
-    error: (err) => {
-      console.error('Error loading subscribers:', err);
-          this.isLoading = false;
-    }
-  });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: SubscriberResponse) => {
+          this.subscribers.set(res.data);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error loading subscribers:', err);
+          this.isLoading.set(false);
+        },
+      });
   }
 }
-  

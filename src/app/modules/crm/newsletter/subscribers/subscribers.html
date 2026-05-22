@@ -1,10 +1,10 @@
 <main class="p-4 md:p-8">
   <h2 class="text-xl font-semibold mb-4">Subscribers</h2>
 
-    <p class="mb-3">Total: {{ subscribers.length }}</p>
+    <p class="mb-3">Total: {{ subscribers().length }}</p>
 
-    <p-table 
-      [value]="subscribers"
+    <p-table
+      [value]="subscribers()"
       [tableStyle]="{ 'min-width': '50rem' }"
       
     >

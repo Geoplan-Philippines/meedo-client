@@ -3,6 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { tap } from 'rxjs';
 
 import { AuthUser, BetterAuthLoginResponse, LoginPayload } from './auth.types';
+import { environment } from '../../../environments/environment.dev';
 
 const TOKEN_KEY = 'access_token';
 const USER_KEY = 'auth_user';
@@ -10,7 +11,7 @@ const USER_KEY = 'auth_user';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:8000/api/v1/auth';
+  private readonly apiUrl = `${environment.apiBaseUrl}/auth`;
 
   private readonly _currentUser = signal<AuthUser | null>(this.readStoredUser());
 
