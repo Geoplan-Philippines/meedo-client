@@ -1,6 +1,6 @@
 import { Routes } from "@angular/router";
 import { Newsletter } from "./newsletter/newsletter";
-import { Subscribers } from "./newsletter/pages/subscribers/subscribers";
+import { Subscribers } from "./newsletter/subscribers/subscribers";
 import { Leads } from "./leads/leads";
 
 export const crmRoutes: Routes = [

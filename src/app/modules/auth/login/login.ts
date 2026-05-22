@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -7,7 +7,8 @@ import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DividerModule } from 'primeng/divider';
-import { AuthService } from '../../../../core/auth/auth.service';
+
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -29,8 +30,8 @@ export class Login {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
-  isSubmitting = false;
-  errorMessage = '';
+  isSubmitting = signal(false);
+  errorMessage = signal('');
 
   readonly loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -44,8 +45,8 @@ export class Login {
       return;
     }
 
-    this.isSubmitting = true;
-    this.errorMessage = '';
+    this.isSubmitting.set(true);
+    this.errorMessage.set('');
 
     const { email, password } = this.loginForm.getRawValue();
 
@@ -55,12 +56,12 @@ export class Login {
           this.router.navigate(['/timekeeping/attendance']);
         },
         error: (error) => {
-          this.errorMessage =
-            error?.error?.message || 'Invalid email or password.';
-          this.isSubmitting = false;
+          this.errorMessage.set(
+            error?.error?.message || 'Invalid email or password.');
+          this.isSubmitting.set(false);
         },
         complete: () => {
-          this.isSubmitting = false;
+          this.isSubmitting.set(false);
         },
       });
   }

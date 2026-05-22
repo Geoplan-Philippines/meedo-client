@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { tap } from 'rxjs';
 
 import { AuthUser, BetterAuthLoginResponse, LoginPayload } from './auth.types';
+import { environment } from '../../../environments/environment.dev';
 
 const TOKEN_KEY = 'access_token';
 const USER_KEY = 'auth_user';
@@ -10,7 +11,12 @@ const USER_KEY = 'auth_user';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:8000/api/v1/auth';
+  private readonly apiUrl = `${environment.apiBaseUrl}/auth`;
+
+  private readonly _currentUser = signal<AuthUser | null>(this.readStoredUser());
+
+  readonly currentUser = this._currentUser.asReadonly();
+  readonly isAuthenticated = computed(() => this._currentUser() !== null);
 
   login(payload: LoginPayload) {
     return this.http
@@ -19,6 +25,7 @@ export class AuthService {
         tap(({ token, user }) => {
           localStorage.setItem(TOKEN_KEY, token);
           localStorage.setItem(USER_KEY, JSON.stringify(user));
+          this._currentUser.set(user);
         }),
       );
   }
@@ -26,18 +33,24 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    this._currentUser.set(null);
   }
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  isAuthenticated(): boolean {
-    return !!this.getToken();
-  }
+  private readStoredUser(): AuthUser | null {
+    const stored = localStorage.getItem(USER_KEY);
+    if (!stored) {
+      return null;
+    }
 
-  getCurrentUser(): AuthUser | null {
-    const user = localStorage.getItem(USER_KEY);
-    return user ? (JSON.parse(user) as AuthUser) : null;
+    try {
+      return JSON.parse(stored) as AuthUser;
+    } catch {
+      localStorage.removeItem(USER_KEY);
+      return null;
+    }
   }
 }

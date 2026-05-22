@@ -94,9 +94,9 @@
           </a>
         </div>
 
-        @if (errorMessage) {
+        @if (errorMessage()) {
           <div class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-            {{ errorMessage }}
+            {{ errorMessage() }}
           </div>
         }
 
@@ -105,8 +105,8 @@
           type="submit"
           label="Login"
           styleClass="w-full"
-          [loading]="isSubmitting"
-          [disabled]="loginForm.invalid || isSubmitting"
+          [loading]="isSubmitting()"
+          [disabled]="loginForm.invalid || isSubmitting()"
         />
       </form>
 
