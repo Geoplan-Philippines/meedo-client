@@ -36,11 +36,11 @@ export const routes: Routes = [
       import('./modules/crm/crm.routes').then((m) => m.crmRoutes),
   },
   {
-    path: 'maintenance',
+    path: 'settings',
     component: MainLayout,
     canActivate: [authGuard],
     loadChildren: () =>
-      import('./modules/maintenance/maintenance.routes').then((m) => m.maintenanceRoutes),
+      import('./modules/settings/settings.routes').then((m) => m.settingsRoutes),
   },
 
   {

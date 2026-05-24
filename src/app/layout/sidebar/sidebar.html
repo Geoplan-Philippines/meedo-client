@@ -11,26 +11,28 @@
   [class.-translate-x-full]="!layoutService.sidebarOpen()"
   [class.translate-x-0]="layoutService.sidebarOpen()"
 >
-  <nav class="flex flex-col gap-6 p-4">
-    @for (section of navSections(); track section.title) {
+  <nav class="flex flex-col gap-6 p-4 min-h-full">
+    @for (section of sections(); track section.title) {
       <div>
-        <h3 class="mb-2 px-3 text-xs font-semibold tracking-wider text-body uppercase opacity-70">
+        <h3 class="mb-2 px-3 text-[11px] font-medium tracking-wider text-body/60 uppercase">
           {{ section.title }}
         </h3>
-        <ul class="flex flex-col gap-1">
+        <ul class="flex flex-col gap-0.5">
           @for (item of section.items; track item.route) {
             <li>
               <a
                 [routerLink]="item.route"
-                routerLinkActive="bg-primary text-primary-foreground font-medium"
-                [routerLinkActiveOptions]="{ exact: false }"
-                #rla="routerLinkActive"
-                [class]="rla.isActive ? 'bg-primary text-primary-foreground' : 'text-body hover:bg-secondary hover:text-secondary-foreground'"
+                [class]="isActive(item.route)
+                  ? 'bg-secondary text-secondary-foreground font-medium'
+                  : 'text-body hover:bg-secondary/60'"
                 class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer"
-                [attr.aria-current]="rla.isActive ? 'page' : null"
+                [attr.aria-current]="isActive(item.route) ? 'page' : null"
                 (click)="layoutService.closeSidebar()"
               >
-                <i [class]="'pi ' + item.icon + ' text-base w-4 text-center'"></i>
+                <i
+                  [class]="'pi ' + item.icon + ' text-base w-4 text-center'"
+                  [class.opacity-60]="!isActive(item.route)"
+                ></i>
                 <span class="truncate">{{ item.label }}</span>
               </a>
             </li>

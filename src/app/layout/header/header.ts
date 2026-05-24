@@ -24,4 +24,8 @@ export class Header {
     this.authService.logout();
     this.router.navigate(['/auth/login']);
   }
+
+  goToSettings(): void {
+    this.router.navigate(['/settings']);
+  }
 }

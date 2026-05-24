@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { LayoutService } from '../layout.service';
 
 interface NavItem {
@@ -17,20 +19,32 @@ interface NavSection {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Sidebar {
   layoutService = inject(LayoutService);
+  private router = inject(Router);
 
-  navSections = signal<NavSection[]>([
+  // Tracks the active URL; updated on every successful navigation.
+  // Used by isActive() to drive longest-prefix-wins highlight logic.
+  currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  sections = signal<NavSection[]>([
     {
       title: 'Tickets',
       items: [
-        { label: 'Dashboard', route: '/dashboard', icon: 'pi-chart-line' },
+        { label: 'Dashboard', route: '/tickets/dashboard', icon: 'pi-chart-line' },
         { label: 'Tickets', route: '/tickets', icon: 'pi-list' },
+        { label: 'Categories', route: '/tickets/categories', icon: 'pi-tags' },
       ],
     },
     {
@@ -47,16 +61,24 @@ export class Sidebar {
         { label: 'Leads', route: '/crm/leads', icon: 'pi-address-book' },
         { label: 'Newsletter', route: '/crm/newsletter', icon: 'pi-envelope' },
       ],
-    }, 
-    {
-      title: 'Maintenance',
-      items: [
-        { label: 'Categories', route: '/maintenance/categories', icon: 'pi-tags' },
-        { label: 'Users', route: '/users', icon: 'pi-users' },
-        { label: 'Departments', route: '/departments', icon: 'pi-sitemap' },
-        { label: 'Projects', route: '/projects', icon: 'pi-briefcase' },
-        { label: 'Customers', route: '/customers', icon: 'pi-building' },
-      ],
     },
   ]);
+
+  private allRoutes = computed(() =>
+    this.sections().flatMap((s) => s.items.map((i) => i.route)),
+  );
+
+  // Longest-prefix-wins active matching.
+  // - On /tickets         → "Tickets" lit (only match).
+  // - On /tickets/dashboard → "Dashboard" lit (longer prefix beats "/tickets").
+  // - On /tickets/:id     → "Tickets" lit (parent — no more-specific nav item).
+  isActive(route: string): boolean {
+    const url = this.currentUrl().split('?')[0].split('#')[0];
+    const matches = (r: string) => url === r || url.startsWith(r + '/');
+    if (!matches(route)) return false;
+    const winner = this.allRoutes()
+      .filter(matches)
+      .reduce((a, b) => (a.length >= b.length ? a : b));
+    return winner === route;
+  }
 }

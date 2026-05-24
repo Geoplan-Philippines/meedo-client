@@ -2,7 +2,7 @@
 
 ## Primary Focus Areas
 
-- NestJS best practices
+- AngularJS best practices
 - Focus on correctness
 - Detect regressions
 - Detect breaking changes
@@ -21,3 +21,7 @@
 - Suggest better architectural alternatives
 - Prioritize maintainability over quick fixes
 - Mention scalability concerns early
+
+## Current Temporary Exception
+
+- Ignore usages of `@AllowAnonymous()` for now; this will be refactored later

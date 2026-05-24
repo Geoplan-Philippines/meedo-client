@@ -1,0 +1,19 @@
+<main class="p-4 md:p-8 gap-6">
+  <h1 class="text-2xl font-semibold text-heading">Settings</h1>
+  <p class="text-sm text-body">Configure your workspace.</p>
+
+  <section class="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    @for (card of cards(); track card.label) {
+      <a
+        [routerLink]="card.route"
+        class="group bg-background border border-border rounded-lg p-6 flex flex-col items-center text-center gap-3 transition-all hover:border-primary hover:shadow-sm cursor-pointer"
+      >
+        <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-secondary text-secondary-foreground">
+          <i [class]="'pi ' + card.icon + ' text-2xl'"></i>
+        </span>
+        <h3 class="text-base font-medium text-primary group-hover:text-primary-hover">{{ card.label }}</h3>
+        <p class="text-sm text-body/70">{{ card.description }}</p>
+      </a>
+    }
+  </section>
+</main>
