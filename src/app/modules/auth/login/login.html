@@ -2,7 +2,9 @@
   <section class="hidden lg:flex w-1/2 relative overflow-hidden">
     <div class="absolute inset-0 p-4">
       <img
-        src="/images/auth-hero.jpeg"
+        ngSrc="/images/auth-hero.jpeg"
+        fill
+        priority
         alt="Meedo auth Hero Image"
         class="h-full w-full object-cover rounded-base"
       />
@@ -12,7 +14,13 @@
   <section class="flex-1 flex items-center justify-center px-6 py-12 lg:px-16">
     <div class="w-full max-w-md space-y-8">
       <div class="lg:hidden flex gap-2 justify-center items-center mb-4">
-        <img src="/images/logo.svg" alt="Meedo Logo" class="h-6 w-auto" />
+        <img
+          ngSrc="/images/logo.svg"
+          width="471"
+          height="355"
+          alt="Meedo Logo"
+          class="h-6 w-auto"
+        />
         <h2 class="text-sm font-bold text-primary">Meedo</h2>
       </div>
 

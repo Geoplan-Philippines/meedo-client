@@ -1,12 +1,12 @@
 import { Routes } from '@angular/router';
 import { MainLayout } from './layout/main-layout/main-layout';
-import { Home } from './modules/home/home';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
-  {
-    path: '',
-    component: Home
+  { 
+    path: '', 
+    loadComponent: () => 
+      import('./modules/home/home').then(m => m.Home) 
   },
   {
     path: 'auth',
@@ -41,5 +41,15 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/maintenance/maintenance.routes').then((m) => m.maintenanceRoutes),
+  },
+
+  {
+    path: '404',
+    loadComponent: () =>
+      import('./modules/not-found/not-found').then((m) => m.NotFound),
+  },
+  {
+    path: '**',
+    redirectTo: '404',
   },
 ];

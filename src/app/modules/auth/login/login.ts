@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { NgOptimizedImage } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -15,6 +16,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    NgOptimizedImage,
     InputTextModule,
     PasswordModule,
     ButtonModule,
@@ -40,6 +42,10 @@ export class Login {
   });
 
   onSubmit(): void {
+    if (this.isSubmitting()) {
+      return;
+    }
+
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;

@@ -14,7 +14,7 @@ import { AuthService } from '../../core/auth/auth.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Header {
-  layoutService = inject(LayoutService);
+  protected readonly layoutService = inject(LayoutService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
