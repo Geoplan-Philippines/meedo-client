@@ -4,7 +4,7 @@ RUN apk add --no-cache libc6-compat
 
 FROM base AS installer
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 FROM installer AS builder
 COPY . .
