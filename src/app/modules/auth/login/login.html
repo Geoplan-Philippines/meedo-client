@@ -31,7 +31,7 @@
 
       <form
         [formGroup]="loginForm"
-        (ngSubmit)="onSubmit()"
+        (submit)="$event.preventDefault()"
         class="space-y-5"
         aria-label="Login form"
       >
@@ -110,11 +110,11 @@
 
         <p-button
           id="login-submit"
-          type="submit"
           label="Login"
           styleClass="w-full"
           [loading]="isSubmitting()"
           [disabled]="loginForm.invalid || isSubmitting()"
+          (onClick)="onSubmit()"
         />
       </form>
 

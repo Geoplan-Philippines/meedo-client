@@ -41,10 +41,8 @@ export class Login {
     rememberMe: [false],
   });
 
-  onSubmit(): void {
-    if (this.isSubmitting()) {
-      return;
-    }
+  async onSubmit(): Promise<void> {
+    if (this.isSubmitting()) return;
 
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -55,20 +53,14 @@ export class Login {
     this.errorMessage.set('');
 
     const { email, password } = this.loginForm.getRawValue();
+    const { error } = await this.authService.login({ email: email!, password: password! });
 
-    this.authService.login({email: email!, password: password!})
-      .subscribe({
-        next: () => {
-          this.router.navigate(['/timekeeping/attendance']);
-        },
-        error: (error) => {
-          this.errorMessage.set(
-            error?.error?.message || 'Invalid email or password.');
-          this.isSubmitting.set(false);
-        },
-        complete: () => {
-          this.isSubmitting.set(false);
-        },
-      });
+    if (error) {
+      this.errorMessage.set(error.message ?? 'Invalid email or password.');
+      this.isSubmitting.set(false);
+      return;
+    }
+
+    this.router.navigate(['/timekeeping/attendance']);
   }
 }
