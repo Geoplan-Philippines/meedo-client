@@ -41,10 +41,8 @@ export class Login {
     rememberMe: [false],
   });
 
-  onSubmit(): void {
-    if (this.isSubmitting()) {
-      return;
-    }
+  async onSubmit(): Promise<void> {
+    if (this.isSubmitting()) return;
 
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -56,19 +54,17 @@ export class Login {
 
     const { email, password } = this.loginForm.getRawValue();
 
-    this.authService.login({email: email!, password: password!})
-      .subscribe({
-        next: () => {
-          this.router.navigate(['/timekeeping/attendance']);
-        },
-        error: (error) => {
-          this.errorMessage.set(
-            error?.error?.message || 'Invalid email or password.');
-          this.isSubmitting.set(false);
-        },
-        complete: () => {
-          this.isSubmitting.set(false);
-        },
-      });
+    try {
+      const { error } = await this.authService.login({ email: email!, password: password! });
+      if (error) {
+        this.errorMessage.set(error.message ?? 'Invalid email or password.');
+        return;
+      }
+      await this.router.navigate(['/timekeeping/attendance']);
+    } catch {
+      this.errorMessage.set('An unexpected error occurred. Please try again.');
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 }

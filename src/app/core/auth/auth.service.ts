@@ -1,56 +1,55 @@
-import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { tap } from 'rxjs';
-
-import { AuthUser, BetterAuthLoginResponse, LoginPayload } from './auth.types';
+import { computed, Injectable, signal } from '@angular/core';
+import { createAuthClient } from 'better-auth/client';
 import { environment } from '../../../environments/environment.dev';
+import { AuthUser } from './auth.types';
 
-const TOKEN_KEY = 'access_token';
-const USER_KEY = 'auth_user';
+type SessionData = { user: AuthUser } | null;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiBaseUrl}/auth`;
+  private readonly client = createAuthClient({
+    baseURL: `${environment.apiBaseUrl}/auth`,
+  });
 
-  private readonly _currentUser = signal<AuthUser | null>(this.readStoredUser());
+  private readonly _session = signal<SessionData>(null);
 
-  readonly currentUser = this._currentUser.asReadonly();
-  readonly isAuthenticated = computed(() => this._currentUser() !== null);
+  readonly currentUser = computed(() => this._session()?.user ?? null);
+  readonly isAuthenticated = computed(() => this._session() !== null);
 
-  login(payload: LoginPayload) {
-    return this.http
-      .post<BetterAuthLoginResponse>(`${this.apiUrl}/sign-in/email`, payload)
-      .pipe(
-        tap(({ token, user }) => {
-          localStorage.setItem(TOKEN_KEY, token);
-          localStorage.setItem(USER_KEY, JSON.stringify(user));
-          this._currentUser.set(user);
-        }),
-      );
+  constructor() {
+    this.loadSession().catch(() => this._session.set(null));
   }
 
-  logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    this._currentUser.set(null);
+  private async loadSession(): Promise<void> {
+    const { data } = await this.client.getSession();
+    this._session.set(data as SessionData);
   }
 
-  getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-
-  private readStoredUser(): AuthUser | null {
-    const stored = localStorage.getItem(USER_KEY);
-    if (!stored) {
-      return null;
+  async login(payload: { email: string; password: string }) {
+    const { data, error } = await this.client.signIn.email({
+      email: payload.email,
+      password: payload.password,
+    });
+    if (data) {
+      this._session.set({ user: data.user as AuthUser });
     }
+    return { data, error };
+  }
 
-    try {
-      return JSON.parse(stored) as AuthUser;
-    } catch {
-      localStorage.removeItem(USER_KEY);
-      return null;
+  async signUp(email: string, password: string, name: string) {
+    const { data, error } = await this.client.signUp.email({
+      email,
+      password,
+      name,
+    });
+    if (data) {
+      this._session.set({ user: data.user as AuthUser });
     }
+    return { data, error };
+  }
+
+  async logout(): Promise<void> {
+    await this.client.signOut();
+    this._session.set(null);
   }
 }
