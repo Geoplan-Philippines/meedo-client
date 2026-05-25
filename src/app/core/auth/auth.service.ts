@@ -3,10 +3,7 @@ import { createAuthClient } from 'better-auth/client';
 import { environment } from '../../../environments/environment.dev';
 import { AuthUser } from './auth.types';
 
-type SessionData = {
-  session: { id: string; userId: string; expiresAt: Date };
-  user: AuthUser;
-} | null;
+type SessionData = { user: AuthUser } | null;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -34,7 +31,7 @@ export class AuthService {
       password: payload.password,
     });
     if (data) {
-      this._session.set(data as unknown as SessionData);
+      this._session.set({ user: data.user as AuthUser });
     }
     return { data, error };
   }
@@ -46,7 +43,7 @@ export class AuthService {
       name,
     });
     if (data) {
-      this._session.set(data as unknown as SessionData);
+      this._session.set({ user: data.user as AuthUser });
     }
     return { data, error };
   }

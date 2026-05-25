@@ -8,9 +8,9 @@ export interface AuthUser {
   name: string;
   email: string;
   emailVerified: boolean;
-  image: string | null;
-  createdAt: string;
-  updatedAt: string;
+  image: string | null | undefined;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface BetterAuthLoginResponse {

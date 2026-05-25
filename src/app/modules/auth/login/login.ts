@@ -53,14 +53,18 @@ export class Login {
     this.errorMessage.set('');
 
     const { email, password } = this.loginForm.getRawValue();
-    const { error } = await this.authService.login({ email: email!, password: password! });
 
-    if (error) {
-      this.errorMessage.set(error.message ?? 'Invalid email or password.');
+    try {
+      const { error } = await this.authService.login({ email: email!, password: password! });
+      if (error) {
+        this.errorMessage.set(error.message ?? 'Invalid email or password.');
+        return;
+      }
+      await this.router.navigate(['/timekeeping/attendance']);
+    } catch {
+      this.errorMessage.set('An unexpected error occurred. Please try again.');
+    } finally {
       this.isSubmitting.set(false);
-      return;
     }
-
-    this.router.navigate(['/timekeeping/attendance']);
   }
 }
