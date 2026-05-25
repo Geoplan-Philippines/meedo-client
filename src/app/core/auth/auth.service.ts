@@ -3,10 +3,6 @@ import { createAuthClient } from 'better-auth/client';
 import { environment } from '../../../environments/environment.dev';
 import { AuthUser } from './auth.types';
 
-const authClient = createAuthClient({
-  baseURL: `${environment.apiBaseUrl}/auth`,
-});
-
 type SessionData = {
   session: { id: string; userId: string; expiresAt: Date };
   user: AuthUser;
@@ -14,45 +10,49 @@ type SessionData = {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly client = createAuthClient({
+    baseURL: `${environment.apiBaseUrl}/auth`,
+  });
+
   private readonly _session = signal<SessionData>(null);
 
   readonly currentUser = computed(() => this._session()?.user ?? null);
   readonly isAuthenticated = computed(() => this._session() !== null);
 
   constructor() {
-    this.loadSession();
+    this.loadSession().catch(() => this._session.set(null));
   }
 
   private async loadSession(): Promise<void> {
-    const { data } = await authClient.getSession();
+    const { data } = await this.client.getSession();
     this._session.set(data as SessionData);
   }
 
   async login(payload: { email: string; password: string }) {
-    const { data, error } = await authClient.signIn.email({
+    const { data, error } = await this.client.signIn.email({
       email: payload.email,
       password: payload.password,
     });
     if (data) {
-      await this.loadSession();
+      this._session.set(data as unknown as SessionData);
     }
     return { data, error };
   }
 
   async signUp(email: string, password: string, name: string) {
-    const { data, error } = await authClient.signUp.email({
+    const { data, error } = await this.client.signUp.email({
       email,
       password,
       name,
     });
     if (data) {
-      await this.loadSession();
+      this._session.set(data as unknown as SessionData);
     }
     return { data, error };
   }
 
   async logout(): Promise<void> {
-    await authClient.signOut();
+    await this.client.signOut();
     this._session.set(null);
   }
 }
