@@ -1,0 +1,62 @@
+name: "DEPLOY MEEDO V3 FRONTEND"
+
+on:
+  push:
+    branches: ["master", "staging"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          if [[ $GITHUB_REF == 'refs/heads/master' ]]; then
+            echo "IMAGE=geoplanoperation/meedo-v3:latest" >> $GITHUB_ENV
+            echo "API_URL=https://meedo-v3-api.geoplanph.com/api/v1" >> $GITHUB_ENV
+            echo "DEPLOY_PATH=docker-apps/meedo-v3/prod" >> $GITHUB_ENV
+          else
+            echo "IMAGE=geoplanoperation/meedo-v3-stg:latest" >> $GITHUB_ENV
+            echo "API_URL=https://meedo-v3-api-stg.geoplanph.com/api/v1" >> $GITHUB_ENV
+            echo "DEPLOY_PATH=docker-apps/meedo-v3/stg" >> $GITHUB_ENV
+          fi
+
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push
+        run: |
+          docker build \
+            --build-arg API_BASE_URL=${{ env.API_URL }} \
+            -t ${{ env.IMAGE }} \
+            -f Dockerfile .
+          docker push ${{ env.IMAGE }}
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.VPS_USERNAME }}/${{ env.DEPLOY_PATH }}
+            echo "[MESSAGE] Preparing image ${{ env.IMAGE }}..."
+
+            export WEB_IMAGE="${{ env.IMAGE }}"
+
+            echo "[MESSAGE] Pulling latest image..."
+            docker compose pull
+
+            echo "[MESSAGE] Deploying service..."
+            docker compose up -d --force-recreate web
+
+            echo "[MESSAGE] Cleaning up old images..."
+            docker image prune -f
+
+            echo "[MESSAGE] Deployment completed!"
