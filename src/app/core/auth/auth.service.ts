@@ -16,8 +16,12 @@ export class AuthService {
   readonly currentUser = computed(() => this._session()?.user ?? null);
   readonly isAuthenticated = computed(() => this._session() !== null);
 
-  constructor() {
-    this.loadSession().catch(() => this._session.set(null));
+  async initialize(): Promise<void> {
+    try {
+      await this.loadSession();
+    } catch (err) {
+      console.error('[AuthService] Failed to load session:', err);
+    }
   }
 
   private async loadSession(): Promise<void> {
