@@ -18,7 +18,7 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: () => {
         const authService = inject(AuthService);
-        return () => authService.loadSession().catch(() => {});
+        return () => authService.initialize();
       },
       multi: true,
     },

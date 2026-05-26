@@ -18,7 +18,6 @@ interface NavSection {
 
 @Component({
   selector: 'app-sidebar',
-  standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
