@@ -5,6 +5,14 @@
 Before making changes, read and follow:
 
 - `.claude/rules/angular-standards.md`
+- `.claude/rules/theming.md`
+- `.claude/rules/architecture.md`
+
+## When reviewing PRs
+
+Before reviewing a PR or running `/review`, read and follow:
+
+- `REVIEW.md`
 
 ## Skills
 

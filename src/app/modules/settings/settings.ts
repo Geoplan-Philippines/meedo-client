@@ -8,6 +8,11 @@ interface SettingsCard {
   icon: string;
 }
 
+interface SettingsGroup {
+  label: string;
+  cards: SettingsCard[];
+}
+
 @Component({
   selector: 'app-settings',
   imports: [RouterLink],
@@ -17,11 +22,27 @@ interface SettingsCard {
 })
 
 export class Settings {
-  cards = signal<SettingsCard[]>([
-    { label: 'Organization', description: 'Company info and branding', icon: 'pi-globe' },
-    { label: 'Teams', description: 'Manage your teams', route: 'teams', icon: 'pi-sitemap' },
-    { label: 'Users', description: 'Members, roles and permissions', icon: 'pi-users' },
-    { label: 'Projects', description: 'Active and archived projects', icon: 'pi-briefcase' },
-    { label: 'Customers', description: 'Customer accounts and contacts', icon: 'pi-building' },
+  readonly groups = signal<SettingsGroup[]>([
+    {
+      label: 'General',
+      cards: [
+        { label: 'Organization', description: 'Company info and branding', icon: 'pi-globe' },
+        { label: 'Users', description: 'Members, roles and permissions', icon: 'pi-users' },
+        { label: 'Teams', description: 'Manage your teams', route: 'teams', icon: 'pi-sitemap' },
+      ],
+    },
+    {
+      label: 'Workspace',
+      cards: [
+        { label: 'Projects', description: 'Active and archived projects', icon: 'pi-briefcase' },
+        { label: 'Customers', description: 'Customer accounts and contacts', icon: 'pi-building' },
+      ],
+    },
+    {
+      label: 'Tickets',
+      cards: [
+        { label: 'Categories', description: 'Ticket categories and tags', route: 'categories', icon: 'pi-tags' },
+      ],
+    },
   ]);
-}
+}   
