@@ -44,7 +44,6 @@ export class Sidebar {
       items: [
         { label: 'Dashboard', route: '/tickets/dashboard', icon: 'pi-chart-line' },
         { label: 'Tickets', route: '/tickets', icon: 'pi-list' },
-        { label: 'Categories', route: '/tickets/categories', icon: 'pi-tags' },
       ],
     },
     {

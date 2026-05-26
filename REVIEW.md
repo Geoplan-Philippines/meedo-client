@@ -21,7 +21,3 @@
 - Suggest better architectural alternatives
 - Prioritize maintainability over quick fixes
 - Mention scalability concerns early
-
-## Current Temporary Exception
-
-- Ignore usages of `@AllowAnonymous()` for now; this will be refactored later
