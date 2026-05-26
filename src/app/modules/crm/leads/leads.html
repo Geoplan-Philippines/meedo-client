@@ -1,32 +1,188 @@
 
-  <p>Total: {{ leads.length }}</p>
+<div class="leads-page">
 
-  <p-table 
-    [value]="leads"
-    [tableStyle]="{ 'min-width': '60rem' }"
-    
-  >
+  <!-- Page Header -->
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Leads</h1>
+      <p class="page-subtitle">Track and manage your sales pipeline</p>
+    </div>
+    <button class="add-btn" type="button">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      <span>Add Lead</span>
+    </button>
+  </header>
 
-    <ng-template pTemplate="header">
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Company</th>
-        <th>Message</th>
-        <th>Status</th>
-      </tr>
-    </ng-template>
+  <!-- KPI Stats -->
+  <div class="stats-grid" role="list" aria-label="Lead statistics">
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--total" aria-hidden="true">
+        <i class="pi pi-users"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats()?.total ?? '—' }}</span>
+        <span class="stat-label">Total Leads</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--pending" aria-hidden="true">
+        <i class="pi pi-clock"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats()?.pending ?? '—' }}</span>
+        <span class="stat-label">Pending</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--qualified" aria-hidden="true">
+        <i class="pi pi-star"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats()?.qualified ?? '—' }}</span>
+        <span class="stat-label">Qualified</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--converted" aria-hidden="true">
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats()?.converted ?? '—' }}</span>
+        <span class="stat-label">Converted</span>
+      </div>
+    </div>
+  </div>
 
-    <ng-template pTemplate="body" let-lead>
-      <tr>
-        <td>{{ lead.firstName }} {{ lead.lastName }}</td>
-        <td>{{ lead.email }}</td>
-        <td>{{ lead.phoneNumber || '—' }}</td>
-        <td>{{ lead.company || '—' }}</td>
-        <td>{{ lead.message || '—' }}</td>
-        <td>{{ lead.status || '—' }}</td>
-      </tr>
-    </ng-template>  
+  <!-- Table Card -->
+  <div class="table-card">
 
-  </p-table>
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+      <div class="search-box">
+        <i class="pi pi-search search-icon" aria-hidden="true"></i>
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Search by name, email, or company…"
+          aria-label="Search leads"
+          (input)="onSearch($event)"
+        />
+      </div>
+      <div class="toolbar-actions">
+        <button class="toolbar-btn" type="button">
+          <i class="pi pi-filter" aria-hidden="true"></i>
+          <span>Filter</span>
+        </button>
+        <button class="toolbar-btn" type="button">
+          <i class="pi pi-download" aria-hidden="true"></i>
+          <span>Export</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Skeleton Loading -->
+    @if (isLoading()) {
+      <div class="skeleton-list" role="status" aria-label="Loading leads">
+        @for (row of skeletonRows; track row) {
+          <div class="skeleton-row">
+            <p-skeleton shape="circle" size="2.25rem"></p-skeleton>
+            <p-skeleton width="8rem" height="0.875rem"></p-skeleton>
+            <p-skeleton width="11rem" height="0.875rem"></p-skeleton>
+            <p-skeleton width="7rem" height="0.875rem"></p-skeleton>
+            <p-skeleton width="6rem" height="0.875rem"></p-skeleton>
+            <p-skeleton width="5rem" height="1.5rem" borderRadius="100px"></p-skeleton>
+          </div>
+        }
+      </div>
+    } @else {
+      <p-table
+        [value]="filteredLeads()"
+        [tableStyle]="{ 'width': '100%' }"
+        class="leads-table"
+        [paginator]="true"
+        [rows]="10"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} leads"
+        [rowHover]="true"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="firstName" scope="col">
+              <div class="th-content">Name <p-sortIcon field="firstName"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="email" scope="col">
+              <div class="th-content">Email <p-sortIcon field="email"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="phoneNumber" scope="col">
+              <div class="th-content">Phone <p-sortIcon field="phoneNumber"></p-sortIcon></div>
+            </th>
+            <th scope="col">
+              <div class="th-content">Company</div>
+            </th>
+            <th scope="col">
+              <div class="th-content">Message</div>
+            </th>
+            <th pSortableColumn="status" scope="col">
+              <div class="th-content">Status <p-sortIcon field="status"></p-sortIcon></div>
+            </th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-lead>
+          <tr class="lead-row">
+            <td>
+              <div class="lead-identity">
+                <div class="avatar" [class]="getAvatarClass(lead)" aria-hidden="true">
+                  {{ getInitials(lead) }}
+                </div>
+                <span class="lead-name">{{ lead.firstName }} {{ lead.lastName }}</span>
+              </div>
+            </td>
+            <td>
+              <a class="lead-email" [href]="'mailto:' + lead.email">{{ lead.email }}</a>
+            </td>
+            <td class="lead-phone">{{ lead.phoneNumber || '—' }}</td>
+            <td>
+              @if (lead.company) {
+                <span class="company-chip">{{ lead.company }}</span>
+              } @else {
+                <span class="empty-cell">—</span>
+              }
+            </td>
+            <td>
+              <span class="lead-message" [title]="lead.message || ''">{{ lead.message || '—' }}</span>
+            </td>
+            <td>
+              <span class="status-badge" [class]="'status-badge status-' + (lead.status || 'pending')">
+                <span class="status-dot" aria-hidden="true"></span>
+                {{ lead.status || 'pending' }}
+              </span>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <div class="empty-icon" aria-hidden="true">
+                  <i class="pi pi-inbox"></i>
+                </div>
+                <p class="empty-title">No leads found</p>
+                <p class="empty-body">
+                  @if (searchTerm()) {
+                    No leads match "{{ searchTerm() }}". Try different keywords.
+                  } @else {
+                    Get started by adding your first lead.
+                  }
+                </p>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+      </p-table>
+    }
+
+  </div>
+</div>

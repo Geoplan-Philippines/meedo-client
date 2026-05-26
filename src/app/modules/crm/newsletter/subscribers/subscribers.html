@@ -1,32 +1,153 @@
-<main class="p-4 md:p-8">
-  <h2 class="text-xl font-semibold mb-4">Subscribers</h2>
+<div class="subscribers-page">
 
-    <p class="mb-3">Total: {{ subscribers().length }}</p>
+  <!-- Page Header -->
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Subscribers</h1>
+      <p class="page-subtitle">Manage your newsletter audience</p>
+    </div>
+    <button class="export-btn" type="button">
+      <i class="pi pi-download" aria-hidden="true"></i>
+      <span>Export</span>
+    </button>
+  </header>
 
-    <p-table
-      [value]="subscribers()"
-      [tableStyle]="{ 'min-width': '50rem' }"
-      
-    >
+  <!-- KPI Stats -->
+  <div class="stats-grid" role="list" aria-label="Subscriber statistics">
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--total" aria-hidden="true">
+        <i class="pi pi-users"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ totalSubscribers() }}</span>
+        <span class="stat-label">Total Subscribers</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--new" aria-hidden="true">
+        <i class="pi pi-user-plus"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">—</span>
+        <span class="stat-label">New This Month</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--unsub" aria-hidden="true">
+        <i class="pi pi-user-minus"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">—</span>
+        <span class="stat-label">Unsubscribed</span>
+      </div>
+    </div>
+  </div>
 
-      <!-- HEADER -->
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Created</th>
-        </tr>
-      </ng-template>
+  <!-- Table Card -->
+  <div class="table-card">
 
-      <!-- BODY -->
-      <ng-template pTemplate="body" let-subscriber>
-        <tr>
-          <td>{{ subscriber.name || 'No name' }}</td>
-          <td>{{ subscriber.email }}</td>
-          <td>{{ subscriber.createdAt | date: 'medium' }}</td>
-        </tr>
-      </ng-template>
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+      <div class="search-box">
+        <i class="pi pi-search search-icon" aria-hidden="true"></i>
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Search by name or email…"
+          aria-label="Search subscribers"
+          (input)="onSearch($event)"
+        />
+      </div>
+      <div class="toolbar-actions">
+        <button class="toolbar-btn" type="button">
+          <i class="pi pi-filter" aria-hidden="true"></i>
+          <span>Filter</span>
+        </button>
+      </div>
+    </div>
 
-    </p-table>
+    <!-- Skeleton Loading -->
+    @if (isLoading()) {
+      <div class="skeleton-list" role="status" aria-label="Loading subscribers">
+        @for (row of skeletonRows; track row) {
+          <div class="skeleton-row">
+            <p-skeleton shape="circle" size="2.25rem"></p-skeleton>
+            <p-skeleton width="9rem" height="0.875rem"></p-skeleton>
+            <p-skeleton width="13rem" height="0.875rem"></p-skeleton>
+            <p-skeleton width="8rem" height="0.875rem"></p-skeleton>
+          </div>
+        }
+      </div>
+    } @else {
+      <p-table
+        [value]="filteredSubscribers()"
+        [tableStyle]="{ 'width': '100%' }"
+        class="subscribers-table"
+        [paginator]="true"
+        [rows]="10"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} subscribers"
+        [rowHover]="true"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="name" scope="col">
+              <div class="th-content">Name <p-sortIcon field="name"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="email" scope="col">
+              <div class="th-content">Email <p-sortIcon field="email"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="createdAt" scope="col">
+              <div class="th-content">Subscribed On <p-sortIcon field="createdAt"></p-sortIcon></div>
+            </th>
+          </tr>
+        </ng-template>
 
-</main>
+        <ng-template pTemplate="body" let-subscriber>
+          <tr>
+            <td>
+              <div class="subscriber-identity">
+                <div class="avatar" [class]="getAvatarClass(subscriber)" aria-hidden="true">
+                  {{ getInitials(subscriber) }}
+                </div>
+                <span class="subscriber-name">
+                  {{ subscriber.name || 'No name' }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <a class="subscriber-email" [href]="'mailto:' + subscriber.email">
+                {{ subscriber.email }}
+              </a>
+            </td>
+            <td class="subscriber-date">
+              {{ subscriber.createdAt | date: 'MMM d, y' }}
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="3">
+              <div class="empty-state">
+                <div class="empty-icon" aria-hidden="true">
+                  <i class="pi pi-inbox"></i>
+                </div>
+                <p class="empty-title">No subscribers found</p>
+                <p class="empty-body">
+                  @if (searchTerm()) {
+                    No subscribers match "{{ searchTerm() }}". Try different keywords.
+                  } @else {
+                    Your newsletter has no subscribers yet.
+                  }
+                </p>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+      </p-table>
+    }
+
+  </div>
+</div>
