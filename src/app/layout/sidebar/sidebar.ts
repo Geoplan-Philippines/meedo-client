@@ -23,6 +23,7 @@ interface NavSection {
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'md:w-64' },
 })
 export class Sidebar {
   layoutService = inject(LayoutService);
