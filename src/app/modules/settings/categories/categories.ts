@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
-  selector: 'app-ticket-categories',
+  selector: 'app-settings-categories',
   imports: [],
   templateUrl: './categories.html',
   styleUrl: './categories.css',

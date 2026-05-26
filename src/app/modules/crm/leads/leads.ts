@@ -44,8 +44,8 @@ export class Leads implements OnInit, OnDestroy {
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: (res:LeadsResponse)  => {
-          console.log('RAW res:', res);   
-          console.log('res.data:', res.data);
+        console.log('RAW res:', res);   
+        console.log('res.data:', res.data);
         this.leads = res.data;
 
         console.log('leads', this.leads);
