@@ -20,7 +20,6 @@ interface SettingsGroup {
   styleUrl: './settings.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-
 export class Settings {
   readonly groups = signal<SettingsGroup[]>([
     {
