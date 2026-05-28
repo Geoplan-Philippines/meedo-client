@@ -405,7 +405,29 @@
   color: var(--color-primary);
 }
 
+/* ─── Disabled (stub) buttons ──────────────────────────── */
+.export-btn[aria-disabled="true"],
+.toolbar-btn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-btn[aria-disabled="true"]:hover {
+  background: var(--color-primary);
+  box-shadow: none;
+}
+
+.toolbar-btn[aria-disabled="true"]:hover {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-body);
+}
+
 /* ─── Responsive ───────────────────────────────────────── */
+@media (max-width: 960px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 768px) {
   .subscribers-page {
     padding: 1rem;

@@ -1,22 +1,10 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
-import { CrmService } from '../../services/crm.service';
-
-interface Subscriber {
-  id: string;
-  email: string;
-  name?: string;
-  createdAt: string;
-}
-
-interface SubscriberResponse {
-  data: Subscriber[];
-}
-
-const AVATAR_CLASSES = ['avatar-blue', 'avatar-teal', 'avatar-indigo', 'avatar-violet', 'avatar-rose'];
+import { CrmService, Subscriber } from '../../services/crm.service';
+import { getAvatarClass } from '../../utils/avatar.utils';
 
 @Component({
   selector: 'app-subscribers',
@@ -48,17 +36,19 @@ export class Subscribers implements OnInit {
 
   getInitials(subscriber: Subscriber): string {
     if (subscriber.name) {
-      const parts = subscriber.name.trim().split(' ');
-      return parts.length > 1
-        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-        : parts[0][0].toUpperCase();
+      const parts = subscriber.name.trim().split(/\s+/).filter(Boolean);
+      if (parts.length > 1) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      if (parts.length === 1) {
+        return parts[0][0].toUpperCase();
+      }
     }
-    return subscriber.email[0].toUpperCase();
+    return subscriber.email?.[0]?.toUpperCase() ?? '?';
   }
 
   getAvatarClass(subscriber: Subscriber): string {
-    const seed = subscriber.email.charCodeAt(0) + subscriber.email.charCodeAt(1);
-    return AVATAR_CLASSES[seed % AVATAR_CLASSES.length];
+    return getAvatarClass(subscriber.email);
   }
 
   onSearch(event: Event): void {
@@ -70,7 +60,7 @@ export class Subscribers implements OnInit {
     this.crmService.getSubscribers()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res: SubscriberResponse) => {
+        next: res => {
           this.subscribers.set(res.data);
           this.isLoading.set(false);
         },

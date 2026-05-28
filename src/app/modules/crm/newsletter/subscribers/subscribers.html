@@ -6,7 +6,7 @@
       <h1 class="page-title">Subscribers</h1>
       <p class="page-subtitle">Manage your newsletter audience</p>
     </div>
-    <button class="export-btn" type="button">
+    <button class="export-btn" type="button" aria-disabled="true" title="Coming soon">
       <i class="pi pi-download" aria-hidden="true"></i>
       <span>Export</span>
     </button>
@@ -59,7 +59,7 @@
         />
       </div>
       <div class="toolbar-actions">
-        <button class="toolbar-btn" type="button">
+        <button class="toolbar-btn" type="button" aria-disabled="true" title="Coming soon">
           <i class="pi pi-filter" aria-hidden="true"></i>
           <span>Filter</span>
         </button>
@@ -107,7 +107,7 @@
           <tr>
             <td>
               <div class="subscriber-identity">
-                <div class="avatar" [class]="getAvatarClass(subscriber)" aria-hidden="true">
+                <div [class]="getAvatarClass(subscriber)" aria-hidden="true">
                   {{ getInitials(subscriber) }}
                 </div>
                 <span class="subscriber-name">

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment.dev';
 
 export interface LeadsStats {
@@ -9,7 +10,34 @@ export interface LeadsStats {
   converted: number;
 }
 
-interface LeadsStatsResponse {
+export interface Lead {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  company?: string;
+  message?: string;
+  status?: string;
+  createdAt: string;
+}
+
+export interface Subscriber {
+  id: string;
+  email: string;
+  name?: string;
+  createdAt: string;
+}
+
+export interface LeadsResponse {
+  data: Lead[];
+}
+
+export interface SubscribersResponse {
+  data: Subscriber[];
+}
+
+export interface LeadsStatsResponse {
   data: LeadsStats;
 }
 
@@ -20,16 +48,16 @@ export class CrmService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiBaseUrl}/crm`;
 
-  getLeads() {
-    return this.http.get<any>(`${this.baseUrl}/leads`);
+  getLeads(): Observable<LeadsResponse> {
+    return this.http.get<LeadsResponse>(`${this.baseUrl}/leads`);
   }
 
   /** GET /crm/leads/stats — ready, pending backend implementation */
-  getLeadsStats() {
+  getLeadsStats(): Observable<LeadsStatsResponse> {
     return this.http.get<LeadsStatsResponse>(`${this.baseUrl}/leads/stats`);
   }
 
-  getSubscribers() {
-    return this.http.get<any>(`${this.baseUrl}/newsletter/subscribers`);
+  getSubscribers(): Observable<SubscribersResponse> {
+    return this.http.get<SubscribersResponse>(`${this.baseUrl}/newsletter/subscribers`);
   }
 }
