@@ -47,6 +47,7 @@ export class Teams implements OnInit {
   readonly dialogVisible = signal(false);
   readonly isEditing = signal(false);
   readonly isSaving = signal(false);
+  readonly isDeleting = signal(false);
 
   readonly selectedTeam = signal<Team | null>(null);
   readonly teamForm = new FormGroup({
@@ -96,6 +97,7 @@ export class Teams implements OnInit {
   openCreateDialog(): void {
     this.isEditing.set(false);
     this.selectedTeam.set(null);
+    this.isSaving.set(false);
     
     this.teamForm.reset({
       name: '',
@@ -108,6 +110,7 @@ export class Teams implements OnInit {
   openEditDialog(team: Team): void {
     this.isEditing.set(true);
     this.selectedTeam.set(team);
+    this.isSaving.set(false);
 
     this.teamForm.patchValue({
       name: team.name,
@@ -171,6 +174,8 @@ export class Teams implements OnInit {
   }
 
   deleteTeam(team: Team): void {
+    this.isDeleting.set(true);
+
     this.teamsService.deleteTeam(team.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -180,6 +185,7 @@ export class Teams implements OnInit {
             summary: 'Success',
             detail: 'Team deleted',
           });
+          this.isDeleting.set(false);
           this.loadTeams();
         },
         error: (err) => {
@@ -189,6 +195,7 @@ export class Teams implements OnInit {
             summary: 'Error',
             detail: 'Failed to delete team',
           });
+          this.isDeleting.set(false);
         },
       });
   }

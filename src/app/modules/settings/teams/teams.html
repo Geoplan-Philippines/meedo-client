@@ -53,6 +53,8 @@
               severity="danger"
               (onClick)="confirmDelete(team)"
               aria-label="Delete team"
+              [loading]="isDeleting()"
+              [disabled]="isDeleting()"
             />
           </div>
         </td>
@@ -109,7 +111,7 @@
     <p-button
       [label]="isEditing() ? 'Update' : 'Create'"
       [loading]="isSaving()"
-      [disabled]="teamForm.invalid"
+      [disabled]="teamForm.invalid || isSaving()"
       (onClick)="saveTeam()"
     />
   </ng-template>
