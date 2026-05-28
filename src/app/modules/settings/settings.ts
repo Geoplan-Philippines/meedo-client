@@ -41,6 +41,7 @@ export class Settings {
       label: 'Tickets',
       cards: [
         { label: 'Categories', description: 'Ticket categories and tags', route: 'categories', icon: 'pi-tags' },
+        { label: 'Statuses', description: 'Lifecycle statuses for tickets', route: 'statuses', icon: 'pi-flag' },
       ],
     },
   ]);

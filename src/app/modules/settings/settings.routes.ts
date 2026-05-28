@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { Settings } from './settings';
 import { Teams } from './teams/teams';
 import { Categories } from './categories/categories';
+import { Statuses } from './statuses/statuses';
 
 export const settingsRoutes: Routes = [
   {
@@ -15,5 +16,9 @@ export const settingsRoutes: Routes = [
   {
     path: 'categories',
     component: Categories,
+  },
+  {
+    path: 'statuses',
+    component: Statuses,
   },
 ];
