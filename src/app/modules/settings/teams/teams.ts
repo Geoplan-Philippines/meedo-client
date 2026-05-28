@@ -13,7 +13,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { TeamsService, Team, CreateTeamPayload, UpdateTeamPayload } from './services/teams.service';
-import { Subject, switchMap } from 'rxjs';
+import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
 
 @Component({
   selector: 'app-teams',
@@ -60,29 +60,31 @@ export class Teams implements OnInit {
   });
 
   ngOnInit(): void {
-  this.refresh$
-    .pipe(
-      switchMap(() => {
-        this.isLoading.set(true);
-        return this.teamsService.getTeams();
-      }),
-      takeUntilDestroyed(this.destroyRef),
-    )
-    .subscribe({
-      next: (res) => {
-        this.teams.set(res.data);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error loading teams:', err);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to load teams',
-        });
-        this.isLoading.set(false);
-      },
-    });
+    this.refresh$
+      .pipe(
+        switchMap(() => {
+          this.isLoading.set(true);
+          return this.teamsService.getTeams().pipe(
+            catchError((err) => {
+              console.error('Error loading teams:', err);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to load teams',
+              });
+              this.isLoading.set(false);
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.teams.set(res.data);
+          this.isLoading.set(false);
+        },
+      });
 
     this.refresh$.next();
   }
