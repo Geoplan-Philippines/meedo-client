@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { LayoutService } from '../layout.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { ThemeService } from '../../core/theme/theme.service';
 
 @Component({
   selector: 'app-header',
@@ -15,6 +16,7 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class Header {
   protected readonly layoutService = inject(LayoutService);
+  protected readonly themeService = inject(ThemeService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 

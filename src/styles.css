@@ -3,6 +3,13 @@
 @import 'tailwindcss';
 @import "primeicons/primeicons.css";
 
+/* Dark mode is driven by the `.app-dark` class on <html> (see ThemeService).
+   The same class is used by PrimeNG (darkModeSelector in app.config.ts).
+   Register the Tailwind `dark:` variant against it for one-off exceptions. */
+@custom-variant dark (&:where(.app-dark, .app-dark *));
+
+/* Light theme (default). Dark mode redefines these same variables below,
+   so any component using the theme tokens flips automatically. */
 :root {
   --background: #F8FBFF;
   --foreground: #0B161F;
@@ -30,7 +37,37 @@
   --radius: 0.25rem;
 }
 
-@theme {
+/* Dark theme: a complementary inversion of the light palette. Surfaces go
+   dark, text goes light, and primary brightens for contrast on dark. */
+.app-dark {
+  --background: #0B161F;
+  --foreground: #F1F6FC;
+  --text-heading: #F1F6FC;
+  --text-body: #A9B8C4;
+
+  --primary: #7AA1FD;
+  --primary-hover: #9EB7FD;
+  --primary-foreground: #01183C;
+  --secondary: #16273A;
+  --secondary-foreground: #9EB7FD;
+  --accent: #22D3EE;
+  --accent-foreground: #062A38;
+
+  --border: #24344A;
+  --input: #24344A;
+  --ring: #22D3EE;
+
+  --destructive: #FF5C5C;
+  --muted-destructive: #3A1D1D;
+  --success: #4ECB8E;
+  --muted-success: #173328;
+  --success-foreground: #FFFFFF;
+}
+
+/* `inline` makes utilities reference the source variable directly
+   (e.g. bg-background -> var(--background)) so they respond to the
+   `.app-dark` overrides above at runtime. */
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-heading: var(--text-heading);
