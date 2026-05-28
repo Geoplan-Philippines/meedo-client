@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule, DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { TableModule } from 'primeng/table';
@@ -12,8 +12,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { SettingsService, Team, CreateTeamPayload, UpdateTeamPayload } from '../services/settings.service';
-import { Badge } from "primeng/badge";
+import { TeamsService, Team, CreateTeamPayload, UpdateTeamPayload } from './services/teams.service';
+import { Subject, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-teams',
@@ -26,21 +26,21 @@ import { Badge } from "primeng/badge";
     TextareaModule,
     ConfirmDialogModule,
     ToastModule,
-    CommonModule,
-    FormsModule,
     DatePipe,
-    Badge
-],
+    ReactiveFormsModule,
+  ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './teams.html',
   styleUrl: './teams.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
+
 export class Teams implements OnInit {
-private readonly settingsService = inject(SettingsService);
+  private readonly teamsService = inject(TeamsService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly refresh$ = new Subject<void>();
 
   readonly teams = signal<Team[]>([]);
   readonly isLoading = signal(false);
@@ -48,58 +48,93 @@ private readonly settingsService = inject(SettingsService);
   readonly isEditing = signal(false);
   readonly isSaving = signal(false);
 
-  selectedTeam: Team | null = null;
-  formName = '';
-  formDescription = '';
+  readonly selectedTeam = signal<Team | null>(null);
+  readonly teamForm = new FormGroup({
+    name: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    description: new FormControl('', {
+      nonNullable: true,
+    }),
+  });
 
   ngOnInit(): void {
-    this.loadTeams();
-  }
-  loadTeams(): void {
-    this.isLoading.set(true);
+  this.refresh$
+    .pipe(
+      switchMap(() => {
+        this.isLoading.set(true);
+        return this.teamsService.getTeams();
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    )
+    .subscribe({
+      next: (res) => {
+        this.teams.set(res.data);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading teams:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load teams',
+        });
+        this.isLoading.set(false);
+      },
+    });
 
-    this.settingsService.getTeams()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          this.teams.set(res.data);
-          this.isLoading.set(false);
-        },
-        error: (err) => {
-          console.error('Error loading teams:', err);
-          this.isLoading.set(false);
-        },
-      });
+    this.refresh$.next();
+  }
+  
+  loadTeams(): void {
+    this.refresh$.next();
   }
 
   openCreateDialog(): void {
     this.isEditing.set(false);
-    this.selectedTeam = null;
-    this.formName = '';
-    this.formDescription = '';
+    this.selectedTeam.set(null);
+    
+    this.teamForm.reset({
+      name: '',
+      description: '',
+    });
+
     this.dialogVisible.set(true);
   }
 
   openEditDialog(team: Team): void {
     this.isEditing.set(true);
-    this.selectedTeam = team;
-    this.formName = team.name;
-    this.formDescription = team.description ?? '';
+    this.selectedTeam.set(team);
+
+    this.teamForm.patchValue({
+      name: team.name,
+      description: team.description ?? '',
+    });
+
     this.dialogVisible.set(true);
   }
 
   saveTeam(): void {
-    if (!this.formName.trim()) return;
+    if (this.teamForm.invalid) {
+      this.teamForm.markAllAsTouched();
+      return;
+    }
+
     this.isSaving.set(true);
 
+    const formValue = this.teamForm.getRawValue();
+
     const payload: CreateTeamPayload | UpdateTeamPayload = {
-      name: this.formName.trim(),
-      description: this.formDescription.trim() || undefined,
+      name: formValue.name.trim(),
+      description: formValue.description.trim() || undefined,
     };
 
-    const request$ = this.isEditing() && this.selectedTeam
-      ? this.settingsService.updateTeam(this.selectedTeam.id, payload)
-      : this.settingsService.createTeam(payload as CreateTeamPayload);
+    const selectedTeam = this.selectedTeam();
+
+    const request$ = this.isEditing() && selectedTeam
+      ? this.teamsService.updateTeam(selectedTeam.id, payload)
+      : this.teamsService.createTeam(payload as CreateTeamPayload);
 
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
@@ -114,6 +149,11 @@ private readonly settingsService = inject(SettingsService);
       },
       error: (err) => {
         console.error('Error saving team:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to save team',
+        });
         this.isSaving.set(false);
       },
     });
@@ -129,7 +169,7 @@ private readonly settingsService = inject(SettingsService);
   }
 
   deleteTeam(team: Team): void {
-    this.settingsService.deleteTeam(team.id)
+    this.teamsService.deleteTeam(team.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -140,7 +180,14 @@ private readonly settingsService = inject(SettingsService);
           });
           this.loadTeams();
         },
-        error: (err) => console.error('Error deleting team:', err),
+        error: (err) => {
+          console.error('Error deleting team:', err);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to delete team',
+          });
+        },
       });
   }
 }

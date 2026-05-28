@@ -26,10 +26,10 @@
   >
     <ng-template pTemplate="header">
       <tr>
-        <th>Name</th>
-        <th>Description</th>
-        <th>Created</th>
-        <th style="width: 8rem">Actions</th>
+        <th scope="col">Name</th>
+        <th scope="col">Description</th>
+        <th scope="col">Created</th>
+        <th scope="col" style="width: 8rem">Actions</th>
       </tr>
     </ng-template>
 
@@ -74,14 +74,16 @@
   [modal]="true"
   [style]="{ width: '400px' }"
 >
-  <div class="flex flex-col gap-4 pt-2">
+
+  <form [formGroup]="teamForm" class="flex flex-col gap-4 pt-2">
     <div class="flex flex-col gap-1">
       <label for="team-name" class="text-sm font-medium">Name</label>
       <input
         id="team-name"
         pInputText
-        [(ngModel)]="formName"
+        formControlName="name"
         placeholder="Team name"
+        required
       />
     </div>
 
@@ -90,12 +92,12 @@
       <textarea
         id="team-desc"
         pTextarea
-        [(ngModel)]="formDescription"
+        formControlName="description"
         placeholder="Optional description"
         rows="3"
       ></textarea>
     </div>
-  </div>
+  </form>
 
   <ng-template pTemplate="footer">
     <p-button
@@ -107,7 +109,7 @@
     <p-button
       [label]="isEditing() ? 'Update' : 'Create'"
       [loading]="isSaving()"
-      [disabled]="!formName.trim()"
+      [disabled]="teamForm.invalid"
       (onClick)="saveTeam()"
     />
   </ng-template>

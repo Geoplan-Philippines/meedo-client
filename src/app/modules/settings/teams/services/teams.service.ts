@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment.dev';
+import { environment } from '../../../../../environments/environment.dev';
 
 export interface Team {
   id: string;
@@ -23,7 +23,7 @@ export interface UpdateTeamPayload {
 }
 
 @Injectable({ providedIn: 'root' })
-export class SettingsService {
+export class TeamsService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/teams`;
 
