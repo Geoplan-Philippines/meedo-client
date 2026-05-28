@@ -17,10 +17,6 @@ export interface Status {
   updatedAt: string;
 }
 
-export interface StatusListResponse {
-  data: Status[];
-}
-
 export interface CreateStatusPayload {
   name: string;
   color: string;
@@ -37,8 +33,10 @@ export class StatusesService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/settings/statuses`;
 
-  list(): Observable<StatusListResponse> {
-    return this.http.get<StatusListResponse>(this.baseUrl);
+  list(): Observable<Status[]> {
+    return this.http
+      .get<Envelope<Status[]>>(this.baseUrl)
+      .pipe(map((res) => res.data));
   }
 
   create(payload: CreateStatusPayload): Observable<Status> {
@@ -64,6 +62,7 @@ export class StatusesService {
       .patch<Envelope<Status>>(`${this.baseUrl}/${id}/restore`, {})
       .pipe(map((res) => res.data));
   }
+
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }

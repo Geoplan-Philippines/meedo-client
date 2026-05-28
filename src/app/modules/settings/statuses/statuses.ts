@@ -134,8 +134,8 @@ export class Statuses implements OnInit {
     this.isLoading.set(true);
     this.error.set(null);
     this.statusesService.list().subscribe({
-      next: (res) => {
-        this.statuses.set(res.data);
+      next: (data) => {
+        this.statuses.set(data);
         this.isLoading.set(false);
       },
       error: () => {
@@ -148,7 +148,7 @@ export class Statuses implements OnInit {
   openCreate(): void {
     this.dialogMode.set('create');
     this.editingStatus.set(null);
-    this.form.reset({ name: '', color: '#3B82F6' });
+    this.form.reset({ name: '', color: '#3B82F6' }); // blue-500 default
     this.isDialogOpen.set(true);
   }
 

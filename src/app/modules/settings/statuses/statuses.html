@@ -24,8 +24,17 @@
   </header>
 
   @if (error()) {
-    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm">
-      {{ error() }}
+    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+      <span>{{ error() }}</span>
+      <p-button
+        label="Retry"
+        icon="pi pi-refresh"
+        size="small"
+        severity="danger"
+        text
+        (onClick)="load()"
+        [disabled]="isLoading()"
+      />
     </div>
   }
 
