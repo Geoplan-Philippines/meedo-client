@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject } from 'rxjs';
 import { catchError, exhaustMap, filter, finalize, tap } from 'rxjs/operators';
@@ -27,7 +27,6 @@ const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
   selector: 'app-settings-statuses',
   imports: [
     RouterLink,
-    FormsModule,
     ReactiveFormsModule,
     DatePipe,
     TableModule,
@@ -48,7 +47,9 @@ export class Statuses implements OnInit {
   readonly statuses = signal<Status[]>([]);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly showArchived = signal(false);
+
+  readonly showArchivedControl = new FormControl(false, { nonNullable: true });
+  readonly showArchived = toSignal(this.showArchivedControl.valueChanges, { initialValue: false });
 
   readonly visibleStatuses = computed(() => {
     const all = this.statuses();

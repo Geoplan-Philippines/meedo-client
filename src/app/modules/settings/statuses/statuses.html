@@ -14,8 +14,7 @@
       <label for="show-archived" class="flex items-center gap-2 text-sm text-body cursor-pointer select-none">
         <p-toggleSwitch
           inputId="show-archived"
-          [ngModel]="showArchived()"
-          (ngModelChange)="showArchived.set($event)"
+          [formControl]="showArchivedControl"
         />
         Show archived
       </label>
@@ -62,7 +61,7 @@
           Create your first status to get started.
         }
       </p>
-      @if (!(showArchived() === false && statuses().length > 0)) {
+      @if (showArchived() || statuses().length === 0) {
         <p-button label="New status" icon="pi pi-plus" (onClick)="openCreate()" class="mt-2" />
       }
     </div>
