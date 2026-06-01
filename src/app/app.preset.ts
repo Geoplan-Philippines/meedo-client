@@ -25,6 +25,14 @@ export const AppPreset = definePreset(Aura, {
           contrastColor: '#FFFFFF',
         },
       },
+      dark: {
+        primary: {
+          color: '{primary.400}',
+          hoverColor: '{primary.300}',
+          activeColor: '{primary.200}',
+          contrastColor: '{primary.950}',
+        },
+      },
     },
   },
 });

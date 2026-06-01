@@ -34,6 +34,18 @@ export class Leads implements OnInit {
       (l.company ?? '').toLowerCase().includes(term)
     );
   });
+  constructor(private crmService: CrmService) {}
+    
+  ngOnInit() {
+    this.isLoading = true;
+    
+    this.crmService.getLeads()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (res:LeadsResponse)  => {
+        console.log('RAW res:', res);   
+        console.log('res.data:', res.data);
+        this.leads = res.data;
 
   getInitials(lead: Lead): string {
     const first = lead.firstName?.[0] ?? '';

@@ -2,7 +2,7 @@
 
 ## Primary Focus Areas
 
-- AngularJS best practices
+- Angular best practices (project is Angular v20+; not AngularJS)
 - Focus on correctness
 - Detect regressions
 - Detect breaking changes
@@ -25,3 +25,5 @@
 ## Current Temporary Exception
 
 - Ignore usages of `@AllowAnonymous()` for now; this will be refactored later
+- Ignore `*.spec.ts` files entirely — unit testing is out of scope for now. Do not comment on missing, outdated, or broken specs, or on test coverage.
+
