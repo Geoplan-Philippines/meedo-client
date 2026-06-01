@@ -1,12 +1,118 @@
 <main class="p-4 md:p-8 flex flex-col gap-4 w-full">
+  <p-toast />
+  <p-confirmDialog />
+
   <nav class="text-sm text-body/70" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
     <span class="mx-2 opacity-60">/</span>
     <span class="text-foreground">Teams</span>
   </nav>
 
-  <header class="flex flex-col gap-1">
-    <h1 class="text-2xl font-semibold text-heading">Teams</h1>
-    <p class="text-sm text-body opacity-70">Manage your teams and members.</p>
+  <header class="flex items-center justify-between">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-semibold text-heading">Teams</h1>
+      <p class="text-sm text-body opacity-70">Manage your teams and members.</p>
+    </div>
+    <p-button
+      label="New Team"
+      icon="pi pi-plus"
+      (onClick)="openCreateDialog()"
+    />
   </header>
+  <p-table
+    [value]="teams()"
+    [loading]="isLoading()"
+    [tableStyle]="{ 'min-width': '40rem' }"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Description</th>
+        <th scope="col">Created</th>
+        <th scope="col" style="width: 8rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-team>
+      <tr>
+        <td>{{ team.name }}</td>
+        <td>{{ team.description || '—' }}</td>
+        <td>{{ team.createdAt | date: 'mediumDate' }}</td>
+        <td>
+          <div class="flex gap-2">
+            <p-button
+              icon="pi pi-pencil"
+              [text]="true"
+              severity="secondary"
+              (onClick)="openEditDialog(team)"
+              aria-label="Edit team"
+            />
+            <p-button
+              icon="pi pi-trash"
+              [text]="true"
+              severity="danger"
+              (onClick)="confirmDelete(team)"
+              aria-label="Delete team"
+              [loading]="isDeleting()"
+              [disabled]="isDeleting()"
+            />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="4" class="text-center p-4">No teams found.</td>
+      </tr>
+    </ng-template>
+  </p-table>
 </main>
+
+<p-dialog
+  [header]="isEditing() ? 'Edit Team' : 'New Team'"
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: '400px' }"
+>
+
+  <form [formGroup]="teamForm" class="flex flex-col gap-4 pt-2">
+    <div class="flex flex-col gap-1">
+      <label for="team-name" class="text-sm font-medium">Name</label>
+      <input
+        id="team-name"
+        pInputText
+        formControlName="name"
+        placeholder="Team name"
+        required
+      />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="team-desc" class="text-sm font-medium">Description</label>
+      <textarea
+        id="team-desc"
+        pTextarea
+        formControlName="description"
+        placeholder="Optional description"
+        rows="3"
+      ></textarea>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      [text]="true"
+      severity="secondary"
+      (onClick)="dialogVisible.set(false)"
+    />
+    <p-button
+      [label]="isEditing() ? 'Update' : 'Create'"
+      [loading]="isSaving()"
+      [disabled]="teamForm.invalid || isSaving()"
+      (onClick)="saveTeam()"
+    />
+  </ng-template>
+</p-dialog>
