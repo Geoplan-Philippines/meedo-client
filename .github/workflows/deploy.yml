@@ -19,7 +19,7 @@ jobs:
             echo "API_URL=https://meedo-v3-api.geoplanph.com/api/v1" >> $GITHUB_ENV
             echo "DEPLOY_PATH=docker-apps/meedo-v3/prod" >> $GITHUB_ENV
           else
-            echo "IMAGE=geoplanoperation/meedo-v3-stg:latest" >> $GITHUB_ENV
+            echo "IMAGE=geoplanoperation/meedo-v3:stg" >> $GITHUB_ENV
             echo "API_URL=https://meedo-v3-api-stg.geoplanph.com/api/v1" >> $GITHUB_ENV
             echo "DEPLOY_PATH=docker-apps/meedo-v3/stg" >> $GITHUB_ENV
           fi
