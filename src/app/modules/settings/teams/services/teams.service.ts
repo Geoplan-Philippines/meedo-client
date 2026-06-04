@@ -16,13 +16,6 @@ export interface CreateTeamPayload {
   organizationId?: string;
 }
 
-export interface UpdateTeamPayload {
-  teamId: string;
-  data: {
-    name?: string;
-  };
-}
-
 @Injectable({ providedIn: 'root' })
 export class TeamsService {
   private readonly http = inject(HttpClient);
@@ -41,7 +34,7 @@ export class TeamsService {
     });
   }
 
-  updateTeam(teamId: string, data: { name?: string; description?: string }) {
+  updateTeam(teamId: string, data: { name?: string }) {
     return this.http.post<Team>(
       `${this.baseUrl}/update-team`,
       { teamId, data },

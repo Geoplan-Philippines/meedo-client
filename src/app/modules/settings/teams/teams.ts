@@ -13,7 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { TeamsService, Team } from './services/teams.service';
 import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
-import { AuthService } from '../../../../../src/app/core/auth/auth.service';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-teams',

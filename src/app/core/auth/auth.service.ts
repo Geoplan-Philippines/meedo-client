@@ -23,7 +23,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this._session() !== null);
 
   readonly organizationId = computed(() =>
-  this._session()?.session?.activeOrganizationId ?? null
+    this._session()?.session?.activeOrganizationId ?? null
 );
 
   async initialize(): Promise<void> {
@@ -34,10 +34,10 @@ export class AuthService {
     }
   }
 
-private async loadSession(): Promise<void> {
-  const { data } = await this.client.getSession();
-  this._session.set(data as SessionData);
-}
+  private async loadSession(): Promise<void> {
+    const { data } = await this.client.getSession();
+    this._session.set(data as SessionData);
+  }
 
   async login(payload: { email: string; password: string }) {
     const { data, error } = await this.client.signIn.email({
@@ -70,3 +70,4 @@ private async loadSession(): Promise<void> {
     this._session.set(null);
   }
 }
+
