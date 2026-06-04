@@ -8,12 +8,12 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { TeamsService, Team, CreateTeamPayload, UpdateTeamPayload } from './services/teams.service';
+import { TeamsService, Team } from './services/teams.service';
 import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-teams',
@@ -23,7 +23,6 @@ import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
     ButtonModule,
     DialogModule,
     InputTextModule,
-    TextareaModule,
     ConfirmDialogModule,
     ToastModule,
     DatePipe,
@@ -34,13 +33,13 @@ import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
   styleUrl: './teams.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-
 export class Teams implements OnInit {
   private readonly teamsService = inject(TeamsService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly refresh$ = new Subject<void>();
+  private readonly authService = inject(AuthService);
 
   readonly teams = signal<Team[]>([]);
   readonly isLoading = signal(false);
@@ -48,15 +47,12 @@ export class Teams implements OnInit {
   readonly isEditing = signal(false);
   readonly isSaving = signal(false);
   readonly isDeleting = signal(false);
-
   readonly selectedTeam = signal<Team | null>(null);
+
   readonly teamForm = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required],
-    }),
-    description: new FormControl('', {
-      nonNullable: true,
     }),
   });
 
@@ -65,7 +61,19 @@ export class Teams implements OnInit {
       .pipe(
         switchMap(() => {
           this.isLoading.set(true);
-          return this.teamsService.getTeams().pipe(
+          const organizationId = this.authService.organizationId();
+
+          if (!organizationId) {
+            this.isLoading.set(false);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'No organization selected',
+            });
+            return EMPTY;
+          }
+
+          return this.teamsService.getTeams(organizationId).pipe(
             catchError((err) => {
               console.error('Error loading teams:', err);
               this.messageService.add({
@@ -82,14 +90,14 @@ export class Teams implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.teams.set(res.data);
+          this.teams.set(res);
           this.isLoading.set(false);
         },
       });
 
     this.refresh$.next();
   }
-  
+
   loadTeams(): void {
     this.refresh$.next();
   }
@@ -98,12 +106,7 @@ export class Teams implements OnInit {
     this.isEditing.set(false);
     this.selectedTeam.set(null);
     this.isSaving.set(false);
-    
-    this.teamForm.reset({
-      name: '',
-      description: '',
-    });
-
+    this.teamForm.reset({ name: '' });
     this.dialogVisible.set(true);
   }
 
@@ -111,12 +114,7 @@ export class Teams implements OnInit {
     this.isEditing.set(true);
     this.selectedTeam.set(team);
     this.isSaving.set(false);
-
-    this.teamForm.patchValue({
-      name: team.name,
-      description: team.description ?? '',
-    });
-
+    this.teamForm.patchValue({ name: team.name });
     this.dialogVisible.set(true);
   }
 
@@ -129,17 +127,28 @@ export class Teams implements OnInit {
     this.isSaving.set(true);
 
     const formValue = this.teamForm.getRawValue();
+    const organizationId = this.authService.organizationId();
 
-    const payload: CreateTeamPayload | UpdateTeamPayload = {
-      name: formValue.name.trim(),
-      description: formValue.description.trim() || undefined,
-    };
+    if (!organizationId) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No organization selected',
+      });
+      this.isSaving.set(false);
+      return;
+    }
 
     const selectedTeam = this.selectedTeam();
 
     const request$ = this.isEditing() && selectedTeam
-      ? this.teamsService.updateTeam(selectedTeam.id, payload)
-      : this.teamsService.createTeam(payload as CreateTeamPayload);
+      ? this.teamsService.updateTeam(selectedTeam.id, {
+          name: formValue.name.trim(),
+        })
+      : this.teamsService.createTeam({
+          name: formValue.name.trim(),
+          organizationId,
+        });
 
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {

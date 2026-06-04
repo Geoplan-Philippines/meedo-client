@@ -3,18 +3,28 @@ import { createAuthClient } from 'better-auth/client';
 import { environment } from '../../../environments/environment.dev';
 import { AuthUser } from './auth.types';
 
-type SessionData = { user: AuthUser } | null;
+type SessionData = {
+  session: {
+    activeOrganizationId: string | null;
+    activeTeamId: string | null;
+  };
+  user: AuthUser;
+} | null;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly client = createAuthClient({
     baseURL: `${environment.apiBaseUrl}/auth`,
-  });
+  }); 
 
   private readonly _session = signal<SessionData>(null);
 
   readonly currentUser = computed(() => this._session()?.user ?? null);
   readonly isAuthenticated = computed(() => this._session() !== null);
+
+  readonly organizationId = computed(() =>
+    this._session()?.session?.activeOrganizationId ?? null
+);
 
   async initialize(): Promise<void> {
     try {
@@ -34,9 +44,11 @@ export class AuthService {
       email: payload.email,
       password: payload.password,
     });
+
     if (data) {
-      this._session.set({ user: data.user as AuthUser });
+      await this.loadSession();
     }
+
     return { data, error };
   }
 
@@ -46,8 +58,9 @@ export class AuthService {
       password,
       name,
     });
+
     if (data) {
-      this._session.set({ user: data.user as AuthUser });
+      await this.loadSession();
     }
     return { data, error };
   }
@@ -57,3 +70,4 @@ export class AuthService {
     this._session.set(null);
   }
 }
+
