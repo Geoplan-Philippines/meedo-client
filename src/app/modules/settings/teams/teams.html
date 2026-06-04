@@ -27,7 +27,6 @@
     <ng-template pTemplate="header">
       <tr>
         <th scope="col">Name</th>
-        <th scope="col">Description</th>
         <th scope="col">Created</th>
         <th scope="col" style="width: 8rem">Actions</th>
       </tr>
@@ -36,7 +35,6 @@
     <ng-template pTemplate="body" let-team>
       <tr>
         <td>{{ team.name }}</td>
-        <td>{{ team.description || '—' }}</td>
         <td>{{ team.createdAt | date: 'mediumDate' }}</td>
         <td>
           <div class="flex gap-2">
@@ -89,16 +87,7 @@
       />
     </div>
 
-    <div class="flex flex-col gap-1">
-      <label for="team-desc" class="text-sm font-medium">Description</label>
-      <textarea
-        id="team-desc"
-        pTextarea
-        formControlName="description"
-        placeholder="Optional description"
-        rows="3"
-      ></textarea>
-    </div>
+
   </form>
 
   <ng-template pTemplate="footer">

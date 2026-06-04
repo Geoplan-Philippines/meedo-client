@@ -5,7 +5,6 @@ import { environment } from '../../../../../environments/environment.dev';
 export interface Team {
   id: string;
   name: string;
-  description?: string;
   isArchived: boolean;
   organizationId: string;
   createdAt: string;
@@ -14,32 +13,47 @@ export interface Team {
 
 export interface CreateTeamPayload {
   name: string;
-  description?: string;
+  organizationId?: string;
 }
 
 export interface UpdateTeamPayload {
-  name?: string;
-  description?: string;
+  teamId: string;
+  data: {
+    name?: string;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
 export class TeamsService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/teams`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/auth/organization`;
 
-  getTeams() {
-    return this.http.get<{ data: Team[] }>(this.baseUrl);
+  getTeams(organizationId: string) {
+    return this.http.get<Team[]>(`${this.baseUrl}/list-teams`, {
+      params: { organizationId },
+      withCredentials: true,
+    });
   }
 
   createTeam(payload: CreateTeamPayload) {
-    return this.http.post<{ data: Team }>(this.baseUrl, payload);
+    return this.http.post<Team>(`${this.baseUrl}/create-team`, payload, {
+      withCredentials: true,
+    });
   }
 
-  updateTeam(id: string, payload: UpdateTeamPayload) {
-    return this.http.patch<{ data: Team }>(`${this.baseUrl}/${id}`, payload);
+  updateTeam(teamId: string, data: { name?: string; description?: string }) {
+    return this.http.post<Team>(
+      `${this.baseUrl}/update-team`,
+      { teamId, data },
+      { withCredentials: true }
+    );
   }
 
-  deleteTeam(id: string) {
-    return this.http.delete<{ data: Team }>(`${this.baseUrl}/${id}`);
+  deleteTeam(teamId: string) {
+    return this.http.post<void>(
+      `${this.baseUrl}/remove-team`,
+      { teamId },
+      { withCredentials: true }
+    );
   }
 }
