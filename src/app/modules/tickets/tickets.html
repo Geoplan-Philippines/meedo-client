@@ -1,6 +1,333 @@
-<main class="p-4 md:p-8">
-  <h1>Tickets</h1>
-  <p-button 
-    label="Create Ticket" 
-  />
-</main>
+<p-toast />
+
+<div class="tickets-page">
+
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Tickets</h1>
+      <p class="page-subtitle">Manage and track your support tickets</p>
+    </div>
+    <button class="add-btn" type="button" (click)="openCreateDialog()">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      <span>Create Ticket</span>
+    </button>
+  </header>
+
+  <div class="stats-grid" role="list" aria-label="Ticket statistics">
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--total" aria-hidden="true">
+        <i class="pi pi-ticket"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ isLoading() ? '—' : stats().total }}</span>
+        <span class="stat-label">Total Tickets</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--urgent" aria-hidden="true">
+        <i class="pi pi-bolt"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ isLoading() ? '—' : stats().urgent }}</span>
+        <span class="stat-label">Urgent</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--high" aria-hidden="true">
+        <i class="pi pi-arrow-up"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ isLoading() ? '—' : stats().high }}</span>
+        <span class="stat-label">High Priority</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--overdue" aria-hidden="true">
+        <i class="pi pi-clock"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ isLoading() ? '—' : stats().overdue }}</span>
+        <span class="stat-label">Overdue</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="search-box">
+        <i class="pi pi-search search-icon" aria-hidden="true"></i>
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Search by title or description…"
+          aria-label="Search tickets"
+          (input)="onSearch($event)"
+        />
+      </div>
+    </div>
+
+    @if (isLoading()) {
+      <div class="skeleton-list" role="status" aria-label="Loading tickets">
+        @for (row of skeletonRows; track row) {
+          <div class="skeleton-row">
+            <p-skeleton width="12rem" height="0.875rem" />
+            <p-skeleton width="8rem" height="0.875rem" />
+            <p-skeleton width="6rem" height="0.875rem" />
+            <p-skeleton width="5rem" height="1.5rem" borderRadius="100px" />
+          </div>
+        }
+      </div>
+    } @else {
+      <p-table
+        [value]="filteredTickets()"
+        [tableStyle]="{ 'width': '100%' }"
+        class="tickets-table"
+        [paginator]="true"
+        [rows]="10"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} tickets"
+        [rowHover]="true"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="title" scope="col">
+              <div class="th-content">Title <p-sortIcon field="title" /></div>
+            </th>
+            <th pSortableColumn="priority" scope="col">
+              <div class="th-content">Priority <p-sortIcon field="priority" /></div>
+            </th>
+            <th scope="col">
+              <div class="th-content">Status</div>
+            </th>
+            <th pSortableColumn="dueDate" scope="col">
+              <div class="th-content">Due Date <p-sortIcon field="dueDate" /></div>
+            </th>
+            <th scope="col">
+              <div class="th-content">Actions</div>
+            </th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-ticket>
+          <tr class="ticket-row">
+            <td>
+              <div class="ticket-title-cell">
+                <span class="ticket-title">{{ ticket.title }}</span>
+                <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
+              </div>
+            </td>
+            <td>
+              <span [class]="getPriorityClass(ticket.priority)">
+                <span class="priority-dot" aria-hidden="true"></span>
+                {{ ticket.priority | titlecase }}
+              </span>
+            </td>
+            <td>
+              @if (ticket.ticketStatus) {
+                <span
+                  class="status-badge"
+                  [style.background-color]="ticket.ticketStatus.color + '22'"
+                  [style.color]="ticket.ticketStatus.color"
+                >
+                  {{ ticket.ticketStatus.name }}
+                </span>
+              } @else {
+                <span class="empty-cell">—</span>
+              }
+            </td>
+            <td class="date-cell">
+              {{ ticket.dueDate ? (ticket.dueDate | date: 'MMM d, y') : '—' }}
+            </td>
+            <td>
+              <button class="view-btn" type="button" (click)="openDetailDialog(ticket)">
+                <i class="pi pi-eye"></i>
+                <span>View</span>
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <div class="empty-icon" aria-hidden="true">
+                  <i class="pi pi-ticket"></i>
+                </div>
+                <p class="empty-title">No tickets found</p>
+                <p class="empty-body">
+                  @if (searchTerm()) {
+                    No tickets match "{{ searchTerm() }}". Try different keywords.
+                  } @else {
+                    Get started by creating your first ticket.
+                  }
+                </p>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </div>
+</div>
+
+<p-dialog
+  header="Create Ticket"
+  [modal]="true"
+  [visible]="createDialogVisible()"
+  (onHide)="closeCreateDialog()"
+  [style]="{ width: '560px' }"
+  [draggable]="false"
+>
+  <form [formGroup]="ticketForm" class="dialog-form">
+
+    <div class="form-field">
+      <label class="form-label">Title <span class="required">*</span></label>
+      <input pInputText formControlName="title" placeholder="Enter ticket title" class="w-full" />
+      @if (ticketForm.get('title')?.invalid && ticketForm.get('title')?.touched) {
+        <small class="form-error">Title is required.</small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Description</label>
+      <textarea pTextarea formControlName="description" placeholder="Enter ticket description" rows="3" class="w-full"></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Priority</label>
+        <p-select formControlName="priority" [options]="priorities" optionLabel="label" optionValue="value" placeholder="Select priority" class="w-full" appendTo="body" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Due Date</label>
+        <p-datepicker formControlName="dueDate" placeholder="Select due date" [showIcon]="true" class="w-full" appendTo="body" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Status</label>
+        <p-select formControlName="ticketStatusId" [options]="statuses()" optionLabel="name" optionValue="id" placeholder="Select status" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Category</label>
+        <p-select formControlName="categoryId" [options]="categories()" optionLabel="name" optionValue="id" placeholder="Select category" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Project</label>
+        <p-select formControlName="projectId" [options]="projects()" optionLabel="displayName" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Team</label>
+        <p-select formControlName="teamId" [options]="teams()" optionLabel="name" optionValue="id" placeholder="Select team" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Assigned To</label>
+      <p-select formControlName="assigneeId" [options]="members()" optionLabel="displayName" optionValue="id" placeholder="Select member" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+    </div>
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="closeCreateDialog()"
+      [disabled]="isSaving()"
+    />
+    <p-button
+      label="Create Ticket"
+      icon="pi pi-check"
+      (onClick)="saveTicket()"
+      [loading]="isSaving()"
+    />
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  [header]="'Ticket #' + (selectedTicket()?.ticketNumber ?? '')"
+  [modal]="true"
+  [visible]="detailDialogVisible()"
+(onHide)="closeDetailDialog()"
+  [style]="{ width: '580px' }"
+  [draggable]="false"
+>
+  @if (selectedTicket(); as ticket) {
+    <div class="detail-grid">
+
+      <div class="detail-field detail-field--full">
+        <span class="detail-label">Title</span>
+        <span class="detail-value detail-title">{{ ticket.title }}</span>
+      </div>
+
+      @if (ticket.description) {
+        <div class="detail-field detail-field--full">
+          <span class="detail-label">Description</span>
+          <span class="detail-value">{{ ticket.description }}</span>
+        </div>
+      }
+
+      <div class="detail-field">
+        <span class="detail-label">Priority</span>
+        <span [class]="getPriorityClass(ticket.priority)">
+          <span class="priority-dot"></span>
+          {{ ticket.priority | titlecase }}
+        </span>
+      </div>
+
+      <div class="detail-field">
+        <span class="detail-label">Status</span>
+        @if (ticket.ticketStatus) {
+          <span
+            class="status-badge"
+            [style.background-color]="ticket.ticketStatus.color + '22'"
+            [style.color]="ticket.ticketStatus.color"
+          >
+            {{ ticket.ticketStatus.name }}
+          </span>
+        } @else {
+          <span class="empty-cell">—</span>
+        }
+      </div>
+
+      <div class="detail-field">
+        <span class="detail-label">Due Date</span>
+        <span class="detail-value">
+          {{ ticket.dueDate ? (ticket.dueDate | date: 'MMM d, y') : '—' }}
+        </span>
+      </div>
+
+      <div class="detail-field">
+        <span class="detail-label">Created</span>
+        <span class="detail-value">{{ ticket.createdAt | date: 'MMM d, y' }}</span>
+      </div>
+
+      <div class="detail-field">
+        <span class="detail-label">Ticket Number</span>
+        <span class="detail-value">#{{ ticket.ticketNumber }}</span>
+      </div>
+
+      <div class="detail-field">
+        <span class="detail-label">Assigned</span>
+        <span class="detail-value">{{ ticket.assigneeId ?? '—' }}</span>
+      </div>
+
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Close"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="closeDetailDialog()"
+    />
+  </ng-template>
+</p-dialog>
