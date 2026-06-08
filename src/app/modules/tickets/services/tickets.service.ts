@@ -3,6 +3,20 @@ import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment.dev';
 
+export interface TicketAssignee {
+  id: string;
+  memberId: string;
+  member: {
+    id: string;
+    user: {
+      id: string;
+      name: string | null;
+      email: string;
+      image: string | null;
+    };
+  };
+}
+
 export interface Ticket {
   id: string;
   title: string;
@@ -10,7 +24,7 @@ export interface Ticket {
   description?: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate?: string;
-  assigneeId?: string;
+  assignees?: TicketAssignee[];
   ticketStatusId: string;
   categoryId?: string;
   projectId?: string;
@@ -34,7 +48,7 @@ export interface CreateTicketPayload {
   categoryId?: string;
   projectId?: string;
   teamId?: string;
-  assigneeId?: string;
+  assigneeIds?: string[];
 }
 
 interface PaginatedApiResponse<T> {
@@ -71,8 +85,10 @@ export class TicketsService {
   }
 
   createTicket(payload: CreateTicketPayload) {
-    return this.http.post<Ticket>(this.baseUrl, payload, {
-      withCredentials: true,
-    });
+    return this.http
+      .post<{ statusCode: number; message: string; data: Ticket }>(this.baseUrl, payload, {
+        withCredentials: true,
+      })
+      .pipe(map(res => res.data));
   }
 }

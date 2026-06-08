@@ -229,7 +229,7 @@
 
     <div class="form-field">
       <label class="form-label" for="ticket-assignee">Assigned To</label>
-      <p-select inputId="ticket-assignee" formControlName="assigneeId" [options]="members()" optionLabel="displayName" optionValue="id" placeholder="Select member" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+      <p-multiSelect inputId="ticket-assignee" formControlName="assigneeIds" [options]="members()" optionLabel="displayName" optionValue="id" placeholder="Select members" display="chip" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
     </div>
 
   </form>
@@ -316,7 +316,7 @@
 
       <div class="detail-field">
         <span class="detail-label">Assigned</span>
-        <span class="detail-value">{{ getMemberName(ticket.assigneeId) }}</span>
+        <span class="detail-value">{{ getMemberNames(ticket) }}</span>
       </div>
 
     </div>

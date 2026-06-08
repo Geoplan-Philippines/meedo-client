@@ -19,6 +19,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -41,6 +42,7 @@ import { AuthService } from '../../core/auth/auth.service';
     InputTextModule,
     TextareaModule,
     SelectModule,
+    MultiSelectModule,
     DatePickerModule,
     ToastModule,
     DatePipe,
@@ -66,6 +68,8 @@ export class Tickets implements OnInit {
   readonly isLoading = signal(false);
   private readonly loadTrigger$ = new Subject<void>();
   private readonly loadedAt = signal(Date.now());
+
+  private readonly assigneeOverrides = new Map<string, string[]>();
 
   readonly tickets = toSignal(
     this.loadTrigger$.pipe(
@@ -98,6 +102,13 @@ export class Tickets implements OnInit {
   readonly members = signal<OrgMember[]>([]);
 
   readonly skeletonRows = [1, 2, 3, 4, 5];
+
+  private readonly mockMembers: OrgMember[] = [
+    { id: 'mock-1', userId: 'mock-1', organizationId: '', role: 'member', displayName: 'Clark',    user: { id: 'mock-1', name: 'Clark',    email: '', image: null } },
+    { id: 'mock-2', userId: 'mock-2', organizationId: '', role: 'member', displayName: 'Chester',  user: { id: 'mock-2', name: 'Chester',  email: '', image: null } },
+    { id: 'mock-3', userId: 'mock-3', organizationId: '', role: 'member', displayName: 'Ace',      user: { id: 'mock-3', name: 'Ace',      email: '', image: null } },
+    { id: 'mock-4', userId: 'mock-4', organizationId: '', role: 'member', displayName: 'Patricia', user: { id: 'mock-4', name: 'Patricia', email: '', image: null } },
+  ];
 
   readonly priorities = [
     { label: 'Low', value: 'LOW' },
@@ -138,7 +149,7 @@ export class Tickets implements OnInit {
     categoryId: new FormControl('', { nonNullable: true }),
     projectId: new FormControl('', { nonNullable: true }),
     teamId: new FormControl('', { nonNullable: true }),
-    assigneeId: new FormControl('', { nonNullable: true }),
+    assigneeIds: new FormControl<string[]>([], { nonNullable: true }),
   });
 
   onSearch(event: Event): void {
@@ -169,7 +180,7 @@ export class Tickets implements OnInit {
           this.statuses.set(res.statuses);
           this.projects.set(res.projects);
           this.teams.set(res.teams as Team[]);
-          this.members.set(res.members);
+          this.members.set([...res.members, ...this.mockMembers]);
           this.isLoadingDropdowns.set(false);
         },
         error: (err: unknown) => {
@@ -188,6 +199,15 @@ export class Tickets implements OnInit {
     if (!assigneeId) return '—';
     const member = this.members().find(m => m.id === assigneeId);
     return member?.displayName ?? assigneeId;
+  }
+
+  getMemberNames(ticket: Ticket): string {
+    const backendIds = (ticket.assignees ?? []).map(a => a.memberId);
+    const overrideIds = this.assigneeOverrides.get(ticket.id) ?? [];
+    const mockIds = overrideIds.filter(id => id.startsWith('mock-'));
+    const ids = [...backendIds, ...mockIds];
+    if (!ids.length) return '—';
+    return ids.map(id => this.getMemberName(id)).join(', ');
   }
 
   getPriorityClass(priority: string): string {
@@ -210,7 +230,7 @@ export class Tickets implements OnInit {
       categoryId: '',
       projectId: '',
       teamId: '',
-      assigneeId: '',
+      assigneeIds: [],
     });
     this.createDialogVisible.set(true);
   }
@@ -236,6 +256,7 @@ export class Tickets implements OnInit {
 
     this.isSaving.set(true);
     const formValue = this.ticketForm.getRawValue();
+    const selectedIds = formValue.assigneeIds;
 
     const payload: CreateTicketPayload = {
       title: formValue.title.trim(),
@@ -246,13 +267,16 @@ export class Tickets implements OnInit {
       categoryId: formValue.categoryId || undefined,
       projectId: formValue.projectId || undefined,
       teamId: formValue.teamId || undefined,
-      assigneeId: formValue.assigneeId || undefined,
+      assigneeIds: selectedIds.filter(id => !id.startsWith('mock-')),
     };
 
     this.ticketsService.createTicket(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (ticket) => {
+          if (selectedIds.length) {
+            this.assigneeOverrides.set(ticket.id, selectedIds);
+          }
           this.messageService.add({
             severity: 'success',
             summary: 'Success',
