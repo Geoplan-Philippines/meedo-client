@@ -10,7 +10,7 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Subject, forkJoin, of, switchMap, finalize, catchError } from 'rxjs';
+import { Subject, forkJoin, of, switchMap, finalize, catchError, tap } from 'rxjs';
 
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -65,12 +65,14 @@ export class Tickets implements OnInit {
 
   readonly isLoading = signal(false);
   private readonly loadTrigger$ = new Subject<void>();
+  private readonly loadedAt = signal(Date.now());
 
   readonly tickets = toSignal(
     this.loadTrigger$.pipe(
       switchMap(() => {
         this.isLoading.set(true);
         return this.ticketsService.getAll().pipe(
+          tap(() => this.loadedAt.set(Date.now())),
           catchError((err: unknown) => {
             console.error('Error loading tickets:', err);
             return of([] as Ticket[]);
@@ -106,7 +108,7 @@ export class Tickets implements OnInit {
 
   readonly stats = computed(() => {
     const all = this.tickets();
-    const now = Date.now();
+    const now = this.loadedAt();
     return {
       total: all.length,
       urgent: all.filter(t => t.priority === 'URGENT').length,
@@ -157,17 +159,17 @@ export class Tickets implements OnInit {
       categories: this.categoriesService.getAll(),
       statuses: this.statusesService.getAll(),
       projects: this.projectsService.getAll(),
-      teams: organizationId ? this.teamsService.getTeams(organizationId) : of([]),
-      members: organizationId ? this.membersService.getMembers(organizationId) : of([]),
+      teams: organizationId ? this.teamsService.getTeams(organizationId) : of([] as Team[]),
+      members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.categories.set(this.toArray<TicketCategory>(res.categories));
-          this.statuses.set(this.toArray<Status>(res.statuses));
-          this.projects.set(res.projects as Project[]);
-          this.teams.set(this.toArray<Team>(res.teams));
-          this.members.set(this.toArray<OrgMember>(res.members));
+          this.categories.set(res.categories);
+          this.statuses.set(res.statuses);
+          this.projects.set(res.projects);
+          this.teams.set(res.teams as Team[]);
+          this.members.set(res.members);
           this.isLoadingDropdowns.set(false);
         },
         error: (err: unknown) => {
@@ -182,21 +184,10 @@ export class Tickets implements OnInit {
       });
   }
 
-  private toArray<T>(response: unknown): T[] {
-    if (Array.isArray(response)) {
-      return response as T[];
-    }
-
-    if (
-      response &&
-      typeof response === 'object' &&
-      'data' in response &&
-      Array.isArray((response as { data: unknown }).data)
-    ) {
-      return (response as { data: T[] }).data;
-    }
-
-    return [];
+  getMemberName(assigneeId?: string): string {
+    if (!assigneeId) return '—';
+    const member = this.members().find(m => m.id === assigneeId);
+    return member?.displayName ?? assigneeId;
   }
 
   getPriorityClass(priority: string): string {

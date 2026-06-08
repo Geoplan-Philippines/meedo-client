@@ -60,7 +60,14 @@ export class TicketsService {
         params: { page: 1, limit: 50 },
         withCredentials: true,
       })
-      .pipe(map(res => res.data));
+      .pipe(
+        map(res => {
+          if (res.meta.lastPage > 1) {
+            console.warn(`[TicketsService] Only page 1 of ${res.meta.lastPage} loaded (${res.meta.total} total). Increase limit or implement pagination.`);
+          }
+          return res.data;
+        }),
+      );
   }
 
   createTicket(payload: CreateTicketPayload) {

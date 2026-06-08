@@ -126,7 +126,7 @@
               @if (ticket.ticketStatus) {
                 <span
                   class="status-badge"
-                  [style.background-color]="ticket.ticketStatus.color + '22'"
+                  [style.background-color]="'color-mix(in srgb, ' + ticket.ticketStatus.color + ' 13%, transparent)'"
                   [style.color]="ticket.ticketStatus.color"
                 >
                   {{ ticket.ticketStatus.name }}
@@ -182,54 +182,54 @@
   <form [formGroup]="ticketForm" class="dialog-form">
 
     <div class="form-field">
-      <label class="form-label">Title <span class="required">*</span></label>
-      <input pInputText formControlName="title" placeholder="Enter ticket title" class="w-full" />
+      <label class="form-label" for="ticket-title">Title <span class="required" aria-hidden="true">*</span></label>
+      <input id="ticket-title" pInputText formControlName="title" placeholder="Enter ticket title" class="w-full" aria-required="true" />
       @if (ticketForm.get('title')?.invalid && ticketForm.get('title')?.touched) {
-        <small class="form-error">Title is required.</small>
+        <small class="form-error" role="alert">Title is required.</small>
       }
     </div>
 
     <div class="form-field">
-      <label class="form-label">Description</label>
-      <textarea pTextarea formControlName="description" placeholder="Enter ticket description" rows="3" class="w-full"></textarea>
+      <label class="form-label" for="ticket-description">Description</label>
+      <textarea id="ticket-description" pTextarea formControlName="description" placeholder="Enter ticket description" rows="3" class="w-full"></textarea>
     </div>
 
     <div class="form-row">
       <div class="form-field">
-        <label class="form-label">Priority</label>
-        <p-select formControlName="priority" [options]="priorities" optionLabel="label" optionValue="value" placeholder="Select priority" class="w-full" appendTo="body" />
+        <label class="form-label" for="ticket-priority">Priority</label>
+        <p-select inputId="ticket-priority" formControlName="priority" [options]="priorities" optionLabel="label" optionValue="value" placeholder="Select priority" class="w-full" appendTo="body" />
       </div>
       <div class="form-field">
-        <label class="form-label">Due Date</label>
-        <p-datepicker formControlName="dueDate" placeholder="Select due date" [showIcon]="true" class="w-full" appendTo="body" />
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-field">
-        <label class="form-label">Status</label>
-        <p-select formControlName="ticketStatusId" [options]="statuses()" optionLabel="name" optionValue="id" placeholder="Select status" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
-      </div>
-      <div class="form-field">
-        <label class="form-label">Category</label>
-        <p-select formControlName="categoryId" [options]="categories()" optionLabel="name" optionValue="id" placeholder="Select category" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
+        <label class="form-label" for="ticket-due-date">Due Date</label>
+        <p-datepicker inputId="ticket-due-date" formControlName="dueDate" placeholder="Select due date" [showIcon]="true" class="w-full" appendTo="body" />
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-field">
-        <label class="form-label">Project</label>
-        <p-select formControlName="projectId" [options]="projects()" optionLabel="displayName" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+        <label class="form-label" for="ticket-status">Status</label>
+        <p-select inputId="ticket-status" formControlName="ticketStatusId" [options]="statuses()" optionLabel="name" optionValue="id" placeholder="Select status" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
       </div>
       <div class="form-field">
-        <label class="form-label">Team</label>
-        <p-select formControlName="teamId" [options]="teams()" optionLabel="name" optionValue="id" placeholder="Select team" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
+        <label class="form-label" for="ticket-category">Category</label>
+        <p-select inputId="ticket-category" formControlName="categoryId" [options]="categories()" optionLabel="name" optionValue="id" placeholder="Select category" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label" for="ticket-project">Project</label>
+        <p-select inputId="ticket-project" formControlName="projectId" [options]="projects()" optionLabel="displayName" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="ticket-team">Team</label>
+        <p-select inputId="ticket-team" formControlName="teamId" [options]="teams()" optionLabel="name" optionValue="id" placeholder="Select team" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
       </div>
     </div>
 
     <div class="form-field">
-      <label class="form-label">Assigned To</label>
-      <p-select formControlName="assigneeId" [options]="members()" optionLabel="displayName" optionValue="id" placeholder="Select member" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+      <label class="form-label" for="ticket-assignee">Assigned To</label>
+      <p-select inputId="ticket-assignee" formControlName="assigneeId" [options]="members()" optionLabel="displayName" optionValue="id" placeholder="Select member" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
     </div>
 
   </form>
@@ -255,7 +255,7 @@
   [header]="'Ticket #' + (selectedTicket()?.ticketNumber ?? '')"
   [modal]="true"
   [visible]="detailDialogVisible()"
-(onHide)="closeDetailDialog()"
+  (onHide)="closeDetailDialog()"
   [style]="{ width: '580px' }"
   [draggable]="false"
 >
@@ -287,7 +287,7 @@
         @if (ticket.ticketStatus) {
           <span
             class="status-badge"
-            [style.background-color]="ticket.ticketStatus.color + '22'"
+            [style.background-color]="'color-mix(in srgb, ' + ticket.ticketStatus.color + ' 13%, transparent)'"
             [style.color]="ticket.ticketStatus.color"
           >
             {{ ticket.ticketStatus.name }}
@@ -316,7 +316,7 @@
 
       <div class="detail-field">
         <span class="detail-label">Assigned</span>
-        <span class="detail-value">{{ ticket.assigneeId ?? '—' }}</span>
+        <span class="detail-value">{{ getMemberName(ticket.assigneeId) }}</span>
       </div>
 
     </div>
