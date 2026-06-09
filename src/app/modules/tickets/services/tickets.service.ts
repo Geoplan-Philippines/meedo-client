@@ -3,8 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment.dev';
-import { CreateTicketPayload, PaginatedApiResponse, Ticket, UpdateTicketPayload } from '../models/ticket.model';
-import { CreateTicketPayload, Ticket } from '../models/ticket.model';
+import { CreateTicketPayload, Ticket, UpdateTicketPayload } from '../models/ticket.model';
 import { ApiResponse } from '../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
 
