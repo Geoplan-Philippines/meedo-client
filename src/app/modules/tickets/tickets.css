@@ -326,6 +326,11 @@
   color: var(--color-destructive);
 }
 
+.form-field--flex {
+  min-width: 0;
+  overflow: hidden;
+}
+
 /* ─── Empty State ──────────────────────────────────────── */
 .empty-state {
   text-align: center;

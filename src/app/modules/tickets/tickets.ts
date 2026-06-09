@@ -36,7 +36,7 @@ import { OrgMember } from './models/members.model';
 import { Project } from './models/projects.model';
 import { Status } from './models/status.model';
 import { TicketCategory } from './models/ticket-categories.model';
-import { CreateTicketPayload, Ticket } from './models/ticket.model';
+import { CreateTicketPayload, Ticket, UpdateTicketPayload } from './models/ticket.model';
 import { Team } from '../settings/teams/models/teams.model';
 
 @Component({
@@ -76,8 +76,6 @@ export class Tickets implements OnInit {
   private readonly loadTrigger$ = new Subject<void>();
   private readonly loadedAt = signal(Date.now());
 
-  private readonly assigneeOverrides = new Map<string, string[]>();
-
   readonly tickets = toSignal(
     this.loadTrigger$.pipe(
       switchMap(() => {
@@ -101,6 +99,8 @@ export class Tickets implements OnInit {
   readonly selectedTicket = signal<Ticket | null>(null);
   readonly isSaving = signal(false);
   readonly isLoadingDropdowns = signal(false);
+  readonly editDialogVisible = signal(false);
+  readonly isUpdating = signal(false);
 
   readonly categories = signal<TicketCategory[]>([]);
   readonly statuses = signal<Status[]>([]);
@@ -109,13 +109,6 @@ export class Tickets implements OnInit {
   readonly members = signal<OrgMember[]>([]);
 
   readonly skeletonRows = [1, 2, 3, 4, 5];
-
-  private readonly mockMembers: OrgMember[] = [
-    { id: 'mock-1', userId: 'mock-1', organizationId: '', role: 'member', displayName: 'Clark',    user: { id: 'mock-1', name: 'Clark',    email: '', image: null } },
-    { id: 'mock-2', userId: 'mock-2', organizationId: '', role: 'member', displayName: 'Chester',  user: { id: 'mock-2', name: 'Chester',  email: '', image: null } },
-    { id: 'mock-3', userId: 'mock-3', organizationId: '', role: 'member', displayName: 'Ace',      user: { id: 'mock-3', name: 'Ace',      email: '', image: null } },
-    { id: 'mock-4', userId: 'mock-4', organizationId: '', role: 'member', displayName: 'Patricia', user: { id: 'mock-4', name: 'Patricia', email: '', image: null } },
-  ];
 
   readonly priorities = [
     { label: 'Low', value: 'LOW' },
@@ -159,6 +152,21 @@ export class Tickets implements OnInit {
     assigneeIds: new FormControl<string[]>([], { nonNullable: true }),
   });
 
+  readonly editTicketForm = new FormGroup({
+    title: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    description: new FormControl('', { nonNullable: true }),
+    priority: new FormControl<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('MEDIUM', { nonNullable: true }),
+    dueDate: new FormControl<Date | null>(null),
+    ticketStatusId: new FormControl('', { nonNullable: true }),
+    categoryId: new FormControl('', { nonNullable: true }),
+    projectId: new FormControl('', { nonNullable: true }),
+    teamId: new FormControl('', { nonNullable: true }),
+    assigneeIds: new FormControl<string[]>([], { nonNullable: true }),
+  }); 
+
   onSearch(event: Event): void {
     this.searchTerm.set((event.target as HTMLInputElement).value);
   }
@@ -187,7 +195,7 @@ export class Tickets implements OnInit {
           this.statuses.set(res.statuses);
           this.projects.set(res.projects);
           this.teams.set(res.teams as Team[]);
-          this.members.set([...res.members, ...this.mockMembers]);
+          this.members.set(res.members);
           this.isLoadingDropdowns.set(false);
         },
         error: (err: unknown) => {
@@ -202,19 +210,10 @@ export class Tickets implements OnInit {
       });
   }
 
-  getMemberName(assigneeId?: string): string {
-    if (!assigneeId) return '—';
-    const member = this.members().find(m => m.id === assigneeId);
-    return member?.displayName ?? assigneeId;
-  }
-
   getMemberNames(ticket: Ticket): string {
-    const backendIds = (ticket.assignees ?? []).map(a => a.memberId);
-    const overrideIds = this.assigneeOverrides.get(ticket.id) ?? [];
-    const mockIds = overrideIds.filter(id => id.startsWith('mock-'));
-    const ids = [...backendIds, ...mockIds];
-    if (!ids.length) return '—';
-    return ids.map(id => this.getMemberName(id)).join(', ');
+    const assignees = ticket.assignees ?? [];
+    if (!assignees.length) return '—';
+    return assignees.map(a => a.member?.user?.name ?? a.member?.user?.email ?? a.memberId).join(', ');
   }
 
   getPriorityClass(priority: string): string {
@@ -255,6 +254,75 @@ export class Tickets implements OnInit {
     this.detailDialogVisible.set(false);
   }
 
+  openEditDialog(ticket: Ticket): void {
+    this.selectedTicket.set(ticket);
+    this.editTicketForm.reset({
+      title: ticket.title,
+      description: ticket.description ?? '',
+      priority: ticket.priority,
+      dueDate: ticket.dueDate ? new Date(ticket.dueDate) : null,
+      ticketStatusId: ticket.ticketStatusId ?? '',
+      categoryId: ticket.categoryId ?? '',
+      projectId: ticket.projectId ?? '',
+      teamId: ticket.teamId ?? '',
+      assigneeIds: (ticket.assignees ?? []).map(a => a.memberId),
+    });
+    this.editDialogVisible.set(true);
+  }
+
+  closeEditDialog(): void {
+    this.editDialogVisible.set(false);
+  }
+
+  updateTicket(): void {
+    if (this.editTicketForm.invalid) {
+      this.editTicketForm.markAllAsTouched();
+      return;
+    }
+
+    const ticket = this.selectedTicket();
+    if (!ticket) return;
+
+    this.isUpdating.set(true);
+    const formValue = this.editTicketForm.getRawValue();
+
+    const payload: UpdateTicketPayload = {
+      title: formValue.title.trim(),
+      description: formValue.description.trim() || undefined,
+      priority: formValue.priority,
+      dueDate: formValue.dueDate ? formValue.dueDate.toISOString() : undefined,
+      ticketStatusId: formValue.ticketStatusId || undefined,
+      categoryId: formValue.categoryId || undefined,
+      projectId: formValue.projectId || undefined,
+      teamId: formValue.teamId || undefined,
+      assigneeIds: formValue.assigneeIds,
+    };
+
+    this.ticketsService.updateTicket(ticket.id, payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Ticket updated',
+          });
+          this.editDialogVisible.set(false);
+          this.isUpdating.set(false);
+          this.loadTrigger$.next();
+        },
+        error: (err: unknown) => {
+          console.error('Error updating ticket:', err);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to update ticket',
+          });
+          this.isUpdating.set(false);
+        },
+      });
+  }
+
   saveTicket(): void {
     if (this.ticketForm.invalid) {
       this.ticketForm.markAllAsTouched();
@@ -274,16 +342,13 @@ export class Tickets implements OnInit {
       categoryId: formValue.categoryId || undefined,
       projectId: formValue.projectId || undefined,
       teamId: formValue.teamId || undefined,
-      assigneeIds: selectedIds.filter(id => !id.startsWith('mock-')),
+      assigneeIds: selectedIds,
     };
 
     this.ticketsService.createTicket(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (ticket) => {
-          if (selectedIds.length) {
-            this.assigneeOverrides.set(ticket.id, selectedIds);
-          }
           this.messageService.add({
             severity: 'success',
             summary: 'Success',

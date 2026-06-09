@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment.dev';
-import { CreateTicketPayload, PaginatedApiResponse, Ticket } from '../models/ticket.model';
+import { CreateTicketPayload, PaginatedApiResponse, Ticket, UpdateTicketPayload } from '../models/ticket.model';
 
 @Injectable({ providedIn: 'root' })
 export class TicketsService {
@@ -31,6 +31,16 @@ export class TicketsService {
       .post<{ statusCode: number; message: string; data: Ticket }>(this.baseUrl, payload, {
         withCredentials: true,
       })
+      .pipe(map(res => res.data));
+  }
+
+  updateTicket(id: string, payload: UpdateTicketPayload) {
+    return this.http
+      .patch<{ statusCode: number; message: string; data: Ticket }>(
+        `${this.baseUrl}/${id}`,
+        payload,
+        { withCredentials: true },
+      )
       .pipe(map(res => res.data));
   }
 }
