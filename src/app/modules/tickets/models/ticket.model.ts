@@ -1,7 +1,7 @@
 export interface TicketAssignee {
   id: string;
   memberId: string;
-  member: {
+  member?: {
     id: string;
     user: {
       id: string;

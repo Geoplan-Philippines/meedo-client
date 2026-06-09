@@ -165,7 +165,7 @@ export class Tickets implements OnInit {
     projectId: new FormControl('', { nonNullable: true }),
     teamId: new FormControl('', { nonNullable: true }),
     assigneeIds: new FormControl<string[]>([], { nonNullable: true }),
-  }); 
+  });
 
   onSearch(event: Event): void {
     this.searchTerm.set((event.target as HTMLInputElement).value);
@@ -348,7 +348,7 @@ export class Tickets implements OnInit {
     this.ticketsService.createTicket(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (ticket) => {
+        next: () => {
           this.messageService.add({
             severity: 'success',
             summary: 'Success',
