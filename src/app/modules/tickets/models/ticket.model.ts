@@ -1,7 +1,7 @@
 export interface TicketAssignee {
   id: string;
   memberId: string;
-  member: {
+  member?: {
     id: string;
     user: {
       id: string;
@@ -20,7 +20,7 @@ export interface Ticket {
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate?: string;
   assignees?: TicketAssignee[];
-  ticketStatusId: string;
+  ticketStatusId?: string;
   categoryId?: string;
   projectId?: string;
   teamId?: string;
@@ -36,6 +36,30 @@ export interface Ticket {
 
 export interface CreateTicketPayload {
   title: string;
+  description?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  dueDate?: string;
+  ticketStatusId?: string;
+  categoryId?: string;
+  projectId?: string;
+  teamId?: string;
+  assigneeIds?: string[];
+}
+
+export interface PaginatedApiResponse<T> {
+  statusCode: number;
+  message: string;
+  data: T[];
+  meta: {
+    total: number;
+    limit: number;
+    page: number;
+    lastPage: number;
+  };
+}
+
+export interface UpdateTicketPayload {
+  title?: string;
   description?: string;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate?: string;
