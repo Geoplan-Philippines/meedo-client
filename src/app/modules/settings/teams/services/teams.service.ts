@@ -1,20 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment.dev';
-
-export interface Team {
-  id: string;
-  name: string;
-  isArchived: boolean;
-  organizationId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateTeamPayload {
-  name: string;
-  organizationId?: string;
-}
+import { CreateTeamPayload, Team } from '../models/teams.model';
 
 @Injectable({ providedIn: 'root' })
 export class TeamsService {

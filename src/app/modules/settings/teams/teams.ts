@@ -11,9 +11,10 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { TeamsService, Team } from './services/teams.service';
+import { TeamsService } from './services/teams.service';
 import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
+import { Team } from './models/teams.model';
 
 @Component({
   selector: 'app-teams',

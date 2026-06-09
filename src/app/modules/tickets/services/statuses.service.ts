@@ -1,21 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators';
+
 import { environment } from '../../../../environments/environment.dev';
-
-export interface Status {
-  id: string;
-  name: string;
-  color: string;
-  isArchived: boolean;
-  organizationId: string;
-}
-
-interface ApiResponse<T> {
-  statusCode: number;
-  message: string;
-  data: T;
-}
+import { ApiResponse, Status } from '../models/status.model';
 
 @Injectable({ providedIn: 'root' })
 export class StatusesService {

@@ -3,8 +3,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
-import { CrmService, Subscriber } from '../../services/crm.service';
+import { CrmService } from '../../services/crm.service';
 import { getAvatarClass } from '../../utils/avatar.utils';
+import { Subscriber } from '../../models/crm.model';
 
 @Component({
   selector: 'app-subscribers',

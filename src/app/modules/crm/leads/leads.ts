@@ -2,8 +2,9 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
-import { CrmService, Lead, LeadsStats } from '../services/crm.service';
+import { CrmService } from '../services/crm.service';
 import { getAvatarClass } from '../utils/avatar.utils';
+import { Lead, LeadsStats } from '../models/crm.model';
 
 @Component({
   selector: 'app-leads',

@@ -13,11 +13,9 @@ import { TableModule } from 'primeng/table';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
 import {
-  CreateStatusPayload,
-  Status,
   StatusesService,
-  UpdateStatusPayload,
 } from './services/statuses.service';
+import { CreateStatusPayload, Status, UpdateStatusPayload } from './models/status.model';
 
 type DialogMode = 'create' | 'edit';
 

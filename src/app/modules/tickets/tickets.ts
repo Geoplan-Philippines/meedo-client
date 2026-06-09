@@ -24,13 +24,20 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
-import { TicketsService, CreateTicketPayload, Ticket } from './services/tickets.service';
-import { TicketCategoriesService, TicketCategory } from './services/ticket-categories.service';
-import { StatusesService, Status } from './services/statuses.service';
-import { ProjectsService, Project } from './services/projects.service';
-import { TeamsService, Team } from '../settings/teams/services/teams.service';
-import { MembersService, OrgMember } from './services/members.service';
+import { TicketsService } from './services/tickets.service';
+import { TicketCategoriesService } from './services/ticket-categories.service';
+import { StatusesService } from './services/statuses.service';
+import { ProjectsService } from './services/projects.service';
+import { TeamsService } from '../settings/teams/services/teams.service';
+import { MembersService } from './services/members.service';
 import { AuthService } from '../../core/auth/auth.service';
+
+import { OrgMember } from './models/members.model';
+import { Project } from './models/projects.model';
+import { Status } from './models/status.model';
+import { TicketCategory } from './models/ticket-categories.model';
+import { CreateTicketPayload, Ticket } from './models/ticket.model';
+import { Team } from '../settings/teams/models/teams.model';
 
 @Component({
   selector: 'app-tickets',

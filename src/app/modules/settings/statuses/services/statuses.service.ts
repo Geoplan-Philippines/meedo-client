@@ -2,31 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../../environments/environment.dev';
-
-interface Envelope<T> {
-  data: T;
-}
-
-export interface Status {
-  id: string;
-  name: string;
-  color: string;
-  isArchived: boolean;
-  organizationId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateStatusPayload {
-  name: string;
-  color: string;
-}
-
-export interface UpdateStatusPayload {
-  name?: string;
-  color?: string;
-  isArchived?: boolean;
-}
+import { CreateStatusPayload, Envelope, Status, UpdateStatusPayload, } from '../models/status.model';
 
 @Injectable({ providedIn: 'root' })
 export class StatusesService {

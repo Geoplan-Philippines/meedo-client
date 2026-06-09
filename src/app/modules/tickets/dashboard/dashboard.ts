@@ -1,11 +1,5 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-
-interface TicketStat {
-  label: string;
-  value: number;
-  icon: string;
-  tone: 'primary' | 'warn' | 'success' | 'muted';
-}
+import { TicketStat } from './models/dashboard.model';
 
 @Component({
   selector: 'app-tickets-dashboard',

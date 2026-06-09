@@ -1,15 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-
-interface RecognizeResponse {
-  statusCode: number;
-  message: string;
-  data: {
-    matched: boolean;
-    similarity: number;
-    threshold: number;
-  };
-}
+import { RecognizeResponse } from '../models/attendance.model';
 
 @Injectable({
   providedIn: 'root',

@@ -1,28 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators';
+
 import { environment } from '../../../../environments/environment.dev';
-
-export interface Project {
-  id: string;
-  apptivoId: string;
-  workOrderNumber: string;
-  customerName: string;
-  displayName: string;
-  status: string;
-  total: number;
-  reportedDate: string | null;
-}
-
-interface PaginatedProjects {
-  data: Omit<Project, 'displayName'>[];
-  meta: {
-    total: number;
-    limit: number;
-    page: number;
-    lastPage: number;
-  };
-}
+import { PaginatedProjects } from '../models/projects.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProjectsService {

@@ -1,21 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators';
-import { environment } from '../../../../environments/environment.dev';
 
-export interface OrgMember {
-  id: string;
-  userId: string;
-  organizationId: string;
-  role: string;
-  displayName: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image: string | null;
-  };
-}
+import { environment } from '../../../../environments/environment.dev';
+import { OrgMember } from '../models/members.model';
 
 @Injectable({ providedIn: 'root' })
 export class MembersService {
