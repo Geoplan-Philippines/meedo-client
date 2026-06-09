@@ -1,3 +1,5 @@
+import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
+
 export interface Project {
   id: string;
   apptivoId: string;
@@ -9,12 +11,4 @@ export interface Project {
   reportedDate: string | null;
 }
 
-export interface PaginatedProjects {
-  data: Omit<Project, 'displayName'>[];
-  meta: {
-    total: number;
-    limit: number;
-    page: number;
-    lastPage: number;
-  };
-}
+export type PaginatedProjects = PaginatedApiResponse<Omit<Project, 'displayName'>>;

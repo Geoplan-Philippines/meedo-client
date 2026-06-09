@@ -4,6 +4,9 @@ import { map } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment.dev';
 import { CreateTicketPayload, PaginatedApiResponse, Ticket, UpdateTicketPayload } from '../models/ticket.model';
+import { CreateTicketPayload, Ticket } from '../models/ticket.model';
+import { ApiResponse } from '../../../shared/interface/api-response.interface';
+import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
 
 @Injectable({ providedIn: 'root' })
 export class TicketsService {
@@ -28,7 +31,7 @@ export class TicketsService {
 
   createTicket(payload: CreateTicketPayload) {
     return this.http
-      .post<{ statusCode: number; message: string; data: Ticket }>(this.baseUrl, payload, {
+      .post<ApiResponse<Ticket>>(this.baseUrl, payload, {
         withCredentials: true,
       })
       .pipe(map(res => res.data));

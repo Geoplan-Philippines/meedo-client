@@ -4,9 +4,3 @@ export interface TicketCategory {
   description?: string;
   organizationId: string;
 }
-
-export interface ApiResponse<T> {
-  statusCode: number;
-  message: string;
-  data: T;
-}

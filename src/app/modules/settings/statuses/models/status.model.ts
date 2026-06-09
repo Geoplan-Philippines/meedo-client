@@ -1,7 +1,3 @@
-export interface Envelope<T> {
-  data: T;
-}
-
 export interface Status {
   id: string;
   name: string;

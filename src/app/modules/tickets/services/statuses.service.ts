@@ -3,7 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment.dev';
-import { ApiResponse, Status } from '../models/status.model';
+import { Status } from '../models/status.model';
+import { ApiResponse } from '../../../shared/interface/api-response.interface';
 
 @Injectable({ providedIn: 'root' })
 export class StatusesService {
