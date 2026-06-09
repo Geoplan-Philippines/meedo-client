@@ -5,9 +5,3 @@ export interface Status {
   isArchived: boolean;
   organizationId: string;
 }
-
-export interface ApiResponse<T> {
-  statusCode: number;
-  message: string;
-  data: T;
-}

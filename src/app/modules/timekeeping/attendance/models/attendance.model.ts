@@ -1,9 +1,9 @@
-export interface RecognizeResponse {
-  statusCode: number;
-  message: string;
-  data: {
-    matched: boolean;
-    similarity: number;
-    threshold: number;
-  };
+import { ApiResponse } from '../../../../shared/interface/api-response.interface';
+
+export interface RecognitionResult {
+  matched: boolean;
+  similarity: number;
+  threshold: number;
 }
+
+export type RecognizeResponse = ApiResponse<RecognitionResult>;

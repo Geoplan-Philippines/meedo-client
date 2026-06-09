@@ -45,15 +45,3 @@ export interface CreateTicketPayload {
   teamId?: string;
   assigneeIds?: string[];
 }
-
-export interface PaginatedApiResponse<T> {
-  statusCode: number;
-  message: string;
-  data: T[];
-  meta: {
-    total: number;
-    limit: number;
-    page: number;
-    lastPage: number;
-  };
-}
