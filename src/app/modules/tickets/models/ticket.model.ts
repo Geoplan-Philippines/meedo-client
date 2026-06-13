@@ -48,12 +48,13 @@ export interface CreateTicketPayload {
 
 export interface UpdateTicketPayload {
   title?: string;
-  description?: string;
+  // null clears the field on the server; undefined leaves it unchanged.
+  description?: string | null;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-  ticketStatusId?: string;
-  categoryId?: string;
-  projectId?: string;
-  teamId?: string;
+  dueDate?: string | null;
+  ticketStatusId?: string | null;
+  categoryId?: string | null;
+  projectId?: string | null;
+  teamId?: string | null;
   assigneeIds?: string[];
 }

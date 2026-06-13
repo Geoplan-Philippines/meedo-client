@@ -1,48 +1,60 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment.dev';
 import { CreateTicketPayload, Ticket, UpdateTicketPayload } from '../models/ticket.model';
+import { TicketStats } from '../models/ticket-stats.model';
 import { ApiResponse } from '../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
+
+export interface TicketListParams {
+  page: number;
+  limit: number;
+  search?: string;
+  ticketStatusId?: string;
+  priority?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
 @Injectable({ providedIn: 'root' })
 export class TicketsService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/tickets`;
 
-  getAll() {
+  getAll(params: TicketListParams) {
+    let httpParams = new HttpParams()
+      .set('page', params.page)
+      .set('limit', params.limit);
+
+    if (params.search) httpParams = httpParams.set('search', params.search);
+    if (params.ticketStatusId) httpParams = httpParams.set('ticketStatusId', params.ticketStatusId);
+    if (params.priority) httpParams = httpParams.set('priority', params.priority);
+    if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
+    if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
+
+    return this.http.get<PaginatedApiResponse<Ticket>>(this.baseUrl, {
+      params: httpParams,
+      withCredentials: true,
+    });
+  }
+
+  getStats() {
     return this.http
-      .get<PaginatedApiResponse<Ticket>>(this.baseUrl, {
-        params: { page: 1, limit: 50 },
-        withCredentials: true,
-      })
-      .pipe(
-        map(res => {
-          if (res.meta.lastPage > 1) {
-            console.warn(`[TicketsService] Only page 1 of ${res.meta.lastPage} loaded (${res.meta.total} total). Increase limit or implement pagination.`);
-          }
-          return res.data;
-        }),
-      );
+      .get<ApiResponse<TicketStats>>(`${this.baseUrl}/stats`, { withCredentials: true })
+      .pipe(map(res => res.data));
   }
 
   createTicket(payload: CreateTicketPayload) {
     return this.http
-      .post<ApiResponse<Ticket>>(this.baseUrl, payload, {
-        withCredentials: true,
-      })
+      .post<ApiResponse<Ticket>>(this.baseUrl, payload, { withCredentials: true })
       .pipe(map(res => res.data));
   }
 
   updateTicket(id: string, payload: UpdateTicketPayload) {
     return this.http
-      .patch<{ statusCode: number; message: string; data: Ticket }>(
-        `${this.baseUrl}/${id}`,
-        payload,
-        { withCredentials: true },
-      )
+      .patch<ApiResponse<Ticket>>(`${this.baseUrl}/${id}`, payload, { withCredentials: true })
       .pipe(map(res => res.data));
   }
 }
