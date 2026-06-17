@@ -19,10 +19,9 @@ export interface TicketComment {
   updatedAt: string;
 }
 
-export interface CreateCommentPayload {
+export interface CommentPayload {
   body: string;
 }
 
-export interface UpdateCommentPayload {
-  body: string;
-}
+export type CreateCommentPayload = CommentPayload;
+export type UpdateCommentPayload = CommentPayload;

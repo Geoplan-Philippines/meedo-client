@@ -34,6 +34,16 @@ export interface Ticket {
   } | null;
 }
 
+export interface TicketListParams {
+  page: number;
+  limit: number;
+  search?: string;
+  ticketStatusId?: string;
+  priority?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 export interface CreateTicketPayload {
   title: string;
   description?: string;

@@ -11,7 +11,7 @@
       <ul class="flex flex-col gap-2 mb-2" aria-label="Activity timeline">
         @for (activity of activities(); track activity.id) {
           <li class="flex items-center gap-2 text-xs text-body">
-            <i class="pi pi-circle-fill text-primary" style="font-size: 0.45rem" aria-hidden="true"></i>
+            <i class="pi pi-circle-fill text-primary activity-dot" aria-hidden="true"></i>
             <span><strong class="text-heading font-medium">{{ actorName(activity) }}</strong> {{ activityLabel(activity) }}</span>
             <span class="ml-auto">{{ activity.createdAt | date: 'MMM d, h:mm a' }}</span>
           </li>

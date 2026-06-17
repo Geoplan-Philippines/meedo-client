@@ -263,6 +263,13 @@ export class Tickets implements OnInit {
     return assignees.map(a => a.member?.user?.name ?? a.member?.user?.email ?? a.memberId).join(', ');
   }
 
+  private readonly hexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+  /** Only let validated hex colors from the API into inline styles; otherwise fall back to a theme token. */
+  safeStatusColor(color?: string | null): string {
+    return color && this.hexColorPattern.test(color) ? color : 'var(--text-body)';
+  }
+
   getPriorityClass(priority: string): string {
     const map: Record<string, string> = {
       LOW: 'priority-low',

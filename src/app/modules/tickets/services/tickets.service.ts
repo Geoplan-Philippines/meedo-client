@@ -3,20 +3,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment.dev';
-import { CreateTicketPayload, Ticket, UpdateTicketPayload } from '../models/ticket.model';
+import { CreateTicketPayload, Ticket, TicketListParams, UpdateTicketPayload } from '../models/ticket.model';
 import { TicketStats } from '../models/ticket-stats.model';
 import { ApiResponse } from '../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
-
-export interface TicketListParams {
-  page: number;
-  limit: number;
-  search?: string;
-  ticketStatusId?: string;
-  priority?: string;
-  sortField?: string;
-  sortOrder?: 'asc' | 'desc';
-}
 
 @Injectable({ providedIn: 'root' })
 export class TicketsService {

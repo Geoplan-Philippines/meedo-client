@@ -2,8 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  OnInit,
   computed,
+  effect,
   inject,
   input,
   signal,
@@ -28,11 +28,14 @@ import { THREAD_PAGE_SIZE, TICKET_COMMENT_MAX_LENGTH } from '../tickets.constant
   selector: 'app-ticket-thread',
   imports: [ButtonModule, TextareaModule, SkeletonModule, DatePipe, ReactiveFormsModule],
   templateUrl: './ticket-thread.html',
+  styleUrl: './ticket-thread.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TicketThread implements OnInit {
+export class TicketThread {
   private readonly commentsService = inject(CommentsService);
   private readonly activityService = inject(ActivityService);
+  // Intentionally reuses the parent Tickets component's MessageService/<p-toast>.
+  // This component must be rendered within Tickets (project pattern: each feature owns its toast).
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -65,8 +68,14 @@ export class TicketThread implements OnInit {
     validators: [Validators.required, Validators.maxLength(TICKET_COMMENT_MAX_LENGTH)],
   });
 
-  ngOnInit(): void {
-    this.reload();
+  constructor() {
+    // The dialog keeps this component alive and rebinds [ticketId] when another
+    // ticket is opened, so react to ticketId changes instead of loading once in
+    // ngOnInit (which would leave the previous ticket's thread on screen).
+    effect(() => {
+      this.ticketId();
+      this.reload();
+    });
   }
 
   private reload(): void {
@@ -139,17 +148,20 @@ export class TicketThread implements OnInit {
 
     this.isPostingComment.set(true);
     this.commentsService.addComment(this.ticketId(), { body })
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isPostingComment.set(false)))
       .subscribe({
-        next: () => {
+        next: (comment) => {
           this.commentControl.reset('');
-          this.isPostingComment.set(false);
-          this.reload();
+          // Page 1 holds the newest comments (older are appended via "Load more"),
+          // so the new comment belongs at the top.
+          this.comments.update((current) => [comment, ...current]);
+          this.commentsTotal.update((total) => total + 1);
+          // Posting creates a COMMENTED activity entry server-side; refresh just the timeline.
+          this.refreshActivity();
         },
         error: (err: unknown) => {
           console.error('Error posting comment:', err);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to post comment' });
-          this.isPostingComment.set(false);
         },
       });
   }
@@ -174,17 +186,16 @@ export class TicketThread implements OnInit {
 
     this.isSavingComment.set(true);
     this.commentsService.updateComment(this.ticketId(), comment.id, { body })
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isSavingComment.set(false)))
       .subscribe({
-        next: () => {
-          this.isSavingComment.set(false);
+        next: (updated) => {
+          // Editing does not generate an activity entry, so only patch the comment locally.
+          this.comments.update((current) => current.map((c) => (c.id === updated.id ? updated : c)));
           this.cancelEditComment();
-          this.reload();
         },
         error: (err: unknown) => {
           console.error('Error updating comment:', err);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update comment' });
-          this.isSavingComment.set(false);
         },
       });
   }
@@ -192,18 +203,32 @@ export class TicketThread implements OnInit {
   deleteComment(comment: TicketComment): void {
     this.deletingCommentId.set(comment.id);
     this.commentsService.deleteComment(this.ticketId(), comment.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.deletingCommentId.set(null)))
       .subscribe({
         next: () => {
-          this.deletingCommentId.set(null);
-          this.reload();
+          // Deleting does not generate an activity entry, so only update comments locally.
+          this.comments.update((current) => current.filter((c) => c.id !== comment.id));
+          this.commentsTotal.update((total) => Math.max(0, total - 1));
           this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Comment removed' });
         },
         error: (err: unknown) => {
           console.error('Error deleting comment:', err);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete comment' });
-          this.deletingCommentId.set(null);
         },
+      });
+  }
+
+  /** Reloads only the activity timeline (used after a comment creates a server-side activity entry). */
+  private refreshActivity(): void {
+    this.activitiesPage = 1;
+    this.activityService.getActivity(this.ticketId(), 1, THREAD_PAGE_SIZE)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.activities.set(res.data);
+          this.activitiesTotal.set(res.meta.total);
+        },
+        error: (err: unknown) => console.error('Error refreshing activity:', err),
       });
   }
 

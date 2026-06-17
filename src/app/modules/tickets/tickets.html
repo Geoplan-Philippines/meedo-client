@@ -141,8 +141,8 @@
               @if (ticket.ticketStatus) {
                 <span
                   class="status-badge"
-                  [style.background-color]="'color-mix(in srgb, ' + ticket.ticketStatus.color + ' 13%, transparent)'"
-                  [style.color]="ticket.ticketStatus.color"
+                  [style.background-color]="'color-mix(in srgb, ' + safeStatusColor(ticket.ticketStatus.color) + ' 13%, transparent)'"
+                  [style.color]="safeStatusColor(ticket.ticketStatus.color)"
                 >
                   {{ ticket.ticketStatus.name }}
                 </span>
@@ -302,8 +302,8 @@
         @if (ticket.ticketStatus) {
           <span
             class="status-badge"
-            [style.background-color]="'color-mix(in srgb, ' + ticket.ticketStatus.color + ' 13%, transparent)'"
-            [style.color]="ticket.ticketStatus.color"
+            [style.background-color]="'color-mix(in srgb, ' + safeStatusColor(ticket.ticketStatus.color) + ' 13%, transparent)'"
+            [style.color]="safeStatusColor(ticket.ticketStatus.color)"
           >
             {{ ticket.ticketStatus.name }}
           </span>
