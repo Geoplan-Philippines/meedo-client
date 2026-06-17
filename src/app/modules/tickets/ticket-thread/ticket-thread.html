@@ -1,0 +1,84 @@
+<section class="mt-5 border-t border-border pt-4" aria-label="Comments and activity">
+  <h2 class="font-heading text-heading text-sm font-semibold mb-3">Comments &amp; Activity</h2>
+
+  @if (isLoading()) {
+    <div role="status" aria-label="Loading comments and activity" class="flex flex-col gap-2">
+      <p-skeleton width="100%" height="2.5rem" />
+      <p-skeleton width="80%" height="2.5rem" />
+    </div>
+  } @else {
+    @if (activities().length) {
+      <ul class="flex flex-col gap-2 mb-2" aria-label="Activity timeline">
+        @for (activity of activities(); track activity.id) {
+          <li class="flex items-center gap-2 text-xs text-body">
+            <i class="pi pi-circle-fill text-primary activity-dot" aria-hidden="true"></i>
+            <span><strong class="text-heading font-medium">{{ actorName(activity) }}</strong> {{ activityLabel(activity) }}</span>
+            <span class="ml-auto">{{ activity.createdAt | date: 'MMM d, h:mm a' }}</span>
+          </li>
+        }
+      </ul>
+      @if (hasMoreActivity()) {
+        <div class="mb-4">
+          <button type="button" class="text-xs text-primary hover:underline" (click)="loadMoreActivity()" [disabled]="loadingMoreActivity()">
+            {{ loadingMoreActivity() ? 'Loading…' : 'Show older activity' }}
+          </button>
+        </div>
+      }
+    }
+
+    @if (comments().length) {
+      <ul class="flex flex-col gap-3 mb-2" aria-label="Comments">
+        @for (comment of comments(); track comment.id) {
+          <li class="rounded-base border border-border bg-background p-3">
+            <div class="flex items-center justify-between mb-1 gap-2">
+              <span class="text-heading text-sm font-medium">{{ authorName(comment) }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-body text-xs">{{ comment.createdAt | date: 'MMM d, y, h:mm a' }}</span>
+                @if (comment.canModify && editingCommentId() !== comment.id) {
+                  <button type="button" class="text-body hover:text-primary" aria-label="Edit comment" (click)="startEditComment(comment)">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button type="button" class="text-body hover:text-destructive" aria-label="Delete comment" [disabled]="deletingCommentId() === comment.id" (click)="deleteComment(comment)">
+                    <i class="pi pi-trash"></i>
+                  </button>
+                }
+              </div>
+            </div>
+            @if (editingCommentId() === comment.id) {
+              <textarea pTextarea [formControl]="editCommentControl" rows="2" class="w-full" aria-label="Edit comment"></textarea>
+              @if (editCommentControl.invalid && editCommentControl.touched) {
+                <small class="form-error" role="alert">Comment cannot be empty.</small>
+              }
+              <div class="flex justify-end gap-2 mt-2">
+                <p-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="cancelEditComment()" [disabled]="isSavingComment()" />
+                <p-button label="Save" icon="pi pi-check" size="small" (onClick)="saveEditComment(comment)" [loading]="isSavingComment()" />
+              </div>
+            } @else {
+              <p class="text-body text-sm whitespace-pre-line">{{ comment.body }}</p>
+            }
+          </li>
+        }
+      </ul>
+      @if (hasMoreComments()) {
+        <div class="mb-2">
+          <button type="button" class="text-xs text-primary hover:underline" (click)="loadMoreComments()" [disabled]="loadingMoreComments()">
+            {{ loadingMoreComments() ? 'Loading…' : 'Load more comments' }}
+          </button>
+        </div>
+      }
+    } @else {
+      <p class="text-body text-sm mb-4">No comments yet. Be the first to comment.</p>
+    }
+
+    <div class="flex flex-col gap-2 mt-2">
+      <label class="form-label" for="ticket-comment">Add a comment</label>
+      <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Write a comment…" rows="2" class="w-full" aria-label="Add a comment"></textarea>
+      @if (commentControl.invalid && commentControl.touched) {
+        <small class="form-error" role="alert">Comment cannot be empty.</small>
+      }
+      <div class="flex justify-end">
+        <p-button label="Comment" icon="pi pi-send" size="small" (onClick)="postComment()" [loading]="isPostingComment()" [disabled]="isPostingComment()" />
+      </div>
+    </div>
+  }
+</section>

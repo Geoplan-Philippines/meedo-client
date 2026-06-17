@@ -19,7 +19,7 @@
         <i class="pi pi-ticket"></i>
       </div>
       <div class="stat-body">
-        <span class="stat-value">{{ isLoading() ? '—' : stats().total }}</span>
+        <span class="stat-value">{{ stats().total }}</span>
         <span class="stat-label">Total Tickets</span>
       </div>
     </div>
@@ -28,7 +28,7 @@
         <i class="pi pi-bolt"></i>
       </div>
       <div class="stat-body">
-        <span class="stat-value">{{ isLoading() ? '—' : stats().urgent }}</span>
+        <span class="stat-value">{{ stats().urgent }}</span>
         <span class="stat-label">Urgent</span>
       </div>
     </div>
@@ -37,7 +37,7 @@
         <i class="pi pi-arrow-up"></i>
       </div>
       <div class="stat-body">
-        <span class="stat-value">{{ isLoading() ? '—' : stats().high }}</span>
+        <span class="stat-value">{{ stats().high }}</span>
         <span class="stat-label">High Priority</span>
       </div>
     </div>
@@ -46,7 +46,7 @@
         <i class="pi pi-clock"></i>
       </div>
       <div class="stat-body">
-        <span class="stat-value">{{ isLoading() ? '—' : stats().overdue }}</span>
+        <span class="stat-value">{{ stats().overdue }}</span>
         <span class="stat-label">Overdue</span>
       </div>
     </div>
@@ -61,32 +61,47 @@
           class="search-input"
           placeholder="Search by title or description…"
           aria-label="Search tickets"
-          (input)="onSearch($event)"
+          [formControl]="searchControl"
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        <p-select
+          [formControl]="statusFilterControl"
+          [options]="statuses()"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="All statuses"
+          [showClear]="true"
+          aria-label="Filter by status"
+          appendTo="body"
+        />
+        <p-select
+          [formControl]="priorityFilterControl"
+          [options]="priorities"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All priorities"
+          [showClear]="true"
+          aria-label="Filter by priority"
+          appendTo="body"
         />
       </div>
     </div>
 
-    @if (isLoading()) {
-      <div class="skeleton-list" role="status" aria-label="Loading tickets">
-        @for (row of skeletonRows; track row) {
-          <div class="skeleton-row">
-            <p-skeleton width="12rem" height="0.875rem" />
-            <p-skeleton width="8rem" height="0.875rem" />
-            <p-skeleton width="6rem" height="0.875rem" />
-            <p-skeleton width="5rem" height="1.5rem" borderRadius="100px" />
-          </div>
-        }
-      </div>
-    } @else {
       <p-table
-        [value]="filteredTickets()"
+        #dt
+        [value]="tickets()"
+        [lazy]="true"
+        [loading]="isLoading()"
+        [totalRecords]="totalRecords()"
         [tableStyle]="{ 'width': '100%' }"
         class="tickets-table"
         [paginator]="true"
-        [rows]="10"
+        [rows]="rows()"
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} tickets"
         [rowHover]="true"
+        (onLazyLoad)="onLazyLoad($event)"
       >
         <ng-template pTemplate="header">
           <tr>
@@ -126,8 +141,8 @@
               @if (ticket.ticketStatus) {
                 <span
                   class="status-badge"
-                  [style.background-color]="'color-mix(in srgb, ' + ticket.ticketStatus.color + ' 13%, transparent)'"
-                  [style.color]="ticket.ticketStatus.color"
+                  [style.background-color]="'color-mix(in srgb, ' + safeStatusColor(ticket.ticketStatus.color) + ' 13%, transparent)'"
+                  [style.color]="safeStatusColor(ticket.ticketStatus.color)"
                 >
                   {{ ticket.ticketStatus.name }}
                 </span>
@@ -167,7 +182,6 @@
           </tr>
         </ng-template>
       </p-table>
-    }
   </div>
 </div>
 
@@ -201,7 +215,7 @@
       </div>
       <div class="form-field">
         <label class="form-label" for="ticket-due-date">Due Date</label>
-        <p-datepicker inputId="ticket-due-date" formControlName="dueDate" placeholder="Select due date" [showIcon]="true" class="w-full" appendTo="body" />
+        <p-datepicker inputId="ticket-due-date" formControlName="dueDate" placeholder="Select due date" [showIcon]="true" [minDate]="minDueDate" class="w-full" appendTo="body" />
       </div>
     </div>
 
@@ -257,6 +271,7 @@
   [visible]="detailDialogVisible()"
   (onHide)="closeDetailDialog()"
   [style]="{ width: '580px' }"
+  [contentStyle]="{ maxHeight: '70vh', overflow: 'auto' }"
   [draggable]="false"
 >
   @if (selectedTicket(); as ticket) {
@@ -287,8 +302,8 @@
         @if (ticket.ticketStatus) {
           <span
             class="status-badge"
-            [style.background-color]="'color-mix(in srgb, ' + ticket.ticketStatus.color + ' 13%, transparent)'"
-            [style.color]="ticket.ticketStatus.color"
+            [style.background-color]="'color-mix(in srgb, ' + safeStatusColor(ticket.ticketStatus.color) + ' 13%, transparent)'"
+            [style.color]="safeStatusColor(ticket.ticketStatus.color)"
           >
             {{ ticket.ticketStatus.name }}
           </span>
@@ -320,6 +335,8 @@
       </div>
 
     </div>
+
+    <app-ticket-thread [ticketId]="ticket.id" />
   }
 
   <ng-template pTemplate="footer">
@@ -367,7 +384,7 @@
       </div>
       <div class="form-field">
         <label class="form-label" for="edit-ticket-due-date">Due Date</label>
-        <p-datepicker inputId="edit-ticket-due-date" formControlName="dueDate" placeholder="Select due date" [showIcon]="true" class="w-full" appendTo="body" />
+        <p-datepicker inputId="edit-ticket-due-date" formControlName="dueDate" placeholder="Select due date" [showIcon]="true" [minDate]="minDueDate" class="w-full" appendTo="body" />
       </div>
     </div>
 
