@@ -74,7 +74,7 @@ describe('Categories', () => {
     component.form.setValue({ name: 'Software', description: '' });
     component.save();
 
-    expect(serviceMock.create).toHaveBeenCalledWith({ name: 'Software', description: undefined });
+    expect(serviceMock.create).toHaveBeenCalledWith({ name: 'Software', description: '' });
     expect(component.categories()).toContain(created);
     expect(component.isDialogOpen()).toBe(false);
   });
@@ -116,6 +116,19 @@ describe('Categories', () => {
 
     expect(component.error()).toBe('Failed to update ticket category. Please try again.');
     expect(component.isDialogOpen()).toBe(true);
+  });
+
+  it('clears the description when the field is emptied', () => {
+    serviceMock.update.mockReturnValue(of({ ...mockCategory, description: '' }));
+
+    component.openEdit(mockCategory);
+    component.form.controls.description.setValue('');
+    component.save();
+
+    expect(serviceMock.update).toHaveBeenCalledWith(mockCategory.id, {
+      name: mockCategory.name,
+      description: '',
+    });
   });
 
   it('removes a category after confirming delete', () => {

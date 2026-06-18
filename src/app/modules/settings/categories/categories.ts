@@ -1,12 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
+import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { TicketCategoriesService } from '../../tickets/services/ticket-categories.service';
@@ -28,6 +29,7 @@ type DialogMode = 'create' | 'edit';
     ButtonModule,
     DialogModule,
     InputTextModule,
+    TextareaModule,
     TooltipModule,
   ],
   templateUrl: './categories.html',
@@ -36,6 +38,7 @@ type DialogMode = 'create' | 'edit';
 })
 export class Categories implements OnInit {
   private readonly ticketCategoriesService = inject(TicketCategoriesService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly categories = signal<TicketCategory[]>([]);
   readonly isLoading = signal(false);
@@ -66,6 +69,10 @@ export class Categories implements OnInit {
 
   readonly nameLength = computed(() => this.formValue()?.name?.length ?? 0);
   readonly descriptionLength = computed(() => this.formValue()?.description?.length ?? 0);
+  readonly isFormInvalid = computed(() => {
+    this.formValue();
+    return this.form.invalid;
+  });
 
   ngOnInit(): void {
     this.load();
@@ -74,21 +81,25 @@ export class Categories implements OnInit {
   load(): void {
     this.isLoading.set(true);
     this.error.set(null);
-    this.ticketCategoriesService.list().subscribe({
-      next: (data) => {
-        this.categories.set(data);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load ticket categories. Please try again.');
-        this.isLoading.set(false);
-      },
-    });
+    this.ticketCategoriesService
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.categories.set(data);
+          this.isLoading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load ticket categories. Please try again.');
+          this.isLoading.set(false);
+        },
+      });
   }
 
   openCreate(): void {
     this.dialogMode.set('create');
     this.editingCategory.set(null);
+    this.error.set(null);
     this.form.reset({ name: '', description: '' });
     this.isDialogOpen.set(true);
   }
@@ -96,6 +107,7 @@ export class Categories implements OnInit {
   openEdit(category: TicketCategory): void {
     this.dialogMode.set('edit');
     this.editingCategory.set(category);
+    this.error.set(null);
     this.form.reset({
       name: category.name,
       description: category.description ?? '',
@@ -120,19 +132,22 @@ export class Categories implements OnInit {
     if (this.dialogMode() === 'create') {
       const payload: CreateTicketCategoryPayload = {
         name: value.name,
-        description: value.description || undefined,
+        description: value.description.trim(),
       };
-      this.ticketCategoriesService.create(payload).subscribe({
-        next: (created) => {
-          this.categories.update((list) => [...list, created]);
-          this.isSaving.set(false);
-          this.isDialogOpen.set(false);
-        },
-        error: () => {
-          this.isSaving.set(false);
-          this.error.set('Failed to create ticket category. Please try again.');
-        },
-      });
+      this.ticketCategoriesService
+        .create(payload)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (created) => {
+            this.categories.update((list) => [...list, created]);
+            this.isSaving.set(false);
+            this.isDialogOpen.set(false);
+          },
+          error: () => {
+            this.isSaving.set(false);
+            this.error.set('Failed to create ticket category. Please try again.');
+          },
+        });
       return;
     }
 
@@ -143,19 +158,22 @@ export class Categories implements OnInit {
     }
     const payload: UpdateTicketCategoryPayload = {
       name: value.name,
-      description: value.description || undefined,
+      description: value.description.trim(),
     };
-    this.ticketCategoriesService.update(editing.id, payload).subscribe({
-      next: (updated) => {
-        this.categories.update((list) => list.map((c) => (c.id === updated.id ? updated : c)));
-        this.isSaving.set(false);
-        this.isDialogOpen.set(false);
-      },
-      error: () => {
-        this.isSaving.set(false);
-        this.error.set('Failed to update ticket category. Please try again.');
-      },
-    });
+    this.ticketCategoriesService
+      .update(editing.id, payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.categories.update((list) => list.map((c) => (c.id === updated.id ? updated : c)));
+          this.isSaving.set(false);
+          this.isDialogOpen.set(false);
+        },
+        error: () => {
+          this.isSaving.set(false);
+          this.error.set('Failed to update ticket category. Please try again.');
+        },
+      });
   }
 
   askDelete(category: TicketCategory): void {
@@ -172,16 +190,19 @@ export class Categories implements OnInit {
     if (!target || this.isDeleting()) return;
     this.isDeleting.set(true);
     this.error.set(null);
-    this.ticketCategoriesService.delete(target.id).subscribe({
-      next: () => {
-        this.categories.update((list) => list.filter((c) => c.id !== target.id));
-        this.isDeleting.set(false);
-        this.categoryToDelete.set(null);
-      },
-      error: () => {
-        this.isDeleting.set(false);
-        this.error.set('Failed to delete ticket category. Please try again.');
-      },
-    });
+    this.ticketCategoriesService
+      .delete(target.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.categories.update((list) => list.filter((c) => c.id !== target.id));
+          this.isDeleting.set(false);
+          this.categoryToDelete.set(null);
+        },
+        error: () => {
+          this.isDeleting.set(false);
+          this.error.set('Failed to delete ticket category. Please try again.');
+        },
+      });
   }
 }

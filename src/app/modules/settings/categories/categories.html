@@ -122,11 +122,11 @@
       </div>
       <textarea
         id="category-description"
+        pTextarea
         formControlName="description"
         rows="3"
         maxlength="255"
         placeholder="Optional"
-        class="w-full rounded-base border border-border bg-background p-2 text-sm text-heading placeholder:text-body/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
       ></textarea>
       @if (form.controls.description.invalid && form.controls.description.touched) {
         <small class="text-destructive">Description must be 255 characters or fewer.</small>
@@ -140,7 +140,7 @@
       [label]="dialogMode() === 'create' ? 'Create' : 'Save changes'"
       (onClick)="save()"
       [loading]="isSaving()"
-      [disabled]="form.invalid"
+      [disabled]="isFormInvalid()"
     />
   </ng-template>
 </p-dialog>
