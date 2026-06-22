@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-22T00:00:00.000Z",
+  "title": "Design System: Meedo v3",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Dispatch Blue",
+        "canonical": "#0B4EA2",
+        "tonalRamp": ["#01183C", "#03285A", "#0B4EA2", "#1060C5", "#1676EE", "#4D8BFC", "#7AA1FD", "#C3D1FE"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Wash Blue",
+        "canonical": "#E8F1FF",
+        "tonalRamp": ["#0B4EA2", "#1676EE", "#4D8BFC", "#7AA1FD", "#9EB7FD", "#C3D1FE", "#E1E8FE", "#F0F3FF"]
+      },
+      "accent": {
+        "role": "tertiary",
+        "displayName": "Signal Cyan",
+        "canonical": "#22D3EE",
+        "tonalRamp": ["#083344", "#0E5063", "#15788F", "#1DA3BF", "#22D3EE", "#5FE0F4", "#9CECF9", "#CFF7FD"]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "canonical": "#F8FBFF",
+        "tonalRamp": ["#0B161F", "#16273A", "#24344A", "#365261", "#7A93A6", "#A9B8C4", "#DBE5F0", "#F8FBFF"]
+      },
+      "heading": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0B161F",
+        "tonalRamp": ["#0B161F", "#16273A", "#24344A", "#365261", "#5A7384", "#7A93A6", "#A9B8C4", "#DBE5F0"]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Slate Body",
+        "canonical": "#365261"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#DBE5F0"
+      },
+      "destructive": {
+        "role": "neutral",
+        "displayName": "Destructive Red",
+        "canonical": "#FF4B4B",
+        "tonalRamp": ["#7A1414", "#A11E1E", "#C92A2A", "#E63939", "#FF4B4B", "#FF7A7A", "#FFB3B3", "#FFE1DE"]
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "Success Green",
+        "canonical": "#3DBE81",
+        "tonalRamp": ["#0F3D2A", "#155236", "#1E7A50", "#2C9C68", "#3DBE81", "#6FD3A3", "#A3E4C5", "#D1EDE0"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles. Fixed 1.75rem ceiling — no fluid clamp, no hero scale." },
+      "headline": { "displayName": "Headline", "purpose": "Big numeric values (stat cards) and prominent section headings." },
+      "title": { "displayName": "Title", "purpose": "Dialog titles, detail-panel titles, card headings." },
+      "body": { "displayName": "Body", "purpose": "Table cells, descriptions, general prose (cap at 65–75ch)." },
+      "label": { "displayName": "Label", "purpose": "Uppercase tracked column headers, detail labels, stat labels, sidebar section titles." }
+    },
+    "shadows": [
+      { "name": "action-lift", "value": "0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent)", "purpose": "Primary-button hover only — a brief blue-tinted lift confirming the action is live." },
+      { "name": "focus-glow", "value": "0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent)", "purpose": "Soft inner ring on focused inputs, paired with a primary-colored border." }
+    ],
+    "motion": [
+      { "name": "duration-fast", "value": "150ms", "purpose": "Color/background/border transitions on buttons, inputs, rows, nav." },
+      { "name": "duration-slide", "value": "200ms", "purpose": "Mobile sidebar drawer slide." },
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing (Tailwind ease-in-out) for state transitions." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "480px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single high-emphasis action. Dispatch Blue fill, lifts on hover.",
+      "html": "<button class=\"ds-btn-primary\"><i class=\"ds-ico\">＋</i> New ticket</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: var(--color-primary, #0B4EA2); color: var(--color-primary-foreground, #fff); border: none; border-radius: var(--radius-base, 4px); font-family: var(--font-body, 'Work Sans', sans-serif); font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.15s, box-shadow 0.15s; } .ds-btn-primary:hover { background: var(--primary-hover, #03285A); box-shadow: 0 4px 12px color-mix(in srgb, var(--primary, #0B4EA2) 25%, transparent); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-ring, #22D3EE); outline-offset: 2px; } .ds-btn-primary .ds-ico { font-style: normal; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-emphasis row/toolbar action. Outline that fills blue on hover.",
+      "html": "<button class=\"ds-btn-ghost\">View</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; border: 1px solid var(--color-border, #DBE5F0); border-radius: var(--radius-base, 4px); background: transparent; color: var(--color-body, #365261); font-family: var(--font-body, 'Work Sans', sans-serif); font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: all 0.15s; } .ds-btn-ghost:hover { background: var(--color-secondary, #E8F1FF); border-color: var(--color-primary, #0B4EA2); color: var(--color-primary, #0B4EA2); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--color-ring, #22D3EE); outline-offset: 2px; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Text input with a leading icon; primary border + glow on focus.",
+      "html": "<div class=\"ds-search\"><svg class=\"ds-search-ico\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg><input class=\"ds-input-search\" placeholder=\"Search tickets…\" /></div>",
+      "css": ".ds-search { position: relative; max-width: 400px; } .ds-search-ico { position: absolute; left: 0.875rem; top: 50%; transform: translateY(-50%); color: var(--color-body, #365261); pointer-events: none; } .ds-input-search { width: 100%; padding: 0.625rem 0.875rem 0.625rem 2.5rem; border: 1px solid var(--color-border, #DBE5F0); border-radius: var(--radius-base, 4px); font-family: var(--font-body, 'Work Sans', sans-serif); font-size: 0.875rem; color: var(--color-heading, #0B161F); background: var(--color-background, #F8FBFF); outline: none; transition: border-color 0.15s, box-shadow 0.15s; } .ds-input-search::placeholder { color: #94a3b8; } .ds-input-search:focus { border-color: var(--color-primary, #0B4EA2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #0B4EA2) 10%, transparent); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Status-first pill — the most repeated atom in the app.",
+      "html": "<span class=\"ds-status-badge\">In Progress</span>",
+      "css": ".ds-status-badge { display: inline-block; padding: 0.25rem 0.625rem; border-radius: 100px; font-family: var(--font-body, 'Work Sans', sans-serif); font-size: 0.75rem; font-weight: 600; white-space: nowrap; background: var(--color-secondary, #E8F1FF); color: var(--color-secondary-foreground, #0B4EA2); }"
+    },
+    {
+      "name": "Priority Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Pill with a leading dot; semantic color pair per priority.",
+      "html": "<span class=\"ds-priority ds-priority--urgent\"><span class=\"ds-priority-dot\"></span>Urgent</span>",
+      "css": ".ds-priority { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.3rem 0.75rem; border-radius: 100px; font-family: var(--font-body, 'Work Sans', sans-serif); font-size: 0.75rem; font-weight: 600; text-transform: capitalize; white-space: nowrap; } .ds-priority-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; } .ds-priority--urgent { background: var(--color-muted-destructive, #FFE1DE); color: var(--color-destructive, #FF4B4B); } .ds-priority--urgent .ds-priority-dot { background: var(--color-destructive, #FF4B4B); } .ds-priority--low { background: var(--color-muted-success, #D1EDE0); color: #065F46; } .ds-priority--low .ds-priority-dot { background: var(--color-success, #3DBE81); }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat, bordered metric card with an icon well. No resting shadow.",
+      "html": "<div class=\"ds-stat-card\"><div class=\"ds-stat-icon\">◷</div><div class=\"ds-stat-body\"><span class=\"ds-stat-value\">128</span><span class=\"ds-stat-label\">Open tickets</span></div></div>",
+      "css": ".ds-stat-card { display: flex; align-items: center; gap: 1rem; background: var(--color-background, #F8FBFF); border: 1px solid var(--color-border, #DBE5F0); border-radius: var(--radius-base, 4px); padding: 1.25rem 1.5rem; } .ds-stat-icon { width: 2.75rem; height: 2.75rem; border-radius: var(--radius-base, 4px); display: flex; align-items: center; justify-content: center; font-size: 1.125rem; flex-shrink: 0; background: var(--color-secondary, #E8F1FF); color: var(--color-primary, #0B4EA2); } .ds-stat-body { display: flex; flex-direction: column; gap: 0.125rem; } .ds-stat-value { font-family: var(--font-heading, 'Poppins', sans-serif); font-size: 1.5rem; font-weight: 700; line-height: 1; color: var(--color-heading, #0B161F); } .ds-stat-label { font-family: var(--font-body, 'Work Sans', sans-serif); font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-body, #365261); }"
+    },
+    {
+      "name": "Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Sidebar link; active fills Wash Blue, hover is a 60% wash.",
+      "html": "<a class=\"ds-nav-item ds-nav-item--active\"><i class=\"ds-nav-ico\">▦</i><span>Dashboard</span></a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; border-radius: 6px; font-family: var(--font-body, 'Work Sans', sans-serif); font-size: 0.875rem; color: var(--color-body, #365261); text-decoration: none; cursor: pointer; transition: background 0.15s, color 0.15s; } .ds-nav-item:hover { background: color-mix(in srgb, var(--color-secondary, #E8F1FF) 60%, transparent); } .ds-nav-item--active { background: var(--color-secondary, #E8F1FF); color: var(--color-secondary-foreground, #0B4EA2); font-weight: 500; } .ds-nav-ico { font-style: normal; opacity: 0.8; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Dispatch Desk",
+    "overview": "Meedo is the surface where Geoplan/Geosense staff move work through a queue — tickets, attendance, leads — so the whole system is built like a dispatch desk: status reads first, the next action is one click away, and nothing on screen is there to impress. The aesthetic is crisp and efficient in the lineage of Linear: tight type, flat surfaces structured by thin borders, a single confident blue for action, and a quiet near-white canvas that lets dense data lead. It rejects cluttered legacy enterprise, playful consumer UI, and over-animated marketing motion; motion is reserved for conveying state.",
+    "keyCharacteristics": [
+      "Status-first: a ticket, attendance entry, or lead reads its state before anything else.",
+      "Flat by default; thin 1px borders do the structural work, not shadows.",
+      "One blue carries every primary action; cyan is a focus/accent signal, not decoration.",
+      "Fixed rem type scale (no fluid clamp) — sized for consistent on-desk viewing.",
+      "Sharp edges: small radii, crisp corners; rounding is restraint, not softness."
+    ],
+    "rules": [
+      { "name": "The One Blue Rule", "body": "There is exactly one action color: Dispatch Blue. If a button, link, or active state needs to say 'this is the thing to act on,' it is this blue or it is wrong. Cyan is for focus, not action.", "section": "colors" },
+      { "name": "The Information-Only Color Rule", "body": "Color always carries meaning (state, selection, focus). A colored surface that means nothing is decoration — remove it.", "section": "colors" },
+      { "name": "The Fixed-Scale Rule", "body": "Type sizes are fixed rem values, never clamp(). Users view at a consistent desk DPI; a headline that shrinks inside a sidebar looks worse, not better.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. A shadow is a verb, not a noun — it only appears in response to hover or focus. If a card has a resting shadow, it's wrong; give it a border instead.", "section": "elevation" },
+      { "name": "The Sharp Edge Rule", "body": "Default to sharp: 4px on buttons/cards/inputs, 6px on nav items. The 100px status/priority pills are the single deliberate exception. Do not soften the system with rounded-lg/rounded-xl; crispness is the brand.", "section": "elevation" },
+      { "name": "The Earned-Familiarity Rule", "body": "Every interactive element ships its full state set — default, hover, focus-visible, active, disabled, loading. The Save button looks identical in every module; if it differs, one is wrong.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use theme tokens (bg-primary, text-body, border-border, var(--primary), …) for every color. Hex literals belong only in app.preset.ts and styles.css.",
+      "Do keep one action color (Dispatch Blue) and reserve Signal Cyan for focus rings and accents.",
+      "Do keep surfaces flat with 1px Hairline borders; let shadows appear only on hover/focus.",
+      "Do keep type on the fixed rem scale (display ceiling 1.75rem) and lean on Poppins for headings/numbers, Work Sans for everything read.",
+      "Do ship skeletons for loading and teaching empty states; pair every status color with text or an icon (never color alone).",
+      "Do keep edges sharp (4px / 6px); the pill is only for status/priority badges.",
+      "Do honor prefers-reduced-motion and keep transitions at 150–250ms, conveying state only."
+    ],
+    "donts": [
+      "Don't drift toward cluttered legacy enterprise — no busy toolbars, gray-on-gray, or deeply nested menus. Density must stay hierarchical and scannable.",
+      "Don't make it feel like a playful consumer app — no bright gamified surfaces, emoji, mascots, or casual copy.",
+      "Don't add over-animated / flashy marketing motion — no decorative gradients, glassmorphism, scroll choreography, or hero-metric template tiles.",
+      "Don't introduce a warm cream/sand body background; the canvas is a cool near-white (#F8FBFF).",
+      "Don't soften the system with large radii (rounded-lg/rounded-xl) or resting card shadows.",
+      "Don't keep hardcoding amber/orange for warning states — promote a warning / muted-warning token pair into the theme instead of inline off-theme hex.",
+      "Don't use gradient text, side-stripe (border-left) accents, or nested cards."
+    ]
+  }
+}
