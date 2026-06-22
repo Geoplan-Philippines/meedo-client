@@ -71,12 +71,8 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: box-shadow 0.15s;
 }
 
-.stat-card:hover {
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 8%, transparent);
-}
 
 .stat-icon {
   width: 2.75rem;
@@ -192,7 +188,7 @@
   background: var(--color-secondary);
   color: var(--color-secondary-foreground);
   font-weight: 600;
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 1rem;
   border: none;
   border-bottom: 1px solid var(--color-border);
   font-size: 0.75rem;
@@ -212,8 +208,11 @@
   background: var(--color-secondary) !important;
 }
 
+/* Whole row is the click target (keyboard path lives on .ticket-title-btn). */
+.ticket-row { cursor: pointer; }
+
 :deep(.tickets-table td) {
-  padding: 0.875rem 1rem;
+  padding: 0.5rem 1rem;
   color: var(--color-body);
   font-size: 0.875rem;
   font-family: var(--font-body);
@@ -228,16 +227,38 @@
 }
 
 /* ─── Ticket Title Cell ────────────────────────────────── */
-.ticket-title-cell {
+/* Real button so the row's open action is keyboard-reachable and SR-announced;
+   styled flush as text. The <tr> click handles mouse; Enter/Space here fires a
+   native click that bubbles up to it — one handler, no double-fire. */
+.ticket-title-btn {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ticket-title-btn:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-base);
 }
 
 .ticket-title {
   font-weight: 600;
   color: var(--color-heading);
   font-size: 0.875rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ticket-desc {
@@ -254,7 +275,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.3rem 0.75rem;
+  padding: 0.25rem 0.625rem;
   border-radius: 100px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -463,29 +484,6 @@
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
-/* ─── View Button ──────────────────────────────────────── */
-.view-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: transparent;
-  color: var(--color-body);
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.view-btn:hover {
-  background: var(--color-secondary);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
 /* ─── Dialog Form ──────────────────────────────────────── */
 .dialog-form {
   display: flex;

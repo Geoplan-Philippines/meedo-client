@@ -117,19 +117,20 @@
             <th pSortableColumn="dueDate" scope="col">
               <div class="th-content">Due Date <p-sortIcon field="dueDate" /></div>
             </th>
-            <th scope="col">
-              <div class="th-content">Actions</div>
-            </th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-ticket>
-          <tr class="ticket-row">
+          <tr class="ticket-row" (click)="openDetailDialog(ticket)">
             <td>
-              <div class="ticket-title-cell">
-                <span class="ticket-title">{{ ticket.title }}</span>
+              <button
+                class="ticket-title-btn"
+                type="button"
+                [attr.aria-label]="'Open ticket #' + ticket.ticketNumber + ': ' + ticket.title"
+              >
+                <span class="ticket-title" [title]="ticket.title">{{ ticket.title }}</span>
                 <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
-              </div>
+              </button>
             </td>
             <td>
               <span [class]="getPriorityClass(ticket.priority)">
@@ -153,18 +154,12 @@
             <td class="date-cell">
               {{ ticket.dueDate ? (ticket.dueDate | date: 'MMM d, y') : '—' }}
             </td>
-            <td>
-              <button class="view-btn" type="button" (click)="openDetailDialog(ticket)">
-                <i class="pi pi-eye"></i>
-                <span>View</span>
-              </button>
-            </td>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="5">
+            <td colspan="4">
               <div class="empty-state">
                 <div class="empty-icon" aria-hidden="true">
                   <i class="pi pi-ticket"></i>
