@@ -139,6 +139,9 @@ export class TicketThread {
   }
 
   postComment(): void {
+    // Enter-to-post can fire while a previous post is still in flight (the button is
+    // disabled during posting, but the keydown handler is not) — guard against double-submit.
+    if (this.isPostingComment()) return;
     if (this.commentControl.invalid) {
       this.commentControl.markAsTouched();
       return;

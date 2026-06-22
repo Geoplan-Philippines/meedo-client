@@ -72,7 +72,7 @@
 
     <div class="flex flex-col gap-2 mt-2">
       <label class="form-label" for="ticket-comment">Add a comment</label>
-      <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Write a comment…" rows="2" class="w-full" aria-label="Add a comment"></textarea>
+      <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Write a comment… (Enter to post, Shift+Enter for a new line)" rows="2" class="w-full" aria-label="Add a comment" (keydown.enter)="$event.preventDefault(); postComment()"></textarea>
       @if (commentControl.invalid && commentControl.touched) {
         <small class="form-error" role="alert">Comment cannot be empty.</small>
       }
