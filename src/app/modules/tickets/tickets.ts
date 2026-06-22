@@ -257,6 +257,18 @@ export class Tickets implements OnInit {
       });
   }
 
+  /**
+   * The date picker returns a Date at LOCAL midnight (e.g. 2026-06-18T00:00:00+08:00).
+   * Calling .toISOString() shifts it to UTC, which can roll the calendar date back a day
+   * (→ 2026-06-17T16:00:00Z), making the backend treat today's date as a past date.
+   * We instead build the timestamp from the picked Y/M/D at UTC midnight so the calendar
+   * date the user selected is preserved regardless of timezone.
+   */
+  private toDueDateIso(date: Date | null): string | null {
+    if (!date) return null;
+    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
+  }
+
   getMemberNames(ticket: Ticket): string {
     const assignees = ticket.assignees ?? [];
     if (!assignees.length) return '—';
@@ -345,7 +357,7 @@ export class Tickets implements OnInit {
       title: formValue.title.trim(),
       description: formValue.description.trim() || null,
       priority: formValue.priority,
-      dueDate: formValue.dueDate ? formValue.dueDate.toISOString() : null,
+      dueDate: this.toDueDateIso(formValue.dueDate),
       ticketStatusId: formValue.ticketStatusId || null,
       categoryId: formValue.categoryId || null,
       projectId: formValue.projectId || null,
@@ -384,7 +396,7 @@ export class Tickets implements OnInit {
       title: formValue.title.trim(),
       description: formValue.description.trim() || undefined,
       priority: formValue.priority,
-      dueDate: formValue.dueDate ? formValue.dueDate.toISOString() : undefined,
+      dueDate: this.toDueDateIso(formValue.dueDate) ?? undefined,
       ticketStatusId: formValue.ticketStatusId || undefined,
       categoryId: formValue.categoryId || undefined,
       projectId: formValue.projectId || undefined,

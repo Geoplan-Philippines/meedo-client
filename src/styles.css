@@ -35,39 +35,104 @@
   --success-foreground: #FFFFFF;
 
   --radius: 0.25rem;
+
+  /* Elevated surface for cards and panels */
+  --surface: #FFFFFF;
+
+  /* Status: Pending (amber) */
+  --status-pending-bg: #FEF3C7;
+  --status-pending-fg: #78350F;
+  --status-pending-dot: #F59E0B;
+
+  /* Status: Contacted (blue) */
+  --status-contacted-bg: #DBEAFE;
+  --status-contacted-fg: #0C4A6E;
+  --status-contacted-dot: #3B82F6;
+
+  /* Status: Converted (emerald) */
+  --status-converted-bg: #D1FAE5;
+  --status-converted-fg: #065F46;
+  --status-converted-dot: #10B981;
+
+  /* Semantic: foreground text on muted status surfaces */
+  --status-qualified-fg: #155E4D;
+  --status-lost-fg: #7F1D1D;
+
+  /* Accent: blue (stat icons, avatars) */
+  --accent-blue-bg: #DBEAFE;
+  --accent-blue-fg: #1D4ED8;
+
+  /* Avatar accent variants */
+  --accent-teal-bg: #CCFBF1;
+  --accent-teal-fg: #0F766E;
+  --accent-violet-bg: #EDE9FE;
+  --accent-violet-fg: #7C3AED;
+  --accent-rose-bg: #FFE4E6;
+  --accent-rose-fg: #BE123C;
 }
 
 /* Dark theme: a complementary inversion of the light palette. Surfaces go
-   dark, text goes light, and primary brightens for contrast on dark. */
+   dark, text goes light, and primary brightens for contrast on dark.
+   Surface hierarchy is deliberate: background < surface < secondary, with
+   each step a clear ~1.5x luminance bump so cards, table headers, row
+   hover, chips, and paginators each read as their own layer. */
 .app-dark {
-  --background: #0B161F;
+  --background: #0A111B;
   --foreground: #F1F6FC;
   --text-heading: #F1F6FC;
-  --text-body: #A9B8C4;
+  --text-body: #B8C5D2;
 
-  --primary: #7AA1FD;
-  --primary-hover: #9EB7FD;
+  --primary: #8FB1FF;
+  --primary-hover: #B0C7FF;
   --primary-foreground: #01183C;
-  --secondary: #16273A;
-  --secondary-foreground: #9EB7FD;
+  --secondary: #213450;
+  --secondary-foreground: #C5D5FF;
   --accent: #22D3EE;
   --accent-foreground: #062A38;
 
-  --border: #24344A;
-  --input: #24344A;
+  --border: #2C415C;
+  --input: #2C415C;
   --ring: #22D3EE;
 
-  --destructive: #FF5C5C;
-  --muted-destructive: #3A1D1D;
-  --success: #4ECB8E;
-  --muted-success: #173328;
-  --success-foreground: #FFFFFF;
+  --destructive: #FF7A7A;
+  --muted-destructive: #4A1E1E;
+  --success: #5BD89B;
+  --muted-success: #1A3A2A;
+  --success-foreground: #03241A;
+
+  --surface: #131F2E;
+
+  --status-pending-bg: #3A2C04;
+  --status-pending-fg: #FDE08A;
+  --status-pending-dot: #FBBF24;
+
+  --status-contacted-bg: #0F2D4E;
+  --status-contacted-fg: #B0CDFC;
+  --status-contacted-dot: #60A5FA;
+
+  --status-converted-bg: #0B3A1F;
+  --status-converted-fg: #82E8B5;
+  --status-converted-dot: #34D399;
+
+  --status-qualified-fg: #82E8B5;
+  --status-lost-fg: #FFB1B1;
+
+  --accent-blue-bg: #0F2D4E;
+  --accent-blue-fg: #B0CDFC;
+
+  --accent-teal-bg: #0E322E;
+  --accent-teal-fg: #6FEED7;
+  --accent-violet-bg: #251450;
+  --accent-violet-fg: #CDBEFE;
+  --accent-rose-bg: #4A1426;
+  --accent-rose-fg: #FFB6BD;
 }
 
 /* `inline` makes utilities reference the source variable directly
    (e.g. bg-background -> var(--background)) so they respond to the
    `.app-dark` overrides above at runtime. */
 @theme inline {
+  --color-surface: var(--surface);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-heading: var(--text-heading);

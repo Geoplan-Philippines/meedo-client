@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgOptimizedImage } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -31,6 +32,7 @@ export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   isSubmitting = signal(false);
   errorMessage = signal('');
@@ -40,6 +42,17 @@ export class Login {
     password: ['', [Validators.required]],
     rememberMe: [false],
   });
+
+  constructor() {
+    // Dismiss the "Invalid email or password" banner as soon as the user edits the
+    // password after a failed attempt — the previous error no longer applies, so we
+    // leave only the field-level "Password is required" validation message.
+    this.loginForm.controls.password.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.errorMessage()) this.errorMessage.set('');
+      });
+  }
 
   async onSubmit(): Promise<void> {
     if (this.isSubmitting()) return;

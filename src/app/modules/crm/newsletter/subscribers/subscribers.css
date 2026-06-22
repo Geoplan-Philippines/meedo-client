@@ -48,7 +48,7 @@
 
 .export-btn:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 4px 12px rgba(11, 78, 162, 0.25);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .export-btn:focus-visible {
@@ -64,7 +64,7 @@
 }
 
 .stat-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   padding: 1.25rem 1.5rem;
@@ -75,7 +75,7 @@
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 16px rgba(11, 78, 162, 0.08);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .stat-icon {
@@ -89,9 +89,9 @@
   flex-shrink: 0;
 }
 
-.stat-icon--total { background: var(--color-secondary);      color: var(--color-primary); }
-.stat-icon--new   { background: var(--color-muted-success);  color: #155E4D; }
-.stat-icon--unsub { background: var(--color-muted-destructive); color: #7F1D1D; }
+.stat-icon--total { background: var(--color-secondary);         color: var(--color-primary); }
+.stat-icon--new   { background: var(--color-muted-success);    color: var(--status-qualified-fg); }
+.stat-icon--unsub { background: var(--color-muted-destructive); color: var(--status-lost-fg); }
 
 .stat-body {
   display: flex;
@@ -117,7 +117,7 @@
 
 /* ─── Table Card ───────────────────────────────────────── */
 .table-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   overflow: hidden;
@@ -157,16 +157,16 @@
   font-family: var(--font-body);
   font-size: 0.875rem;
   color: var(--color-heading);
-  background: var(--color-background);
+  background: var(--surface);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.search-input::placeholder { color: #94a3b8; }
+.search-input::placeholder { color: color-mix(in srgb, var(--color-body) 78%, transparent); }
 
 .search-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(11, 78, 162, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .toolbar-actions { display: flex; gap: 0.5rem; }
@@ -276,11 +276,11 @@
   letter-spacing: 0.02em;
 }
 
-.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
-.avatar-teal   { background: #CCFBF1; color: #0F766E; }
-.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
-.avatar-violet { background: #EDE9FE; color: #7C3AED; }
-.avatar-rose   { background: #FFE4E6; color: #BE123C; }
+.avatar-blue   { background: var(--accent-blue-bg);   color: var(--accent-blue-fg); }
+.avatar-teal   { background: var(--accent-teal-bg);   color: var(--accent-teal-fg); }
+.avatar-indigo { background: var(--color-secondary);  color: var(--color-primary); }
+.avatar-violet { background: var(--accent-violet-bg); color: var(--accent-violet-fg); }
+.avatar-rose   { background: var(--accent-rose-bg);   color: var(--accent-rose-fg); }
 
 /* ─── Cells ────────────────────────────────────────────── */
 .subscriber-name {
@@ -379,7 +379,7 @@
 }
 
 :deep(.p-paginator .p-paginator-pages .p-paginator-page:hover:not(.p-highlight)) {
-  background: #fff;
+  background: var(--surface);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
@@ -400,7 +400,7 @@
 :deep(.p-paginator .p-paginator-next:hover),
 :deep(.p-paginator .p-paginator-first:hover),
 :deep(.p-paginator .p-paginator-last:hover) {
-  background: #fff;
+  background: var(--surface);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }

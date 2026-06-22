@@ -48,7 +48,7 @@
 
 .add-btn:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 4px 12px rgba(11, 78, 162, 0.25);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .add-btn:focus-visible {
@@ -64,7 +64,7 @@
 }
 
 .stat-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   padding: 1.25rem 1.5rem;
@@ -75,7 +75,7 @@
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 16px rgba(11, 78, 162, 0.08);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .stat-icon {
@@ -89,10 +89,10 @@
   flex-shrink: 0;
 }
 
-.stat-icon--total    { background: var(--color-secondary);      color: var(--color-primary); }
-.stat-icon--pending  { background: #FEF3C7;                     color: #92400E; }
-.stat-icon--qualified { background: var(--color-muted-success); color: #155E4D; }
-.stat-icon--converted { background: #DBEAFE;                    color: #1D4ED8; }
+.stat-icon--total     { background: var(--color-secondary);      color: var(--color-primary); }
+.stat-icon--pending   { background: var(--status-pending-bg);   color: var(--status-pending-fg); }
+.stat-icon--qualified { background: var(--color-muted-success);  color: var(--status-qualified-fg); }
+.stat-icon--converted { background: var(--accent-blue-bg);       color: var(--accent-blue-fg); }
 
 .stat-body {
   display: flex;
@@ -118,7 +118,7 @@
 
 /* ─── Table Card ───────────────────────────────────────── */
 .table-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   overflow: hidden;
@@ -158,16 +158,16 @@
   font-family: var(--font-body);
   font-size: 0.875rem;
   color: var(--color-heading);
-  background: var(--color-background);
+  background: var(--surface);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.search-input::placeholder { color: #94a3b8; }
+.search-input::placeholder { color: color-mix(in srgb, var(--color-body) 78%, transparent); }
 
 .search-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(11, 78, 162, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .toolbar-actions {
@@ -284,11 +284,11 @@
   letter-spacing: 0.02em;
 }
 
-.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
-.avatar-teal   { background: #CCFBF1; color: #0F766E; }
-.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
-.avatar-violet { background: #EDE9FE; color: #7C3AED; }
-.avatar-rose   { background: #FFE4E6; color: #BE123C; }
+.avatar-blue   { background: var(--accent-blue-bg);   color: var(--accent-blue-fg); }
+.avatar-teal   { background: var(--accent-teal-bg);   color: var(--accent-teal-fg); }
+.avatar-indigo { background: var(--color-secondary);  color: var(--color-primary); }
+.avatar-violet { background: var(--accent-violet-bg); color: var(--accent-violet-fg); }
+.avatar-rose   { background: var(--accent-rose-bg);   color: var(--accent-rose-fg); }
 
 .lead-name {
   font-weight: 600;
@@ -337,7 +337,7 @@
   white-space: nowrap;
 }
 
-.empty-cell { color: #cbd5e1; }
+.empty-cell { color: color-mix(in srgb, var(--color-body) 70%, transparent); }
 
 /* ─── Status Badge ─────────────────────────────────────── */
 .status-badge {
@@ -359,19 +359,19 @@
   flex-shrink: 0;
 }
 
-.status-pending   { background: #FEF3C7; color: #92400E; }
-.status-pending .status-dot   { background: #F59E0B; }
+.status-pending   { background: var(--status-pending-bg);   color: var(--status-pending-fg); }
+.status-pending .status-dot   { background: var(--status-pending-dot); }
 
-.status-qualified { background: var(--color-muted-success); color: #155E4D; }
+.status-qualified { background: var(--color-muted-success);  color: var(--status-qualified-fg); }
 .status-qualified .status-dot { background: var(--color-success); }
 
-.status-contacted { background: #DBEAFE; color: #0C4A6E; }
-.status-contacted .status-dot { background: #3B82F6; }
+.status-contacted { background: var(--status-contacted-bg);  color: var(--status-contacted-fg); }
+.status-contacted .status-dot { background: var(--status-contacted-dot); }
 
-.status-converted { background: #D1FAE5; color: #065F46; }
-.status-converted .status-dot { background: #10B981; }
+.status-converted { background: var(--status-converted-bg);  color: var(--status-converted-fg); }
+.status-converted .status-dot { background: var(--status-converted-dot); }
 
-.status-lost { background: var(--color-muted-destructive); color: #7F1D1D; }
+.status-lost { background: var(--color-muted-destructive); color: var(--status-lost-fg); }
 .status-lost .status-dot { background: var(--color-destructive); }
 
 /* ─── Empty State ──────────────────────────────────────── */
@@ -439,7 +439,7 @@
 }
 
 :deep(.p-paginator .p-paginator-pages .p-paginator-page:hover:not(.p-highlight)) {
-  background: #fff;
+  background: var(--surface);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
@@ -460,7 +460,7 @@
 :deep(.p-paginator .p-paginator-next:hover),
 :deep(.p-paginator .p-paginator-first:hover),
 :deep(.p-paginator .p-paginator-last:hover) {
-  background: #fff;
+  background: var(--surface);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
