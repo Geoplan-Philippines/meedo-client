@@ -270,7 +270,7 @@
   [draggable]="false"
 >
   @if (selectedTicket(); as ticket) {
-    <div class="detail-grid">
+<div class="detail-grid">
 
       <div class="detail-field detail-field--full">
         <span class="detail-label">Title</span>
@@ -308,6 +308,23 @@
       </div>
 
       <div class="detail-field">
+        <span class="detail-label">Project</span>
+        @if (ticket.project) {
+          <span class="detail-value">
+            <div>{{ ticket.project.customerName }}</div>
+            <div class="detail-subvalue">{{ ticket.project.workOrderNumber }}</div>
+          </span>
+        } @else {
+          <span class="empty-cell">—</span>
+        }
+      </div>
+
+      <div class="detail-field">
+        <span class="detail-label">Ticket Number</span>
+        <span class="detail-value">#{{ ticket.ticketNumber }}</span>
+      </div>
+
+      <div class="detail-field">
         <span class="detail-label">Due Date</span>
         <span class="detail-value">
           {{ ticket.dueDate ? (ticket.dueDate | date: 'MMM d, y') : '—' }}
@@ -319,12 +336,7 @@
         <span class="detail-value">{{ ticket.createdAt | date: 'MMM d, y' }}</span>
       </div>
 
-      <div class="detail-field">
-        <span class="detail-label">Ticket Number</span>
-        <span class="detail-value">#{{ ticket.ticketNumber }}</span>
-      </div>
-
-      <div class="detail-field">
+      <div class="detail-field detail-field--full">
         <span class="detail-label">Assigned</span>
         <span class="detail-value">{{ getMemberNames(ticket) }}</span>
       </div>

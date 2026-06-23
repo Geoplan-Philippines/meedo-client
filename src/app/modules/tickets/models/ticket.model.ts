@@ -32,6 +32,11 @@ export interface Ticket {
     name: string;
     color: string | null;
   } | null;
+  project?: {
+  id: string;
+  customerName: string;
+  workOrderNumber: string;
+} | null;
 }
 
 export interface TicketListParams {
