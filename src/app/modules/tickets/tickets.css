@@ -540,4 +540,9 @@
   font-size: 1rem;
 }
 
+.detail-subvalue {
+  font-size: 0.85em;
+  color: var(--color-body);
+}
+
 .empty-cell { color: var(--color-body); }
