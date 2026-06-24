@@ -1,44 +1,53 @@
-<header class="h-16 px-4 border-b border-border bg-background flex justify-between items-center relative">
-  <div class="flex items-center gap-3">
-    <p-button 
-      icon="pi pi-bars" 
-      [text]="true" 
-      severity="secondary" 
-      class="md:hidden" 
-      (onClick)="layoutService.toggleSidebar()" 
-      aria-label="Toggle Menu" 
+<header class="app-header h-14 sm:h-16 px-3 sm:px-4 border-b border-border bg-background flex justify-between items-center relative gap-2">
+  <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+    <p-button
+      icon="pi pi-bars"
+      [text]="true"
+      severity="secondary"
+      class="header-icon-btn shrink-0 md:hidden"
+      (onClick)="layoutService.toggleSidebar()"
+      aria-label="Toggle Menu"
     />
-    
-    <span class="text-xl font-bold text-heading">MeedoV3</span>
+
+    <img
+      src="/images/app-logo.png"
+      alt="Meedo"
+      class="app-logo h-7 sm:h-9 w-auto object-contain min-w-0 shrink"
+      width="455"
+      height="148"
+    />
   </div>
 
-  <div class="flex items-center gap-2">
+  <div class="header-actions flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
     <p-button
       [icon]="themeService.isDark() ? 'pi pi-sun' : 'pi pi-moon'"
       [text]="true"
       severity="secondary"
+      class="header-icon-btn"
       (onClick)="themeService.toggle()"
       [attr.aria-label]="themeService.isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
     />
-    <p-button icon="pi pi-bell" [text]="true" severity="secondary" />
+    <p-button icon="pi pi-bell" [text]="true" severity="secondary" class="header-icon-btn optional-action" />
     <p-button
       icon="pi pi-cog"
       [text]="true"
       severity="secondary"
+      class="header-icon-btn"
       (onClick)="goToSettings()"
       aria-label="Settings"
     />
     <p-avatar
       shape="circle"
       image="https://primefaces.org/cdn/primeng/images/demo/avatar/amyelsner.png"
-      class="w-8 h-8 cursor-pointer border-border border-2 hover:border-primary transition-colors ml-2"
+      class="hidden sm:inline-flex w-8 h-8 cursor-pointer border-border border-2 hover:border-primary transition-colors ml-1 lg:ml-2"
       [attr.aria-label]="'User profile'"
     />
-    <span>{{ currentUser()?.name }}</span>
+    <span class="hidden lg:inline max-w-40 truncate text-sm text-heading">{{ currentUser()?.name }}</span>
     <p-button
       icon="pi pi-sign-out"
       [text]="true"
       severity="secondary"
+      class="header-icon-btn"
       (onClick)="logout()"
       aria-label="Sign out"
     />
