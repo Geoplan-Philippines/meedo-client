@@ -36,7 +36,7 @@
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-primary-foreground);
   border: none;
   border-radius: var(--radius-base);
   font-family: var(--font-body);
@@ -48,7 +48,7 @@
 
 .add-btn:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 4px 12px rgba(11, 78, 162, 0.25);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .add-btn:focus-visible {
@@ -64,9 +64,9 @@
 }
 
 .stat-card {
-  background: #fff;
+  background: var(--color-background);
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-base);
   padding: 1.25rem 1.5rem;
   display: flex;
   align-items: center;
@@ -75,13 +75,13 @@
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 16px rgba(11, 78, 162, 0.08);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .stat-icon {
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-base);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,9 +118,9 @@
 
 /* ─── Table Card ───────────────────────────────────────── */
 .table-card {
-  background: #fff;
+  background: var(--color-background);
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-base);
   overflow: hidden;
 }
 
@@ -167,7 +167,7 @@
 
 .search-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(11, 78, 162, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .toolbar-actions {
@@ -218,7 +218,17 @@
 .skeleton-row:last-child { border-bottom: none; }
 
 /* ─── Table Overrides ──────────────────────────────────── */
-:deep(.leads-table thead) {
+:deep(.leads-table),
+:deep(.leads-table .p-datatable),
+:deep(.leads-table .p-datatable-table),
+:deep(.leads-table .p-datatable-tbody),
+:deep(.leads-table .p-datatable-tbody > tr),
+:deep(.leads-table .p-datatable-tbody > tr > td) {
+  background: var(--color-background);
+}
+
+:deep(.leads-table thead),
+:deep(.leads-table .p-datatable-thead > tr > th) {
   background: var(--color-secondary);
 }
 
@@ -434,12 +444,12 @@
 
 :deep(.p-paginator .p-paginator-pages .p-paginator-page.p-highlight) {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-primary-foreground);
   border-color: var(--color-primary);
 }
 
 :deep(.p-paginator .p-paginator-pages .p-paginator-page:hover:not(.p-highlight)) {
-  background: #fff;
+  background: var(--color-background);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
@@ -460,7 +470,7 @@
 :deep(.p-paginator .p-paginator-next:hover),
 :deep(.p-paginator .p-paginator-first:hover),
 :deep(.p-paginator .p-paginator-last:hover) {
-  background: #fff;
+  background: var(--color-background);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
