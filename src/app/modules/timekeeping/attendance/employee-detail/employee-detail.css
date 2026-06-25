@@ -1,0 +1,130 @@
+.detail-page {
+  padding: 2rem 2.5rem;
+  background: var(--color-background);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0;
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+/* ─── Summary cards ────────────────────────────────────── */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.summary-card {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-body);
+}
+
+.summary-value {
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  font-family: var(--font-heading);
+  line-height: 1.1;
+}
+
+/* ─── Timeline ─────────────────────────────────────────── */
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-heading);
+  font-family: var(--font-heading);
+  margin: 0 0 0.875rem;
+}
+
+.empty-text {
+  font-size: 0.875rem;
+  color: var(--color-body);
+  padding: 1rem 0;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  flex-wrap: wrap;
+}
+
+.timeline-time {
+  font-weight: 700;
+  color: var(--color-heading);
+  font-variant-numeric: tabular-nums;
+  min-width: 4.5rem;
+}
+
+.timeline-type {
+  font-weight: 600;
+  color: var(--color-body);
+}
+
+.timeline-origin {
+  font-size: 0.75rem;
+  color: var(--color-body);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* ─── History table ────────────────────────────────────── */
+.history-section :where(th, td) {
+  font-size: 0.875rem;
+}
+
+.text-right {
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .detail-page {
+    padding: 1.25rem;
+  }
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

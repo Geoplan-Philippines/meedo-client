@@ -6,23 +6,22 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { finalize, interval } from 'rxjs';
 
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
 import { AttendanceService } from '../services/attendance.service';
+import { Roster } from '../roster/roster';
 import {
   AttendanceEvent,
   AttendanceEventType,
-  AttendanceRecord,
   AttendanceSource,
   DailyAttendanceSummary,
   ManualEventType,
@@ -48,14 +47,7 @@ type PunchMode = 'in' | 'out';
 
 @Component({
   selector: 'app-attendance-timesheet',
-  imports: [
-    TableModule,
-    ButtonModule,
-    DialogModule,
-    TagModule,
-    ToastModule,
-    DatePipe,
-  ],
+  imports: [ButtonModule, DialogModule, ToastModule, DatePipe, Roster],
   providers: [MessageService],
   templateUrl: './timesheet.html',
   styleUrl: './timesheet.css',
@@ -65,6 +57,8 @@ export class Timesheet implements OnInit {
   private readonly attendanceService = inject(AttendanceService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+
+  private readonly roster = viewChild(Roster);
 
   readonly workTypes: readonly WorkTypeOption[] = [
     {
@@ -100,18 +94,9 @@ export class Timesheet implements OnInit {
   readonly selectedWorkType = signal<WorkTypeOption | null>(null);
   readonly isPunching = signal(false);
 
-  // Today's computed attendance + timeline.
+  // Current user's computed attendance for today.
   readonly summary = signal<DailyAttendanceSummary | null>(null);
   readonly isLoadingSummary = signal(false);
-
-  // History table (server-side pagination).
-  readonly history = signal<AttendanceRecord[]>([]);
-  readonly totalRecords = signal(0);
-  readonly rows = signal(10);
-  readonly isLoadingHistory = signal(false);
-
-  private first = 0;
-  private historyRequestId = 0;
 
   // Live clock for the elapsed counter and confirmation timestamp.
   readonly now = signal(Date.now());
@@ -119,12 +104,12 @@ export class Timesheet implements OnInit {
   readonly firstIn = computed(() => this.summary()?.firstIn ?? null);
   readonly lastOut = computed(() => this.summary()?.lastOut ?? null);
   readonly billableHours = computed(() => this.summary()?.billableHours ?? null);
-  readonly events = computed<AttendanceEvent[]>(() => this.summary()?.events ?? []);
+  private readonly events = computed<AttendanceEvent[]>(() => this.summary()?.events ?? []);
 
   readonly hasClockedIn = computed(() => this.firstIn() !== null);
 
   /** The most recent event today — drives Time Out's inferred work type. */
-  readonly lastEvent = computed<AttendanceEvent | null>(() => {
+  private readonly lastEvent = computed<AttendanceEvent | null>(() => {
     const events = this.events();
     return events.length ? events[events.length - 1] : null;
   });
@@ -230,9 +215,9 @@ export class Timesheet implements OnInit {
             detail: `${this.eventTypeLabel(event.eventType)} at ${this.formatTime(event.timestamp)}`,
           });
           this.dialogVisible.set(false);
-          // Reflect the punch immediately, then refresh history in the background.
+          // Reflect the punch immediately, then refresh the roster row.
           this.loadSummary(true);
-          this.refreshHistory();
+          this.roster()?.reload();
         },
         error: (err: unknown) => {
           console.error('Error recording attendance event:', err);
@@ -246,12 +231,6 @@ export class Timesheet implements OnInit {
   }
 
   /* ─── Data loading ───────────────────────────────────── */
-
-  onHistoryLazyLoad(event: TableLazyLoadEvent): void {
-    this.first = event.first ?? 0;
-    this.rows.set(event.rows ?? 10);
-    this.fetchHistory();
-  }
 
   private loadSummary(silent: boolean): void {
     if (!silent) this.isLoadingSummary.set(true);
@@ -277,46 +256,13 @@ export class Timesheet implements OnInit {
       });
   }
 
-  private refreshHistory(): void {
-    this.first = 0;
-    this.fetchHistory();
-  }
-
-  private fetchHistory(): void {
-    const requestId = ++this.historyRequestId;
-    this.isLoadingHistory.set(true);
-
-    this.attendanceService
-      .getHistory({
-        page: Math.floor(this.first / this.rows()) + 1,
-        limit: this.rows(),
-      })
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isLoadingHistory.set(false)),
-      )
-      .subscribe({
-        next: (res) => {
-          if (requestId !== this.historyRequestId) return;
-          this.history.set(res.data);
-          this.totalRecords.set(res.meta.total);
-        },
-        error: (err: unknown) => {
-          if (requestId !== this.historyRequestId) return;
-          console.error('Error loading attendance history:', err);
-          this.history.set([]);
-          this.totalRecords.set(0);
-        },
-      });
-  }
-
   /* ─── Helpers ────────────────────────────────────────── */
 
   private workTypeForSource(source: AttendanceSource): WorkTypeOption {
     return this.workTypes.find((option) => option.source === source) ?? this.workTypes[0];
   }
 
-  eventTypeLabel(eventType: AttendanceEventType): string {
+  private eventTypeLabel(eventType: AttendanceEventType): string {
     const labels: Record<AttendanceEventType, string> = {
       OFFICE_ACCESS: 'Office Access',
       OFFICE_IN: 'Office In',
@@ -327,15 +273,6 @@ export class Timesheet implements OnInit {
       WFH_OUT: 'WFH Out',
     };
     return labels[eventType] ?? eventType;
-  }
-
-  sourceSeverity(source: string): 'info' | 'success' | 'warn' {
-    const map: Record<string, 'info' | 'success' | 'warn'> = {
-      OFFICE: 'info',
-      FIELD: 'warn',
-      WFH: 'success',
-    };
-    return map[source] ?? 'info';
   }
 
   private formatTime(iso: string): string {

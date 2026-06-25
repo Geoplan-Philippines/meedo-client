@@ -1,0 +1,95 @@
+<main class="detail-page">
+  <header class="page-header">
+    <p-button
+      icon="pi pi-arrow-left"
+      label="Back"
+      severity="secondary"
+      [text]="true"
+      (onClick)="goBack()"
+    />
+    <h1 class="page-title">
+      Attendance — {{ summary()?.date ?? null | date: 'fullDate' }}
+    </h1>
+  </header>
+
+  <section class="summary-grid" aria-live="polite">
+    <article class="summary-card">
+      <span class="summary-label">First In</span>
+      <span class="summary-value">{{ firstIn() ? (firstIn() | date: 'shortTime') : '—' }}</span>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Last Out</span>
+      <span class="summary-value">{{ lastOut() ? (lastOut() | date: 'shortTime') : '—' }}</span>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Clocked Hours</span>
+      <span class="summary-value">{{ billableHours() !== null ? billableHours() : '—' }}</span>
+    </article>
+  </section>
+
+  <section class="timeline-section">
+    <h2 class="section-title">Timeline of Events</h2>
+
+    @if (isLoading()) {
+      <p class="empty-text">Loading…</p>
+    } @else if (events().length === 0) {
+      <p class="empty-text">No attendance events recorded for this day.</p>
+    } @else {
+      <ul class="timeline">
+        @for (event of events(); track event.id) {
+          <li class="timeline-item">
+            <span class="timeline-time">{{ event.timestamp | date: 'shortTime' }}</span>
+            <span class="timeline-type">{{ eventTypeLabel(event.eventType) }}</span>
+            <p-tag [value]="event.source" [severity]="sourceSeverity(event.source)" />
+            @if (event.origin === 'BIOMETRICS') {
+              <span class="timeline-origin" title="From biometric device">
+                <i class="pi pi-id-card"></i> Biometric
+              </span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="history-section">
+    <h2 class="section-title">Attendance History</h2>
+
+    <p-table
+      [value]="history()"
+      [lazy]="true"
+      (onLazyLoad)="onHistoryLazyLoad($event)"
+      [paginator]="true"
+      [rows]="rows()"
+      [totalRecords]="totalRecords()"
+      [loading]="isLoadingHistory()"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      dataKey="id"
+      styleClass="p-datatable-sm"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Date</th>
+          <th>First In</th>
+          <th>Last Out</th>
+          <th class="text-right">Billable Hours</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-record>
+        <tr>
+          <td>{{ record.date | date: 'mediumDate' }}</td>
+          <td>{{ record.firstIn ? (record.firstIn | date: 'shortTime') : '—' }}</td>
+          <td>{{ record.lastOut ? (record.lastOut | date: 'shortTime') : '—' }}</td>
+          <td class="text-right">{{ record.billableHours !== null ? record.billableHours : '—' }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="4" class="empty-text">No attendance history found.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+</main>

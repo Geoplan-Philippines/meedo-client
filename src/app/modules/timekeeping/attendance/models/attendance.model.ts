@@ -83,3 +83,26 @@ export interface AttendanceHistoryParams {
 export type RecordEventResponse = ApiResponse<AttendanceEvent>;
 export type DailySummaryResponse = ApiResponse<DailyAttendanceSummary>;
 export type AttendanceHistoryResponse = PaginatedApiResponse<AttendanceRecord>;
+
+/* ─── Org-wide roster (owners/admins) ───────────────────── */
+
+/** One employee's computed attendance for a day on the org roster. */
+export interface RosterEntry {
+  employeeId: string;
+  name: string | null;
+  email: string;
+  employeeCode: string | null;
+  department: string | null;
+  firstIn: string | null;
+  lastOut: string | null;
+  clockedHours: number | null;
+}
+
+export interface RosterParams {
+  page: number;
+  limit: number;
+  date?: string;
+  search?: string;
+}
+
+export type RosterResponse = PaginatedApiResponse<RosterEntry>;

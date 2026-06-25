@@ -1,0 +1,93 @@
+.roster-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ─── Header ───────────────────────────────────────────── */
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0 0 0.25rem;
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-body);
+  margin: 0;
+}
+
+/* ─── Toolbar ──────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 18rem;
+}
+
+.search-field i {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--color-body);
+  font-size: 0.875rem;
+}
+
+.search-field input {
+  width: 100%;
+  padding-left: 2.25rem;
+}
+
+.date-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ─── Table ────────────────────────────────────────────── */
+.roster-table :where(th, td) {
+  font-size: 0.875rem;
+}
+
+.chevron-col {
+  width: 2.5rem;
+  text-align: center;
+  color: var(--color-body);
+}
+
+.roster-row {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.roster-row:hover {
+  background: color-mix(in srgb, var(--primary) 5%, var(--color-background));
+}
+
+.name-cell {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.empty-text {
+  font-size: 0.875rem;
+  color: var(--color-body);
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+@media (max-width: 640px) {
+  .search-field {
+    min-width: 100%;
+  }
+}
