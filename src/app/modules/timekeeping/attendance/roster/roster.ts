@@ -49,8 +49,15 @@ export class Roster implements OnInit {
   readonly rows = signal(10);
   readonly isLoading = signal(false);
 
+  /** Only org managers see the whole roster, so only they get the employee search. */
+  readonly canSearch = signal(false);
+
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly dateControl = new FormControl<Date>(this.startOfToday(), { nonNullable: true });
+
+  /** Future days have no attendance yet, so the picker and next-day step are capped at today. */
+  readonly maxDate = this.startOfToday();
+  readonly isToday = signal(true);
 
   private first = 0;
   private requestId = 0;
@@ -62,7 +69,10 @@ export class Roster implements OnInit {
 
     this.dateControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.resetToFirstPage());
+      .subscribe((value) => {
+        this.isToday.set(this.isSameDay(value, this.maxDate));
+        this.resetToFirstPage();
+      });
   }
 
   ngOnInit(): void {
@@ -80,6 +90,7 @@ export class Roster implements OnInit {
   }
 
   nextDay(): void {
+    if (this.isToday()) return;
     this.shiftDay(1);
   }
 
@@ -128,6 +139,7 @@ export class Roster implements OnInit {
           if (requestId !== this.requestId) return;
           this.entries.set(res.data);
           this.totalRecords.set(res.meta.total);
+          this.canSearch.set(res.meta.viewerIsManager);
         },
         error: (err: unknown) => {
           if (requestId !== this.requestId) return;
@@ -144,6 +156,14 @@ export class Roster implements OnInit {
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
     const day = `${date.getDate()}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private isSameDay(a: Date, b: Date): boolean {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
   }
 
   private startOfToday(): Date {

@@ -34,7 +34,7 @@
       @if (isLoading()) {
         <p class="empty-text">Loading…</p>
       } @else if (events().length === 0) {
-        <p class="empty-text">No attendance events recorded for this day.</p>
+        <p class="empty-text">No data yet.</p>
       } @else {
         <ul class="timeline">
           @for (event of events(); track event.id) {
@@ -78,46 +78,5 @@
         </ul>
       </div>
     </div>
-  </section>
-
-  <section class="history-section">
-    <h2 class="section-title">Attendance History</h2>
-
-    <p-table
-      [value]="history()"
-      [lazy]="true"
-      (onLazyLoad)="onHistoryLazyLoad($event)"
-      [paginator]="true"
-      [rows]="rows()"
-      [totalRecords]="totalRecords()"
-      [loading]="isLoadingHistory()"
-      [rowsPerPageOptions]="[10, 25, 50]"
-      dataKey="id"
-      styleClass="p-datatable-sm"
-    >
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Date</th>
-          <th>First In</th>
-          <th>Last Out</th>
-          <th class="text-right">Billable Hours</th>
-        </tr>
-      </ng-template>
-
-      <ng-template pTemplate="body" let-record>
-        <tr>
-          <td>{{ record.date | date: 'mediumDate' }}</td>
-          <td>{{ record.firstIn ? (record.firstIn | date: 'shortTime') : '—' }}</td>
-          <td>{{ record.lastOut ? (record.lastOut | date: 'shortTime') : '—' }}</td>
-          <td class="text-right">{{ record.billableHours !== null ? record.billableHours : '—' }}</td>
-        </tr>
-      </ng-template>
-
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td colspan="4" class="empty-text">No attendance history found.</td>
-        </tr>
-      </ng-template>
-    </p-table>
   </section>
 </main>

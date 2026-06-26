@@ -52,6 +52,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  /* Stay right-aligned even when the search field is hidden for non-managers. */
+  margin-left: auto;
 }
 
 /* ─── Table ────────────────────────────────────────────── */

@@ -49,7 +49,7 @@
   <section class="punch-panel">
     <div class="punch-buttons">
       <p-button
-        label="Time In"
+        label="Clock In"
         icon="pi pi-sign-in"
         severity="primary"
         size="large"
@@ -57,7 +57,7 @@
         (onClick)="openTimeIn()"
       />
       <p-button
-        label="Time Out"
+        label="Clock Out"
         icon="pi pi-sign-out"
         severity="secondary"
         size="large"
@@ -134,7 +134,7 @@
         <span class="worktype-icon worktype-icon--lg"><i [class]="option.icon"></i></span>
         <div>
           <p class="confirm-action">
-            {{ dialogMode() === 'in' ? 'Time In' : 'Time Out' }} — {{ option.label }}
+            {{ dialogMode() === 'in' ? 'Clock In' : 'Clock Out' }} — {{ option.label }}
           </p>
           <p class="confirm-time">{{ now() | date: 'EEEE, MMM d • h:mm a' }}</p>
         </div>
@@ -159,7 +159,7 @@
           />
         }
         <p-button
-          [label]="dialogMode() === 'in' ? 'Confirm Time In' : 'Confirm Time Out'"
+          [label]="dialogMode() === 'in' ? 'Confirm Clock In' : 'Confirm Clock Out'"
           icon="pi pi-check"
           [loading]="isPunching()"
           (onClick)="confirmPunch()"

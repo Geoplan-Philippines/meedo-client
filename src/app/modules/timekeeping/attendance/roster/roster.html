@@ -5,15 +5,17 @@
   </header>
 
   <div class="toolbar">
-    <span class="search-field">
-      <i class="pi pi-search"></i>
-      <input
-        pInputText
-        type="text"
-        placeholder="Search keywords"
-        [formControl]="searchControl"
-      />
-    </span>
+    @if (canSearch()) {
+      <span class="search-field">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          type="text"
+          placeholder="Search keywords"
+          [formControl]="searchControl"
+        />
+      </span>
+    }
 
     <div class="date-nav">
       <p-datepicker
@@ -22,9 +24,16 @@
         [showIcon]="true"
         iconDisplay="input"
         [readonlyInput]="true"
+        [maxDate]="maxDate"
       />
       <p-button icon="pi pi-chevron-left" [text]="true" (onClick)="previousDay()" ariaLabel="Previous day" />
-      <p-button icon="pi pi-chevron-right" [text]="true" (onClick)="nextDay()" ariaLabel="Next day" />
+      <p-button
+        icon="pi pi-chevron-right"
+        [text]="true"
+        [disabled]="isToday()"
+        (onClick)="nextDay()"
+        ariaLabel="Next day"
+      />
     </div>
   </div>
 
@@ -67,7 +76,7 @@
 
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="7" class="empty-text">No attendance found for this day.</td>
+        <td colspan="7" class="empty-text">No data yet.</td>
       </tr>
     </ng-template>
   </p-table>

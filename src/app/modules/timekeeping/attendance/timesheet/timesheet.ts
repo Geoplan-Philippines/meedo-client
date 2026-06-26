@@ -134,8 +134,8 @@ export class Timesheet implements OnInit {
     this.dialogStep() === 'select'
       ? 'Work Type'
       : this.dialogMode() === 'in'
-        ? 'Confirm Time In'
-        : 'Confirm Time Out',
+        ? 'Confirm Clock In'
+        : 'Confirm Clock Out',
   );
 
   /** Whether a distinct clock-out exists; otherwise the day is still open. */
@@ -233,8 +233,8 @@ export class Timesheet implements OnInit {
     if (!last) {
       this.messageService.add({
         severity: 'warn',
-        summary: 'No time in',
-        detail: 'Record a time in before timing out.',
+        summary: 'No clock in',
+        detail: 'Record a clock in before clocking out.',
       });
       return;
     }
@@ -279,7 +279,7 @@ export class Timesheet implements OnInit {
         next: (event) => {
           this.messageService.add({
             severity: 'success',
-            summary: this.dialogMode() === 'in' ? 'Timed in' : 'Timed out',
+            summary: this.dialogMode() === 'in' ? 'Clocked in' : 'Clocked out',
             detail: `${this.eventTypeLabel(event.eventType)} at ${this.formatTime(event.timestamp)}`,
           });
           this.dialogVisible.set(false);

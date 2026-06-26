@@ -1,5 +1,8 @@
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
-import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
+import {
+  PaginatedApiResponse,
+  PaginationMeta,
+} from '../../../../shared/interface/paginated-response.interface';
 
 export interface RecognitionResult {
   matched: boolean;
@@ -109,4 +112,11 @@ export interface RosterParams {
   search?: string;
 }
 
-export type RosterResponse = PaginatedApiResponse<RosterEntry>;
+/** Roster meta carries `viewerIsManager` so members can hide the employee search. */
+export interface RosterMeta extends PaginationMeta {
+  viewerIsManager: boolean;
+}
+
+export interface RosterResponse extends ApiResponse<RosterEntry[]> {
+  meta: RosterMeta;
+}
