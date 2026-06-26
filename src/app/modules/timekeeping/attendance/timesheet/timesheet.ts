@@ -101,6 +101,20 @@ export class Timesheet implements OnInit {
   // Live clock for the elapsed counter and confirmation timestamp.
   readonly now = signal(Date.now());
 
+  // Geolocation — punches are gated until the browser yields a fix.
+  readonly coords = signal<{ latitude: number; longitude: number } | null>(null);
+  readonly locationStatus = signal<'pending' | 'ready' | 'denied' | 'unavailable'>('pending');
+  readonly hasLocation = computed(() => this.coords() !== null);
+
+  /** Human-readable address resolved from the current fix (null while resolving). */
+  readonly locationLabel = signal<string | null>(null);
+  /** Raw coordinate fallback shown until the address resolves. */
+  readonly coordinateLabel = computed(() => {
+    const c = this.coords();
+    return c ? `${c.latitude.toFixed(5)}, ${c.longitude.toFixed(5)}` : null;
+  });
+  private lastGeocodeKey = '';
+
   readonly firstIn = computed(() => this.summary()?.firstIn ?? null);
   readonly lastOut = computed(() => this.summary()?.lastOut ?? null);
   readonly billableHours = computed(() => this.summary()?.billableHours ?? null);
@@ -142,6 +156,7 @@ export class Timesheet implements OnInit {
 
   ngOnInit(): void {
     this.loadSummary(false);
+    this.watchLocation();
 
     interval(SUMMARY_POLL_MS)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -150,6 +165,58 @@ export class Timesheet implements OnInit {
     interval(CLOCK_TICK_MS)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.now.set(Date.now()));
+  }
+
+  /* ─── Geolocation ────────────────────────────────────── */
+
+  private watchLocation(): void {
+    if (!('geolocation' in navigator)) {
+      this.locationStatus.set('unavailable');
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        this.coords.set({ latitude, longitude });
+        this.locationStatus.set('ready');
+        void this.resolveAddress(latitude, longitude);
+      },
+      (error) => {
+        this.coords.set(null);
+        this.locationStatus.set(
+          error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable',
+        );
+      },
+      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 27_000 },
+    );
+
+    this.destroyRef.onDestroy(() => navigator.geolocation.clearWatch(watchId));
+  }
+
+  /**
+   * Reverse-geocode the fix into a readable address via OSM Nominatim. Uses
+   * native fetch so the auth interceptor's credentialed/withCredentials clone
+   * (which Nominatim's wildcard CORS rejects) never touches the request. Skips
+   * refetching while the rounded position is unchanged to respect rate limits.
+   */
+  private async resolveAddress(latitude: number, longitude: number): Promise<void> {
+    const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+    if (key === this.lastGeocodeKey) return;
+    this.lastGeocodeKey = key;
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+      const response = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Reverse geocode failed: ${response.status}`);
+
+      const data = (await response.json()) as { display_name?: string };
+      this.locationLabel.set(data.display_name ?? null);
+    } catch (err) {
+      console.error('Error resolving address:', err);
+      this.locationLabel.set(null);
+    }
   }
 
   /* ─── Dialog flow ────────────────────────────────────── */
@@ -199,10 +266,11 @@ export class Timesheet implements OnInit {
     if (!option) return;
 
     const eventType = this.dialogMode() === 'in' ? option.inEvent : option.outEvent;
+    const coords = this.coords();
 
     this.isPunching.set(true);
     this.attendanceService
-      .recordEvent({ eventType })
+      .recordEvent({ eventType, latitude: coords?.latitude, longitude: coords?.longitude })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isPunching.set(false)),

@@ -47,22 +47,48 @@
 
   <!-- ─── Punch panel ──────────────────────────────────── -->
   <section class="punch-panel">
-    <p-button
-      label="Time In"
-      icon="pi pi-sign-in"
-      severity="primary"
-      size="large"
-      (onClick)="openTimeIn()"
-    />
-    <p-button
-      label="Time Out"
-      icon="pi pi-sign-out"
-      severity="secondary"
-      size="large"
-      [outlined]="true"
-      [disabled]="!canTimeOut()"
-      (onClick)="openTimeOut()"
-    />
+    <div class="punch-buttons">
+      <p-button
+        label="Time In"
+        icon="pi pi-sign-in"
+        severity="primary"
+        size="large"
+        [disabled]="!hasLocation()"
+        (onClick)="openTimeIn()"
+      />
+      <p-button
+        label="Time Out"
+        icon="pi pi-sign-out"
+        severity="secondary"
+        size="large"
+        [outlined]="true"
+        [disabled]="!canTimeOut() || !hasLocation()"
+        (onClick)="openTimeOut()"
+      />
+    </div>
+
+    <p class="location-status" [class.location-status--ready]="locationStatus() === 'ready'">
+      @switch (locationStatus()) {
+        @case ('pending') {
+          <i class="pi pi-spin pi-spinner"></i> Getting your location…
+        }
+        @case ('ready') {
+          <i class="pi pi-map-marker"></i>
+          <span class="location-text">{{ locationLabel() ?? coordinateLabel() }}</span>
+          @if (locationLabel()) {
+            <span class="location-coords">({{ coordinateLabel() }})</span>
+          }
+        }
+        @case ('denied') {
+          <i class="pi pi-exclamation-triangle"></i>
+          Location permission denied. Enable it to time in or out.
+        }
+        @case ('unavailable') {
+          <i class="pi pi-exclamation-triangle"></i>
+          Location unavailable. Punching is disabled until a location is found.
+        }
+      }
+    </p>
   </section>
 
   <!-- ─── In/Out roster (own row for members, all for managers) ─── -->

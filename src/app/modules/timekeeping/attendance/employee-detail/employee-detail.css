@@ -56,6 +56,252 @@
   line-height: 1.1;
 }
 
+/* ─── Detail grid (timeline left, map right) ───────────── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ─── Map (theme-aware "live proximity" card) ──────────── */
+.map-wrapper {
+  position: relative;
+  border-radius: var(--radius-base);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+.map-container {
+  width: 100%;
+  height: 440px;
+}
+
+.map-overlay-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-background) 92%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.map-overlay-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-heading);
+}
+
+.map-overlay-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #16a34a;
+}
+
+.map-legend {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  z-index: 2;
+  list-style: none;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: color-mix(in srgb, var(--color-background) 80%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--color-body);
+}
+
+.legend-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.map-empty {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  color: var(--color-body);
+  background: color-mix(in srgb, var(--color-background) 65%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ─── Dot + label-pill markers (theme-aware) ───────────── */
+/* Zero-size anchor: its center is exactly the geo coordinate, so it can't drift. */
+:host ::ng-deep .proximity-marker {
+  position: relative;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+}
+
+:host ::ng-deep .proximity-label {
+  position: absolute;
+  left: 0;
+  bottom: 11px;
+  transform: translateX(-50%) scale(var(--marker-scale, 1));
+  transform-origin: center bottom;
+  white-space: nowrap;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-heading);
+  background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  border: 1px solid var(--color-border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+:host ::ng-deep .proximity-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--dot);
+  border: 2px solid var(--color-background);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%) scale(var(--marker-scale, 1));
+  transform-origin: center;
+}
+
+/* When several punches share one pin, grow the dot and show the count inside it. */
+:host ::ng-deep .proximity-dot--counted {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Soft pulsing proximity ring expanding out from behind the dot. */
+:host ::ng-deep .proximity-dot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--dot);
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  animation: proximity-pulse 2s ease-out infinite;
+}
+
+@keyframes proximity-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.8);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .proximity-dot::before {
+    animation: none;
+  }
+}
+
+/* ─── Restyled zoom controls (white rounded, like the mock) ─ */
+:host ::ng-deep .maplibregl-ctrl-top-right {
+  margin: 0.75rem;
+}
+
+:host ::ng-deep .maplibregl-ctrl-group {
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+:host ::ng-deep .maplibregl-ctrl-group button {
+  width: 34px;
+  height: 34px;
+}
+
+/* ─── Popups (theme-aware) ─────────────────────────────── */
+:host ::ng-deep .maplibregl-popup-content {
+  background: var(--color-background);
+  color: var(--color-body);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+:host ::ng-deep .maplibregl-popup-tip {
+  border-top-color: var(--color-background);
+  border-bottom-color: var(--color-background);
+  border-left-color: var(--color-background);
+  border-right-color: var(--color-background);
+}
+
+:host ::ng-deep .map-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-family: var(--font-body);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+:host ::ng-deep .map-popup strong {
+  font-size: 0.8125rem;
+  color: var(--color-heading);
+}
+
+:host ::ng-deep .map-popup span,
+:host ::ng-deep .map-popup small {
+  font-size: 0.75rem;
+  color: var(--color-body);
+}
+
 /* ─── Timeline ─────────────────────────────────────────── */
 .section-title {
   font-size: 1.125rem;
@@ -118,6 +364,12 @@
 
 .text-right {
   text-align: right;
+}
+
+@media (max-width: 1024px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {

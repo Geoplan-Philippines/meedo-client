@@ -43,6 +43,8 @@ export interface AttendanceEvent {
   eventType: AttendanceEventType;
   origin: AttendanceOrigin;
   timestamp: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,6 +73,8 @@ export interface DailyAttendanceSummary {
 export interface RecordAttendanceEventPayload {
   eventType: ManualEventType;
   timestamp?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface AttendanceHistoryParams {
