@@ -1,0 +1,92 @@
+<section class="roster-section">
+  <header class="section-header">
+    <h2 class="section-title">In/Out</h2>
+    <p class="section-subtitle">Log your rendered work hours.</p>
+  </header>
+
+  <div class="toolbar">
+    @if (canSearch()) {
+      <span class="search-field">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          type="text"
+          placeholder="Search keywords"
+          aria-label="Search employees"
+          [formControl]="searchControl"
+        />
+      </span>
+    }
+
+    <div class="date-nav">
+      <p-datepicker
+        [formControl]="dateControl"
+        dateFormat="yy-mm-dd"
+        [showIcon]="true"
+        iconDisplay="input"
+        [readonlyInput]="true"
+        [maxDate]="maxDate"
+      />
+      <p-button icon="pi pi-chevron-left" [text]="true" (onClick)="previousDay()" ariaLabel="Previous day" />
+      <p-button
+        icon="pi pi-chevron-right"
+        [text]="true"
+        [disabled]="isToday()"
+        (onClick)="nextDay()"
+        ariaLabel="Next day"
+      />
+    </div>
+  </div>
+
+  <p-table
+    #dt
+    [value]="entries()"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="rows()"
+    [totalRecords]="totalRecords()"
+    [loading]="isLoading()"
+    [rowsPerPageOptions]="[10, 25, 50]"
+    dataKey="employeeId"
+    styleClass="p-datatable-sm roster-table"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th class="chevron-col"></th>
+        <th>Employee Name</th>
+        <th>Employee Code</th>
+        <th>Department</th>
+        <th>First In</th>
+        <th>Last Out</th>
+        <th>Clocked Hours</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-entry>
+      <tr
+        class="roster-row"
+        tabindex="0"
+        role="button"
+        [attr.aria-label]="'View attendance for ' + (entry.name ?? entry.email)"
+        (click)="openEmployee(entry)"
+        (keydown.enter)="openEmployee(entry)"
+        (keydown.space)="openEmployee(entry); $event.preventDefault()"
+      >
+        <td class="chevron-col"><i class="pi pi-chevron-right"></i></td>
+        <td class="name-cell">{{ entry.name ?? entry.email }}</td>
+        <td>{{ entry.employeeCode ?? '—' }}</td>
+        <td>{{ entry.department ?? '—' }}</td>
+        <td>{{ entry.firstIn ? (entry.firstIn | date: 'yyyy-MM-dd hh:mm a') : '—' }}</td>
+        <td>{{ entry.lastOut ? (entry.lastOut | date: 'yyyy-MM-dd hh:mm a') : '—' }}</td>
+        <td>{{ entry.clockedHours !== null ? entry.clockedHours + ' Hours' : '—' }}</td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="7" class="empty-text">No data yet.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>

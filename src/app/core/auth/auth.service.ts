@@ -15,7 +15,7 @@ type SessionData = {
 export class AuthService {
   private readonly client = createAuthClient({
     baseURL: `${environment.apiBaseUrl}/auth`,
-  }); 
+  });
 
   private readonly _session = signal<SessionData>(null);
 
