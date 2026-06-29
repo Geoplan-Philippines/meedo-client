@@ -73,6 +73,11 @@ export interface DailyAttendanceSummary {
   events: AttendanceEvent[];
 }
 
+export interface AttendanceRealtimeUpdate {
+  reasons: Array<'biometric' | 'manual' | 'auto-clock-out'>;
+  timestamp: string;
+}
+
 export interface RecordAttendanceEventPayload {
   eventType: ManualEventType;
   timestamp?: string;

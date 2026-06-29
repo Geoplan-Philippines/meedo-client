@@ -14,7 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT, Location } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { finalize } from 'rxjs';
+import { auditTime, finalize } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -93,6 +93,7 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
   private readonly themeService = inject(ThemeService);
 
   private employeeId = '';
+  private selectedDate: string | undefined;
 
   private readonly mapContainer = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
   private map: MaplibreMap | null = null;
@@ -214,8 +215,16 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
     const date = this.route.snapshot.queryParamMap.get('date') ?? undefined;
     if (!employeeId) return;
     this.employeeId = employeeId;
+    this.selectedDate = date;
 
     this.loadDay(date);
+    this.attendanceService.updates$
+      .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.isSelectedDateToday() && this.document.visibilityState === 'visible') {
+          this.loadDay(this.selectedDate, true);
+        }
+      });
   }
 
   ngAfterViewInit(): void {
@@ -247,15 +256,27 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
     this.location.back();
   }
 
-  private loadDay(date: string | undefined): void {
-    this.isLoading.set(true);
+  private loadDay(date: string | undefined, silent = false): void {
+    if (!silent) this.isLoading.set(true);
     this.attendanceService
       .getEmployeeDay(this.employeeId, date)
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoading.set(false)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          if (!silent) this.isLoading.set(false);
+        }),
+      )
       .subscribe({
         next: (summary) => this.summary.set(summary),
         error: (err: unknown) => console.error('Error loading employee attendance:', err),
       });
+  }
+
+  private isSelectedDateToday(): boolean {
+    if (!this.selectedDate) return true;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}-${`${now.getDate()}`.padStart(2, '0')}`;
+    return this.selectedDate === today;
   }
 
   private renderMarkers(groups: MarkerGroup[]): void {

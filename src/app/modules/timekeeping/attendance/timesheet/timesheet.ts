@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
-import { finalize, interval } from 'rxjs';
+import { auditTime, finalize, interval } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -28,9 +28,6 @@ import {
   WorkType,
 } from '../models/attendance.model';
 
-/** How often we silently re-pull today's summary so externally-sourced
- *  (e.g. biometric office) events surface without a manual refresh. */
-const SUMMARY_POLL_MS = 3 * 60_000;
 /** Clock tick driving the live "elapsed" counter while clocked in. */
 const CLOCK_TICK_MS = 1_000;
 /** Minimum gap between reverse-geocode calls — OSM Nominatim allows ≤ 1 req/s. */
@@ -161,8 +158,8 @@ export class Timesheet implements OnInit {
     this.loadSummary(false);
     this.watchLocation();
 
-    interval(SUMMARY_POLL_MS)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    this.attendanceService.updates$
+      .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadSummary(true));
 
     interval(CLOCK_TICK_MS)

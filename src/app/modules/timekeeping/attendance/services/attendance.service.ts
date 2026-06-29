@@ -1,11 +1,13 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map } from 'rxjs/operators';
+import { Observable, share } from 'rxjs';
 
 import { environment } from '../../../../../environments/environment.dev';
 import {
   AttendanceHistoryParams,
   AttendanceHistoryResponse,
+  AttendanceRealtimeUpdate,
   DailyAttendanceSummary,
   DailySummaryResponse,
   RecognizeResponse,
@@ -31,6 +33,27 @@ export class AttendanceService {
 
   private readonly faceUrl = `${environment.apiBaseUrl}/timekeeping/attendance`;
   private readonly baseUrl = `${environment.apiBaseUrl}/attendance`;
+
+  readonly updates$ = new Observable<AttendanceRealtimeUpdate>((subscriber) => {
+    if (typeof EventSource === 'undefined') {
+      subscriber.complete();
+      return;
+    }
+
+    const source = new EventSource(`${this.baseUrl}/updates`, { withCredentials: true });
+    const onUpdate = (event: MessageEvent<string>): void => {
+      try {
+        subscriber.next(JSON.parse(event.data) as AttendanceRealtimeUpdate);
+      } catch (error) {
+        console.error('Invalid attendance realtime update:', error);
+      }
+    };
+    source.addEventListener('attendance.updated', onUpdate as EventListener);
+    return () => {
+      source.removeEventListener('attendance.updated', onUpdate as EventListener);
+      source.close();
+    };
+  }).pipe(share());
 
   recognize(image: Blob) {
     const formData = new FormData();

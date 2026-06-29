@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { debounceTime, distinctUntilChanged, finalize, interval } from 'rxjs';
+import { auditTime, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
 import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -22,9 +22,6 @@ import { AttendanceService } from '../services/attendance.service';
 import { RosterEntry } from '../models/attendance.model';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** How often the live board silently re-pulls today's roster. */
-const ROSTER_POLL_MS = 3 * 60_000;
 
 @Component({
   selector: 'app-attendance-roster',
@@ -82,11 +79,8 @@ export class Roster implements OnInit {
   ngOnInit(): void {
     // The lazy p-table fires (onLazyLoad) on init, loading the first page.
 
-    // Live board: silently re-pull today's roster so biometric/manual punches
-    // surface without a manual refresh. Skip past days (static) and hidden tabs
-    // (no point polling in the background).
-    interval(ROSTER_POLL_MS)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    this.attendanceService.updates$
+      .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (this.isToday() && this.document.visibilityState === 'visible') {
           this.fetchRoster(true);
