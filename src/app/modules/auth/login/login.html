@@ -61,17 +61,32 @@
           <label for="login-password" class="text-sm font-medium text-heading">
             Password
           </label>
-          <p-password
-            id="login-password"
-            formControlName="password"
-            placeholder="Enter your password"
-            [toggleMask]="true"
-            [feedback]="false"
-            autocomplete="current-password"
-            inputStyleClass="w-full"
-            [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
-            aria-describedby="password-error"
-          />
+          <div class="relative">
+            <input
+              pInputText
+              id="login-password"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              class="w-full pr-10"
+              [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+              aria-describedby="password-error"
+            />
+            <button
+              type="button"
+              class="absolute inset-y-0 right-0 flex items-center px-3 text-body/70 hover:text-heading transition-colors"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+            >
+              <i
+                class="pi"
+                [class.pi-eye]="!passwordVisible()"
+                [class.pi-eye-slash]="passwordVisible()"
+                aria-hidden="true"
+              ></i>
+            </button>
+          </div>
           @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
             <small id="password-error" class="text-destructive text-xs" role="alert">
               Password is required.
