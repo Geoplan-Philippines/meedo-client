@@ -19,4 +19,14 @@ export const timekeepingRoutes: Routes = [
       (component) => component.confirmDiscardChanges(),
     ],
   },
+  {
+    path: 'timesheet/approval/review',
+    loadComponent: () =>
+      import('./timesheet/review/timesheet-review').then((m) => m.TimesheetReview),
+  },
+  {
+    path: 'timesheet/approval',
+    loadComponent: () =>
+      import('./timesheet/approval/timesheet-approval').then((m) => m.TimesheetApproval),
+  },
 ];
