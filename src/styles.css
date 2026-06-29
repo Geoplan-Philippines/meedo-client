@@ -35,6 +35,12 @@
   --muted-success: #D1EDE0;
   --success-foreground: #FFFFFF;
 
+  /* Attendance punch categories — fixed marker/legend hues, constant across themes. */
+  --attendance-field: #3B82F6;
+  --attendance-wfh: #EAB308;
+  --attendance-office: #22C55E;
+  --attendance-biometric: #8B5CF6;
+
   --radius: 0.25rem;
 }
 
@@ -89,6 +95,11 @@
   --color-muted-destructive: var(--muted-destructive);
   --color-success: var(--success);
   --color-muted-success: var(--muted-success);
+
+  --color-attendance-field: var(--attendance-field);
+  --color-attendance-wfh: var(--attendance-wfh);
+  --color-attendance-office: var(--attendance-office);
+  --color-attendance-biometric: var(--attendance-biometric);
 
   --radius-base: var(--radius);
 

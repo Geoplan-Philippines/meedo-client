@@ -91,12 +91,4 @@ export class AttendanceService {
       })
       .pipe(map((res): DailyAttendanceSummary => res.data));
   }
-
-  /** A single employee's paginated daily history for the roster drill-down. */
-  getEmployeeHistory(employeeId: string, params: AttendanceHistoryParams) {
-    return this.http.get<AttendanceHistoryResponse>(`${this.baseUrl}/roster/${employeeId}/history`, {
-      params: buildHistoryParams(params),
-      withCredentials: true,
-    });
-  }
 }

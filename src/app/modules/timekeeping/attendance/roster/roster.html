@@ -12,6 +12,7 @@
           pInputText
           type="text"
           placeholder="Search keywords"
+          aria-label="Search employees"
           [formControl]="searchControl"
         />
       </span>
@@ -63,7 +64,15 @@
     </ng-template>
 
     <ng-template pTemplate="body" let-entry>
-      <tr class="roster-row" (click)="openEmployee(entry)">
+      <tr
+        class="roster-row"
+        tabindex="0"
+        role="button"
+        [attr.aria-label]="'View attendance for ' + (entry.name ?? entry.email)"
+        (click)="openEmployee(entry)"
+        (keydown.enter)="openEmployee(entry)"
+        (keydown.space)="openEmployee(entry); $event.preventDefault()"
+      >
         <td class="chevron-col"><i class="pi pi-chevron-right"></i></td>
         <td class="name-cell">{{ entry.name ?? entry.email }}</td>
         <td>{{ entry.employeeCode ?? '—' }}</td>

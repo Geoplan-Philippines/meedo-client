@@ -33,6 +33,8 @@ import {
 const SUMMARY_POLL_MS = 3 * 60_000;
 /** Clock tick driving the live "elapsed" counter while clocked in. */
 const CLOCK_TICK_MS = 1_000;
+/** Minimum gap between reverse-geocode calls — OSM Nominatim allows ≤ 1 req/s. */
+const GEOCODE_MIN_INTERVAL_MS = 2_000;
 
 interface WorkTypeOption {
   readonly type: WorkType;
@@ -114,6 +116,7 @@ export class Timesheet implements OnInit {
     return c ? `${c.latitude.toFixed(5)}, ${c.longitude.toFixed(5)}` : null;
   });
   private lastGeocodeKey = '';
+  private lastGeocodeAt = 0;
 
   readonly firstIn = computed(() => this.summary()?.firstIn ?? null);
   readonly lastOut = computed(() => this.summary()?.lastOut ?? null);
@@ -204,7 +207,15 @@ export class Timesheet implements OnInit {
   private async resolveAddress(latitude: number, longitude: number): Promise<void> {
     const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
     if (key === this.lastGeocodeKey) return;
+
+    // Time-gate on top of the position dedupe: if a jittery fix crosses a 4th-
+    // decimal boundary repeatedly, skip until the rate-limit window passes. The
+    // next fix retries, so the address still resolves shortly.
+    const now = Date.now();
+    if (now - this.lastGeocodeAt < GEOCODE_MIN_INTERVAL_MS) return;
+
     this.lastGeocodeKey = key;
+    this.lastGeocodeAt = now;
 
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;

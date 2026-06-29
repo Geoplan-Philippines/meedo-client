@@ -12,13 +12,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe, Location } from '@angular/common';
+import { DatePipe, DOCUMENT, Location } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 
 import {
   LngLatBounds,
@@ -29,19 +28,24 @@ import {
 } from 'maplibre-gl';
 
 import { AttendanceService } from '../services/attendance.service';
+import { ThemeService } from '../../../../core/theme/theme.service';
 import {
   AttendanceEvent,
   AttendanceEventType,
-  AttendanceRecord,
   DailyAttendanceSummary,
 } from '../models/attendance.model';
 
-/** Marker colors by punch context, per spec (field=blue, wfh=yellow, manual office=green, biometric=purple). */
+/**
+ * Marker colors by punch context (field=blue, wfh=yellow, manual office=green,
+ * biometric=purple). Values reference the theme tokens in `styles.css` so the
+ * hex lives in one place; markers set these as the `--dot` custom property and
+ * CSS resolves them.
+ */
 const SOURCE_COLORS = {
-  FIELD: '#3b82f6',
-  WFH: '#eab308',
-  OFFICE_MANUAL: '#22c55e',
-  BIOMETRIC: '#8b5cf6',
+  FIELD: 'var(--color-attendance-field)',
+  WFH: 'var(--color-attendance-wfh)',
+  OFFICE_MANUAL: 'var(--color-attendance-office)',
+  BIOMETRIC: 'var(--color-attendance-biometric)',
 } as const;
 
 /**
@@ -51,9 +55,6 @@ const SOURCE_COLORS = {
  */
 const LIGHT_STYLE_URL = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-
-/** The app drives dark mode via the `.app-dark` class on the document element. */
-const DARK_MODE_CLASS = 'app-dark';
 
 /** A single punch: the event to plot and the text shown on its pill. */
 interface MarkerSpec {
@@ -78,7 +79,7 @@ const FAN_SPACING = 46;
 
 @Component({
   selector: 'app-attendance-employee-detail',
-  imports: [ButtonModule, TagModule, TableModule, DatePipe],
+  imports: [ButtonModule, TagModule, DatePipe],
   templateUrl: './employee-detail.html',
   styleUrl: './employee-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,6 +89,8 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
   private readonly route = inject(ActivatedRoute);
   private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly themeService = inject(ThemeService);
 
   private employeeId = '';
 
@@ -96,22 +99,11 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
   private markers: { marker: Marker; popup: Popup; base: [number, number] }[] = [];
   private readonly mapReady = signal(false);
 
-  /** Tracks the app's dark mode so the basemap can follow the theme. */
-  private readonly isDark = signal(document.documentElement.classList.contains(DARK_MODE_CLASS));
   private currentStyleUrl = '';
 
   // Selected day timeline.
   readonly summary = signal<DailyAttendanceSummary | null>(null);
   readonly isLoading = signal(false);
-
-  // Full history (server-side pagination).
-  readonly history = signal<AttendanceRecord[]>([]);
-  readonly totalRecords = signal(0);
-  readonly rows = signal(10);
-  readonly isLoadingHistory = signal(false);
-
-  private first = 0;
-  private historyRequestId = 0;
 
   readonly firstIn = computed(() => this.summary()?.firstIn ?? null);
   readonly lastOut = computed(() => this.summary()?.lastOut ?? null);
@@ -209,19 +201,12 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
     // Swap the basemap when the app theme flips. Markers are DOM overlays, so
     // they survive setStyle and don't need re-adding.
     effect(() => {
-      const url = this.isDark() ? DARK_STYLE_URL : LIGHT_STYLE_URL;
+      const url = this.themeService.isDark() ? DARK_STYLE_URL : LIGHT_STYLE_URL;
       if (this.map && url !== this.currentStyleUrl) {
         this.currentStyleUrl = url;
         this.map.setStyle(url);
       }
     });
-
-    // Mirror the document's dark-mode class into the signal.
-    const observer = new MutationObserver(() =>
-      this.isDark.set(document.documentElement.classList.contains(DARK_MODE_CLASS)),
-    );
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    this.destroyRef.onDestroy(() => observer.disconnect());
   }
 
   ngOnInit(): void {
@@ -234,7 +219,7 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.currentStyleUrl = this.isDark() ? DARK_STYLE_URL : LIGHT_STYLE_URL;
+    this.currentStyleUrl = this.themeService.isDark() ? DARK_STYLE_URL : LIGHT_STYLE_URL;
     this.map = new MaplibreMap({
       container: this.mapContainer().nativeElement,
       style: this.currentStyleUrl,
@@ -258,12 +243,6 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
     });
   }
 
-  onHistoryLazyLoad(event: TableLazyLoadEvent): void {
-    this.first = event.first ?? 0;
-    this.rows.set(event.rows ?? 10);
-    this.fetchHistory();
-  }
-
   goBack(): void {
     this.location.back();
   }
@@ -276,31 +255,6 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
       .subscribe({
         next: (summary) => this.summary.set(summary),
         error: (err: unknown) => console.error('Error loading employee attendance:', err),
-      });
-  }
-
-  private fetchHistory(): void {
-    const requestId = ++this.historyRequestId;
-    this.isLoadingHistory.set(true);
-
-    this.attendanceService
-      .getEmployeeHistory(this.employeeId, {
-        page: Math.floor(this.first / this.rows()) + 1,
-        limit: this.rows(),
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoadingHistory.set(false)))
-      .subscribe({
-        next: (res) => {
-          if (requestId !== this.historyRequestId) return;
-          this.history.set(res.data);
-          this.totalRecords.set(res.meta.total);
-        },
-        error: (err: unknown) => {
-          if (requestId !== this.historyRequestId) return;
-          console.error('Error loading employee history:', err);
-          this.history.set([]);
-          this.totalRecords.set(0);
-        },
       });
   }
 
@@ -364,15 +318,15 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
 
   /** A colored dot with a text pill, plus a count badge when punches are grouped. */
   private buildMarkerElement(group: MarkerGroup): HTMLElement {
-    const el = document.createElement('div');
+    const el = this.document.createElement('div');
     el.className = 'proximity-marker';
     el.style.setProperty('--dot', group.color);
 
-    const label = document.createElement('span');
+    const label = this.document.createElement('span');
     label.className = 'proximity-label';
     label.textContent = group.label;
 
-    const dot = document.createElement('span');
+    const dot = this.document.createElement('span');
     dot.className = 'proximity-dot';
 
     // Show the punch count inside the dot itself, rather than as a floating badge.

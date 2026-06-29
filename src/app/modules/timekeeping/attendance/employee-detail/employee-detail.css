@@ -112,7 +112,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: #16a34a;
+  color: var(--success);
 }
 
 .map-legend {
@@ -145,6 +145,22 @@
   height: 0.6rem;
   border-radius: 50%;
   display: inline-block;
+}
+
+.legend-dot--field {
+  background: var(--color-attendance-field);
+}
+
+.legend-dot--wfh {
+  background: var(--color-attendance-wfh);
+}
+
+.legend-dot--office {
+  background: var(--color-attendance-office);
+}
+
+.legend-dot--biometric {
+  background: var(--color-attendance-biometric);
 }
 
 .map-empty {
@@ -210,7 +226,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: white;
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 1;
@@ -355,15 +371,6 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-}
-
-/* ─── History table ────────────────────────────────────── */
-.history-section :where(th, td) {
-  font-size: 0.875rem;
-}
-
-.text-right {
-  text-align: right;
 }
 
 @media (max-width: 1024px) {

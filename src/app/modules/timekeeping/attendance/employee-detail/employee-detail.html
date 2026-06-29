@@ -23,7 +23,7 @@
     </article>
     <article class="summary-card">
       <span class="summary-label">Clocked Hours</span>
-      <span class="summary-value">{{ billableHours() !== null ? billableHours() : '—' }}</span>
+      <span class="summary-value">{{ billableHours() !== null ? billableHours() + ' Hours' : '—' }}</span>
     </article>
   </section>
 
@@ -71,10 +71,10 @@
         }
 
         <ul class="map-legend">
-          <li><span class="legend-dot" style="background: #3b82f6"></span> Field</li>
-          <li><span class="legend-dot" style="background: #eab308"></span> WFH</li>
-          <li><span class="legend-dot" style="background: #22c55e"></span> Office</li>
-          <li><span class="legend-dot" style="background: #8b5cf6"></span> Biometric</li>
+          <li><span class="legend-dot legend-dot--field"></span> Field</li>
+          <li><span class="legend-dot legend-dot--wfh"></span> WFH</li>
+          <li><span class="legend-dot legend-dot--office"></span> Office</li>
+          <li><span class="legend-dot legend-dot--biometric"></span> Biometric</li>
         </ul>
       </div>
     </div>
