@@ -30,7 +30,7 @@ import {
 
 /** How often we silently re-pull today's summary so externally-sourced
  *  (e.g. biometric office) events surface without a manual refresh. */
-const SUMMARY_POLL_MS = 15_000;
+const SUMMARY_POLL_MS = 3 * 60_000;
 /** Clock tick driving the live "elapsed" counter while clocked in. */
 const CLOCK_TICK_MS = 1_000;
 
