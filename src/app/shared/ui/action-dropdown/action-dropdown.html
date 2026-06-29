@@ -1,0 +1,14 @@
+<p-menu #menu [model]="menuItems()" [popup]="true" appendTo="body" styleClass="action-dropdown-menu" />
+
+<button
+  pButton
+  type="button"
+  size="small"
+  severity="secondary"
+  [text]="true"
+  icon="pi pi-ellipsis-v"
+  class="action-dropdown-trigger"
+  (click)="menu.toggle($event)"
+  [disabled]="disabled() || menuItems().length === 0"
+  [attr.aria-label]="ariaLabel()"
+></button>
