@@ -3,6 +3,8 @@ import { Settings } from './settings';
 import { Teams } from './teams/teams';
 import { Categories } from './categories/categories';
 import { Statuses } from './statuses/statuses';
+import { Users } from './users/users';
+import { orgAdminGuard } from '../../core/auth/org-admin.guard';
 
 export const settingsRoutes: Routes = [
   {
@@ -20,5 +22,10 @@ export const settingsRoutes: Routes = [
   {
     path: 'statuses',
     component: Statuses,
+  },
+  {
+    path: 'users',
+    component: Users,
+    canActivate: [orgAdminGuard],
   },
 ];

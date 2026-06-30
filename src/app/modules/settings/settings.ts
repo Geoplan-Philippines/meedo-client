@@ -1,11 +1,17 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { catchError, EMPTY } from 'rxjs';
+
+import { AuthService } from '../../core/auth/auth.service';
+import { isOrganizationAdmin } from '../../core/auth/org-admin.guard';
 
 interface SettingsCard {
   label: string;
   description: string;
   route?: string;
   icon: string;
+  adminOnly?: boolean;
 }
 
 interface SettingsGroup {
@@ -20,13 +26,24 @@ interface SettingsGroup {
   styleUrl: './settings.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Settings {
+export class Settings implements OnInit {
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly canManageUsers = signal(false);
+
   readonly groups = signal<SettingsGroup[]>([
     {
       label: 'General',
       cards: [
         { label: 'Organization', description: 'Company info and branding', icon: 'pi-globe' },
-        { label: 'Users', description: 'Members, roles and permissions', icon: 'pi-users' },
+        {
+          label: 'Users',
+          description: 'Members, roles and permissions',
+          icon: 'pi-users',
+          route: 'users',
+          adminOnly: true,
+        },
         { label: 'Teams', description: 'Manage your teams', route: 'teams', icon: 'pi-sitemap' },
       ],
     },
@@ -45,4 +62,17 @@ export class Settings {
       ],
     },
   ]);
-}   
+
+  ngOnInit(): void {
+    const organizationId = this.authService.organizationId();
+    if (!organizationId) return;
+
+    this.authService
+      .getActiveMemberRole(organizationId)
+      .pipe(
+        catchError(() => EMPTY),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((role) => this.canManageUsers.set(isOrganizationAdmin(role)));
+  }
+}

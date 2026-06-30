@@ -1,0 +1,210 @@
+import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { MessageService } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { ToastModule } from 'primeng/toast';
+import { catchError, EMPTY, forkJoin, Subject, switchMap } from 'rxjs';
+
+import { AuthService } from '../../../core/auth/auth.service';
+import { Team } from '../teams/models/teams.model';
+import { TeamsService } from '../teams/services/teams.service';
+import { OnboardMemberPayload, OnboardMemberRole, OrganizationMember } from './models/users.model';
+import { UserService } from './services/user.service';
+
+@Component({
+  selector: 'app-users',
+  imports: [
+    RouterLink,
+    TableModule,
+    ButtonModule,
+    DialogModule,
+    InputTextModule,
+    PasswordModule,
+    SelectModule,
+    ToastModule,
+    DatePipe,
+    ReactiveFormsModule,
+  ],
+  providers: [MessageService],
+  templateUrl: './users.html',
+  styleUrl: './users.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class Users implements OnInit {
+  private readonly userService = inject(UserService);
+  private readonly teamsService = inject(TeamsService);
+  private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly refresh$ = new Subject<void>();
+  private readonly authService = inject(AuthService);
+
+  readonly users = signal<OrganizationMember[]>([]);
+  readonly teams = signal<Team[]>([]);
+  readonly isLoading = signal(false);
+  readonly loadError = signal<string | null>(null);
+  readonly dialogVisible = signal(false);
+  readonly isSaving = signal(false);
+  readonly saveError = signal<string | null>(null);
+
+  readonly roleOptions: { label: string; value: OnboardMemberRole }[] = [
+    { label: 'Member', value: 'member' },
+  ];
+
+  readonly onboardEmployeeForm = new FormGroup({
+    name: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(100)],
+    }),
+    email: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email],
+    }),
+    password: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(8), Validators.maxLength(128)],
+    }),
+    employeeCode: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(50)],
+    }),
+    biometricsId: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(50)],
+    }),
+    teamId: new FormControl<string | null>(null),
+    role: new FormControl<OnboardMemberRole>('member', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+  });
+
+  ngOnInit(): void {
+    this.refresh$
+      .pipe(
+        switchMap(() => {
+          const organizationId = this.authService.organizationId();
+          this.isLoading.set(true);
+          this.loadError.set(null);
+
+          if (!organizationId) {
+            this.isLoading.set(false);
+            this.loadError.set('No organization selected.');
+            return EMPTY;
+          }
+
+          return forkJoin({
+            users: this.userService.getUsers(organizationId),
+            teams: this.teamsService.getTeams(organizationId),
+          }).pipe(
+            catchError((error) => {
+              console.error('Error loading users:', error);
+              this.isLoading.set(false);
+              this.loadError.set('Failed to load users and teams. Please try again.');
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({ users, teams }) => {
+        this.users.set(users);
+        this.teams.set([...teams].sort((a, b) => a.name.localeCompare(b.name)));
+        this.isLoading.set(false);
+      });
+
+    this.refresh$.next();
+  }
+
+  loadUsers(): void {
+    this.refresh$.next();
+  }
+
+  openCreateDialog(): void {
+    this.onboardEmployeeForm.reset({
+      name: '',
+      email: '',
+      password: '',
+      employeeCode: '',
+      biometricsId: '',
+      teamId: null,
+      role: 'member',
+    });
+    this.saveError.set(null);
+    this.dialogVisible.set(true);
+  }
+
+  closeDialog(): void {
+    if (this.isSaving()) return;
+    this.dialogVisible.set(false);
+    this.saveError.set(null);
+  }
+
+  saveOnboardEmployee(): void {
+    if (this.onboardEmployeeForm.invalid || this.isSaving()) {
+      this.onboardEmployeeForm.markAllAsTouched();
+      return;
+    }
+
+    const formValue = this.onboardEmployeeForm.getRawValue();
+    const name = formValue.name.trim();
+
+    if (!name) {
+      this.onboardEmployeeForm.controls.name.setErrors({ required: true });
+      this.onboardEmployeeForm.controls.name.markAsTouched();
+      return;
+    }
+
+    const payload: OnboardMemberPayload = {
+      name,
+      email: formValue.email.trim(),
+      password: formValue.password,
+      role: formValue.role,
+      ...(formValue.employeeCode.trim()
+        ? { employeeCode: formValue.employeeCode.trim() }
+        : {}),
+      ...(formValue.biometricsId.trim()
+        ? { biometricsId: formValue.biometricsId.trim() }
+        : {}),
+      ...(formValue.teamId ? { teamId: formValue.teamId } : {}),
+    };
+
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    this.userService
+      .onboardMember(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isSaving.set(false);
+          this.dialogVisible.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'User onboarded',
+            detail: `${payload.name} can now sign in.`,
+          });
+          this.loadUsers();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.isSaving.set(false);
+          this.saveError.set(this.getErrorMessage(error));
+        },
+      });
+  }
+
+  private getErrorMessage(error: HttpErrorResponse): string {
+    const message = error.error?.message;
+    if (Array.isArray(message)) return message.join(' ');
+    if (typeof message === 'string' && message.trim()) return message;
+    return 'Failed to onboard the user. Please try again.';
+  }
+}
