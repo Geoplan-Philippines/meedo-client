@@ -1,4 +1,6 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { map, Observable } from 'rxjs';
 import { createAuthClient } from 'better-auth/client';
 import { environment } from '../../../environments/environment.dev';
 import { AuthUser } from './auth.types';
@@ -13,6 +15,7 @@ type SessionData = {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
   private readonly client = createAuthClient({
     baseURL: `${environment.apiBaseUrl}/auth`,
   });
@@ -25,6 +28,18 @@ export class AuthService {
   readonly organizationId = computed(() =>
     this._session()?.session?.activeOrganizationId ?? null
 );
+
+  getActiveMemberRole(organizationId?: string): Observable<string> {
+    return this.http
+      .get<{ role: string }>(
+        `${environment.apiBaseUrl}/auth/organization/get-active-member-role`,
+        {
+          params: organizationId ? { organizationId } : {},
+          withCredentials: true,
+        },
+      )
+      .pipe(map((response) => response.role));
+  }
 
   async initialize(): Promise<void> {
     try {
