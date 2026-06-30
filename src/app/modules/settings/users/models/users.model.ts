@@ -60,7 +60,6 @@ export interface UpdateMemberPayload {
   employeeCode: string | null;
   biometricsId: string | null;
   teamId: string | null;
-  role: OrganizationMemberRole;
 }
 
 export interface OnboardMemberResponse {

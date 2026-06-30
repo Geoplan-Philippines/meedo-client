@@ -225,6 +225,9 @@
         appendTo="body"
         class="w-full"
       />
+      @if (dialogMode() === 'edit') {
+        <small class="text-body/70">Role changes are managed separately.</small>
+      }
     </div>
   </form>
 

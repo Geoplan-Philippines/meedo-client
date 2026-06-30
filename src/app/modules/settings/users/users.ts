@@ -169,6 +169,7 @@ export class Users implements OnInit {
     this.dialogMode.set('create');
     this.selectedUser.set(null);
     this.roleOptions.set([{ label: 'Member', value: 'member' }]);
+    this.onboardEmployeeForm.controls.role.enable({ emitEvent: false });
     this.onboardEmployeeForm.controls.password.setValidators([
       Validators.required,
       Validators.minLength(8),
@@ -215,6 +216,8 @@ export class Users implements OnInit {
             role: details.role,
           });
           this.onboardEmployeeForm.controls.password.updateValueAndValidity({ emitEvent: false });
+          // Role is not editable here; show it as a disabled, informational field.
+          this.onboardEmployeeForm.controls.role.disable({ emitEvent: false });
           this.editingUserId.set(null);
           this.dialogVisible.set(true);
         },
@@ -266,7 +269,6 @@ export class Users implements OnInit {
         employeeCode: formValue.employeeCode.trim() || null,
         biometricsId: formValue.biometricsId.trim() || null,
         teamId: formValue.teamId,
-        role: formValue.role,
       };
 
       this.userService
