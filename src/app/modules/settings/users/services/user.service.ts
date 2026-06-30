@@ -6,9 +6,11 @@ import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
 import {
   ListMembersResponse,
+  MemberDetails,
   OnboardMemberPayload,
   OnboardMemberResponse,
   OrganizationMember,
+  UpdateMemberPayload,
 } from '../models/users.model';
 
 const MEMBERS_PAGE_SIZE = 100;
@@ -38,10 +40,28 @@ export class UserService {
     );
   }
 
+  getMember(memberId: string): Observable<MemberDetails> {
+    return this.http
+      .get<ApiResponse<MemberDetails>>(`${this.adminUrl}/members/${memberId}`, {
+        withCredentials: true,
+      })
+      .pipe(map((response) => response.data));
+  }
+
   onboardMember(payload: OnboardMemberPayload): Observable<OnboardMemberResponse> {
     return this.http
       .post<ApiResponse<OnboardMemberResponse>>(
         `${this.adminUrl}/onboard-member`,
+        payload,
+        { withCredentials: true },
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  updateMember(memberId: string, payload: UpdateMemberPayload): Observable<MemberDetails> {
+    return this.http
+      .patch<ApiResponse<MemberDetails>>(
+        `${this.adminUrl}/members/${memberId}`,
         payload,
         { withCredentials: true },
       )

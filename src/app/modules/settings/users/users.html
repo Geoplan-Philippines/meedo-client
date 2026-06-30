@@ -51,7 +51,7 @@
         [paginator]="users().length > 10"
         [rows]="10"
         [rowsPerPageOptions]="[10, 25, 50]"
-        [tableStyle]="{ 'min-width': '42rem' }"
+        [tableStyle]="{ 'min-width': '48rem' }"
       >
         <ng-template pTemplate="header">
           <tr>
@@ -59,6 +59,7 @@
             <th scope="col">Email</th>
             <th scope="col">Role</th>
             <th scope="col" class="hidden md:table-cell">Joined</th>
+            <th scope="col" class="text-right" style="width: 5rem">Actions</th>
           </tr>
         </ng-template>
 
@@ -81,6 +82,19 @@
             <td class="hidden md:table-cell text-body/70">
               {{ member.createdAt | date: 'mediumDate' }}
             </td>
+            <td class="text-right">
+              <p-button
+                icon="pi pi-pencil"
+                severity="secondary"
+                text
+                rounded
+                size="small"
+                [ariaLabel]="'Edit ' + (member.user.name || member.user.email)"
+                [loading]="editingUserId() === member.id"
+                [disabled]="editingUserId() !== null"
+                (onClick)="openEditDialog(member)"
+              />
+            </td>
           </tr>
         </ng-template>
       </p-table>
@@ -89,7 +103,7 @@
 </main>
 
 <p-dialog
-  header="Onboard user"
+  [header]="dialogMode() === 'edit' ? 'Edit user' : 'Onboard user'"
   [visible]="dialogVisible()"
   (visibleChange)="$event ? null : closeDialog()"
   [modal]="true"
@@ -98,7 +112,7 @@
   [closable]="!isSaving()"
   [style]="{ width: '640px', maxWidth: 'calc(100vw - 2rem)' }"
 >
-  <form [formGroup]="onboardEmployeeForm" (ngSubmit)="saveOnboardEmployee()" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <form [formGroup]="onboardEmployeeForm" (ngSubmit)="saveUser()" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     @if (saveError()) {
       <div role="alert" class="sm:col-span-2 rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm">
         {{ saveError() }}
@@ -121,20 +135,22 @@
       }
     </div>
 
-    <div class="flex flex-col gap-1.5 sm:col-span-2">
-      <label for="member-password" class="text-sm font-medium text-heading">Temporary password</label>
-      <p-password
-        inputId="member-password"
-        formControlName="password"
-        [toggleMask]="true"
-        [feedback]="false"
-        autocomplete="new-password"
-        inputStyleClass="w-full"
-      />
-      @if (onboardEmployeeForm.controls.password.invalid && onboardEmployeeForm.controls.password.touched) {
-        <small class="text-destructive">Password must be between 8 and 128 characters.</small>
-      }
-    </div>
+    @if (dialogMode() === 'create') {
+      <div class="flex flex-col gap-1.5 sm:col-span-2">
+        <label for="member-password" class="text-sm font-medium text-heading">Temporary password</label>
+        <p-password
+          inputId="member-password"
+          formControlName="password"
+          [toggleMask]="true"
+          [feedback]="false"
+          autocomplete="new-password"
+          inputStyleClass="w-full"
+        />
+        @if (onboardEmployeeForm.controls.password.invalid && onboardEmployeeForm.controls.password.touched) {
+          <small class="text-destructive">Password must be between 8 and 128 characters.</small>
+        }
+      </div>
+    }
 
     <div class="flex flex-col gap-1.5">
       <label for="member-employee-code" class="text-sm font-medium text-heading">Employee code</label>
@@ -174,7 +190,7 @@
       <p-select
         inputId="member-role"
         formControlName="role"
-        [options]="roleOptions"
+        [options]="roleOptions()"
         optionLabel="label"
         optionValue="value"
         appendTo="body"
@@ -186,9 +202,9 @@
   <ng-template pTemplate="footer">
     <p-button label="Cancel" severity="secondary" text (onClick)="closeDialog()" [disabled]="isSaving()" />
     <p-button
-      label="Onboard user"
-      icon="pi pi-user-plus"
-      (onClick)="saveOnboardEmployee()"
+      [label]="dialogMode() === 'edit' ? 'Save changes' : 'Onboard user'"
+      [icon]="dialogMode() === 'edit' ? 'pi pi-check' : 'pi pi-user-plus'"
+      (onClick)="saveUser()"
       [loading]="isSaving()"
       [disabled]="onboardEmployeeForm.invalid || isSaving()"
     />

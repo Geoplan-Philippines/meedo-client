@@ -17,8 +17,15 @@ import { catchError, EMPTY, forkJoin, Subject, switchMap } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Team } from '../teams/models/teams.model';
 import { TeamsService } from '../teams/services/teams.service';
-import { OnboardMemberPayload, OnboardMemberRole, OrganizationMember } from './models/users.model';
+import {
+  OnboardMemberPayload,
+  OrganizationMember,
+  OrganizationMemberRole,
+  UpdateMemberPayload,
+} from './models/users.model';
 import { UserService } from './services/user.service';
+
+type DialogMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-users',
@@ -52,12 +59,14 @@ export class Users implements OnInit {
   readonly isLoading = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly dialogVisible = signal(false);
+  readonly dialogMode = signal<DialogMode>('create');
+  readonly selectedUser = signal<OrganizationMember | null>(null);
+  readonly editingUserId = signal<string | null>(null);
   readonly isSaving = signal(false);
   readonly saveError = signal<string | null>(null);
-
-  readonly roleOptions: { label: string; value: OnboardMemberRole }[] = [
+  readonly roleOptions = signal<{ label: string; value: OrganizationMemberRole }[]>([
     { label: 'Member', value: 'member' },
-  ];
+  ]);
 
   readonly onboardEmployeeForm = new FormGroup({
     name: new FormControl('', {
@@ -81,7 +90,7 @@ export class Users implements OnInit {
       validators: [Validators.maxLength(50)],
     }),
     teamId: new FormControl<string | null>(null),
-    role: new FormControl<OnboardMemberRole>('member', {
+    role: new FormControl<OrganizationMemberRole>('member', {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -129,6 +138,14 @@ export class Users implements OnInit {
   }
 
   openCreateDialog(): void {
+    this.dialogMode.set('create');
+    this.selectedUser.set(null);
+    this.roleOptions.set([{ label: 'Member', value: 'member' }]);
+    this.onboardEmployeeForm.controls.password.setValidators([
+      Validators.required,
+      Validators.minLength(8),
+      Validators.maxLength(128),
+    ]);
     this.onboardEmployeeForm.reset({
       name: '',
       email: '',
@@ -138,8 +155,50 @@ export class Users implements OnInit {
       teamId: null,
       role: 'member',
     });
+    this.onboardEmployeeForm.controls.password.updateValueAndValidity({ emitEvent: false });
     this.saveError.set(null);
     this.dialogVisible.set(true);
+  }
+
+  openEditDialog(member: OrganizationMember): void {
+    if (this.editingUserId()) return;
+
+    this.editingUserId.set(member.id);
+    this.saveError.set(null);
+
+    this.userService
+      .getMember(member.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (details) => {
+          this.dialogMode.set('edit');
+          this.selectedUser.set(member);
+          this.roleOptions.set([
+            { label: this.formatRole(details.role), value: details.role },
+          ]);
+          this.onboardEmployeeForm.controls.password.clearValidators();
+          this.onboardEmployeeForm.reset({
+            name: details.user.name ?? '',
+            email: details.user.email,
+            password: '',
+            employeeCode: details.user.employeeCode ?? '',
+            biometricsId: details.user.biometricsId ?? '',
+            teamId: details.teamId,
+            role: details.role,
+          });
+          this.onboardEmployeeForm.controls.password.updateValueAndValidity({ emitEvent: false });
+          this.editingUserId.set(null);
+          this.dialogVisible.set(true);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.editingUserId.set(null);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Unable to edit user',
+            detail: this.getErrorMessage(error),
+          });
+        },
+      });
   }
 
   closeDialog(): void {
@@ -148,7 +207,7 @@ export class Users implements OnInit {
     this.saveError.set(null);
   }
 
-  saveOnboardEmployee(): void {
+  saveUser(): void {
     if (this.onboardEmployeeForm.invalid || this.isSaving()) {
       this.onboardEmployeeForm.markAllAsTouched();
       return;
@@ -163,11 +222,40 @@ export class Users implements OnInit {
       return;
     }
 
+    this.isSaving.set(true);
+    this.saveError.set(null);
+
+    if (this.dialogMode() === 'edit') {
+      const selectedUser = this.selectedUser();
+      if (!selectedUser) {
+        this.isSaving.set(false);
+        return;
+      }
+
+      const payload: UpdateMemberPayload = {
+        name,
+        email: formValue.email.trim(),
+        employeeCode: formValue.employeeCode.trim() || null,
+        biometricsId: formValue.biometricsId.trim() || null,
+        teamId: formValue.teamId,
+        role: formValue.role,
+      };
+
+      this.userService
+        .updateMember(selectedUser.id, payload)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => this.handleSaveSuccess(`${payload.name} was updated.`),
+          error: (error: HttpErrorResponse) => this.handleSaveError(error),
+        });
+      return;
+    }
+
     const payload: OnboardMemberPayload = {
       name,
       email: formValue.email.trim(),
       password: formValue.password,
-      role: formValue.role,
+      role: 'member',
       ...(formValue.employeeCode.trim()
         ? { employeeCode: formValue.employeeCode.trim() }
         : {}),
@@ -177,34 +265,42 @@ export class Users implements OnInit {
       ...(formValue.teamId ? { teamId: formValue.teamId } : {}),
     };
 
-    this.isSaving.set(true);
-    this.saveError.set(null);
-
     this.userService
       .onboardMember(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
-          this.isSaving.set(false);
-          this.dialogVisible.set(false);
-          this.messageService.add({
-            severity: 'success',
-            summary: 'User onboarded',
-            detail: `${payload.name} can now sign in.`,
-          });
-          this.loadUsers();
-        },
-        error: (error: HttpErrorResponse) => {
-          this.isSaving.set(false);
-          this.saveError.set(this.getErrorMessage(error));
-        },
+        next: () => this.handleSaveSuccess(`${payload.name} can now sign in.`),
+        error: (error: HttpErrorResponse) => this.handleSaveError(error),
       });
+  }
+
+  private handleSaveSuccess(detail: string): void {
+    const isEditing = this.dialogMode() === 'edit';
+    this.isSaving.set(false);
+    this.dialogVisible.set(false);
+    this.messageService.add({
+      severity: 'success',
+      summary: isEditing ? 'User updated' : 'User onboarded',
+      detail,
+    });
+    this.loadUsers();
+  }
+
+  private handleSaveError(error: HttpErrorResponse): void {
+    this.isSaving.set(false);
+    this.saveError.set(this.getErrorMessage(error));
   }
 
   private getErrorMessage(error: HttpErrorResponse): string {
     const message = error.error?.message;
     if (Array.isArray(message)) return message.join(' ');
     if (typeof message === 'string' && message.trim()) return message;
-    return 'Failed to onboard the user. Please try again.';
+    return this.dialogMode() === 'edit'
+      ? 'Failed to update the user. Please try again.'
+      : 'Failed to onboard the user. Please try again.';
+  }
+
+  private formatRole(role: OrganizationMemberRole): string {
+    return role.charAt(0).toUpperCase() + role.slice(1);
   }
 }
