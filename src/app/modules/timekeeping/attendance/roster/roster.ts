@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { auditTime, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } from 'rxjs';
 
 import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -62,6 +62,7 @@ export class Roster implements OnInit {
 
   private first = 0;
   private requestId = 0;
+  private pendingRealtimeRefresh = false;
 
   constructor() {
     this.searchControl.valueChanges
@@ -79,6 +80,14 @@ export class Roster implements OnInit {
   ngOnInit(): void {
     // The lazy p-table fires (onLazyLoad) on init, loading the first page.
 
+    fromEvent(this.document, 'visibilitychange')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.document.visibilityState !== 'visible' || !this.pendingRealtimeRefresh) return;
+        this.pendingRealtimeRefresh = false;
+        this.fetchRoster(true);
+      });
+
     this.attendanceService.updates$
       .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe((update) => {
@@ -87,10 +96,12 @@ export class Roster implements OnInit {
         const affectsSelectedDate = update.affected?.some(
           (target) => target.date === selectedDate,
         ) ?? false;
-        if ((targeted ? affectsSelectedDate : this.isToday()) &&
-            this.document.visibilityState === 'visible') {
+        if (!(targeted ? affectsSelectedDate : this.isToday())) return;
+        if (this.document.visibilityState === 'visible') {
           this.fetchRoster(true);
+          return;
         }
+        this.pendingRealtimeRefresh = true;
       });
   }
 

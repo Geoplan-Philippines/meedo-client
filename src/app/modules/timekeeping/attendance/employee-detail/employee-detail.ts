@@ -14,7 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT, Location } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { auditTime, finalize } from 'rxjs';
+import { auditTime, finalize, fromEvent } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -94,6 +94,7 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
 
   private employeeId = '';
   private selectedDate: string | undefined;
+  private pendingRealtimeRefresh = false;
 
   private readonly mapContainer = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
   private map: MaplibreMap | null = null;
@@ -218,6 +219,14 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
     this.selectedDate = date;
 
     this.loadDay(date);
+    fromEvent(this.document, 'visibilitychange')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.document.visibilityState !== 'visible' || !this.pendingRealtimeRefresh) return;
+        this.pendingRealtimeRefresh = false;
+        this.loadDay(this.selectedDate, true);
+      });
+
     this.attendanceService.updates$
       .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe((update) => {
@@ -226,10 +235,12 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
         const affectsEmployee = update.affected?.some(
           (target) => target.employeeId === this.employeeId && target.date === selectedDate,
         ) ?? false;
-        if ((targeted ? affectsEmployee : this.isSelectedDateToday()) &&
-            this.document.visibilityState === 'visible') {
+        if (!(targeted ? affectsEmployee : this.isSelectedDateToday())) return;
+        if (this.document.visibilityState === 'visible') {
           this.loadDay(this.selectedDate, true);
+          return;
         }
+        this.pendingRealtimeRefresh = true;
       });
   }
 

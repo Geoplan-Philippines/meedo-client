@@ -41,6 +41,7 @@ export class AttendanceService {
     }
 
     const source = new EventSource(`${this.baseUrl}/updates`, { withCredentials: true });
+    let connectionInterrupted = false;
     const onUpdate = (event: MessageEvent<string>): void => {
       try {
         subscriber.next(JSON.parse(event.data) as AttendanceRealtimeUpdate);
@@ -48,8 +49,24 @@ export class AttendanceService {
         console.error('Invalid attendance realtime update:', error);
       }
     };
+    const onOpen = (): void => {
+      if (connectionInterrupted) {
+        console.info('Attendance realtime connection restored.');
+      }
+      connectionInterrupted = false;
+    };
+    const onError = (): void => {
+      if (connectionInterrupted) return;
+      connectionInterrupted = true;
+      const state = source.readyState === EventSource.CLOSED ? 'closed' : 'reconnecting';
+      console.warn(`Attendance realtime connection interrupted (${state}).`);
+    };
+    source.addEventListener('open', onOpen);
+    source.addEventListener('error', onError);
     source.addEventListener('attendance.updated', onUpdate as EventListener);
     return () => {
+      source.removeEventListener('open', onOpen);
+      source.removeEventListener('error', onError);
       source.removeEventListener('attendance.updated', onUpdate as EventListener);
       source.close();
     };
