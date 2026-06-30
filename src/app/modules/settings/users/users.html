@@ -161,10 +161,39 @@
     </div>
 
     <div class="flex flex-col gap-1.5">
-      <label for="member-biometrics-id" class="text-sm font-medium text-heading">Biometrics ID</label>
-      <input id="member-biometrics-id" pInputText formControlName="biometricsId" maxlength="50" placeholder="Optional" />
+      <div class="flex items-center justify-between gap-2">
+        <label for="member-biometrics-id" class="text-sm font-medium text-heading">Biometrics ID</label>
+        <p-button
+          icon="pi pi-refresh"
+          severity="secondary"
+          text
+          rounded
+          size="small"
+          ariaLabel="Refresh Hikvision users"
+          [loading]="isLoadingBiometricUsers()"
+          (onClick)="loadBiometricUsers()"
+        />
+      </div>
+      <p-select
+        inputId="member-biometrics-id"
+        formControlName="biometricsId"
+        [options]="biometricUsers()"
+        optionLabel="displayName"
+        optionValue="employeeNo"
+        placeholder="Select or enter a device user"
+        [editable]="true"
+        [filter]="true"
+        filterBy="displayName,employeeNo,name"
+        [showClear]="true"
+        [loading]="isLoadingBiometricUsers()"
+        appendTo="body"
+        class="w-full"
+      />
       @if (onboardEmployeeForm.controls.biometricsId.invalid && onboardEmployeeForm.controls.biometricsId.touched) {
         <small class="text-destructive">Biometrics ID must be 50 characters or fewer.</small>
+      }
+      @if (biometricUsersError()) {
+        <small class="text-body/70">{{ biometricUsersError() }}</small>
       }
     </div>
 

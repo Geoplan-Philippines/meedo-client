@@ -36,6 +36,14 @@ export interface MemberDetails {
   };
 }
 
+export interface HikvisionDirectoryUser {
+  employeeNo: string;
+  name: string;
+  userType: string;
+  enabled: boolean;
+  displayName: string;
+}
+
 export interface OnboardMemberPayload {
   name: string;
   email: string;

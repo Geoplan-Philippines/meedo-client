@@ -5,6 +5,7 @@ import { EMPTY, expand, map, Observable, reduce } from 'rxjs';
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
 import {
+  HikvisionDirectoryUser,
   ListMembersResponse,
   MemberDetails,
   OnboardMemberPayload,
@@ -23,6 +24,7 @@ interface MembersPage extends ListMembersResponse {
 export class UserService {
   private readonly http = inject(HttpClient);
   private readonly adminUrl = `${environment.apiBaseUrl}/admin`;
+  private readonly attendanceUrl = `${environment.apiBaseUrl}/attendance`;
   private readonly organizationUrl = `${environment.apiBaseUrl}/auth/organization`;
 
   getUsers(organizationId: string): Observable<OrganizationMember[]> {
@@ -38,6 +40,22 @@ export class UserService {
         [] as OrganizationMember[],
       ),
     );
+  }
+
+  getHikvisionUsers(): Observable<HikvisionDirectoryUser[]> {
+    return this.http
+      .get<ApiResponse<{ users: Omit<HikvisionDirectoryUser, 'displayName'>[] }>>(
+        `${this.attendanceUrl}/biometrics/users`,
+        { withCredentials: true },
+      )
+      .pipe(
+        map((response) => response.data.users.map((user) => ({
+          ...user,
+          displayName: user.name
+            ? `${user.employeeNo} - ${user.name}`
+            : user.employeeNo,
+        }))),
+      );
   }
 
   getMember(memberId: string): Observable<MemberDetails> {

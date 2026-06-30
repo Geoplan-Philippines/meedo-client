@@ -18,6 +18,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { Team } from '../teams/models/teams.model';
 import { TeamsService } from '../teams/services/teams.service';
 import {
+  HikvisionDirectoryUser,
   OnboardMemberPayload,
   OrganizationMember,
   OrganizationMemberRole,
@@ -56,6 +57,9 @@ export class Users implements OnInit {
 
   readonly users = signal<OrganizationMember[]>([]);
   readonly teams = signal<Team[]>([]);
+  readonly biometricUsers = signal<HikvisionDirectoryUser[]>([]);
+  readonly isLoadingBiometricUsers = signal(false);
+  readonly biometricUsersError = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly dialogVisible = signal(false);
@@ -130,11 +134,35 @@ export class Users implements OnInit {
         this.isLoading.set(false);
       });
 
+    this.loadBiometricUsers();
     this.refresh$.next();
   }
 
   loadUsers(): void {
     this.refresh$.next();
+  }
+
+  loadBiometricUsers(): void {
+    if (this.isLoadingBiometricUsers()) return;
+
+    this.isLoadingBiometricUsers.set(true);
+    this.biometricUsersError.set(null);
+    this.userService
+      .getHikvisionUsers()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (users) => {
+          this.biometricUsers.set(users);
+          this.isLoadingBiometricUsers.set(false);
+        },
+        error: (error) => {
+          console.error('Error loading Hikvision users:', error);
+          this.biometricUsersError.set(
+            'Hikvision users are unavailable. You can enter the ID manually.',
+          );
+          this.isLoadingBiometricUsers.set(false);
+        },
+      });
   }
 
   openCreateDialog(): void {
