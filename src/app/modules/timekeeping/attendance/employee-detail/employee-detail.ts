@@ -220,8 +220,14 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
     this.loadDay(date);
     this.attendanceService.updates$
       .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        if (this.isSelectedDateToday() && this.document.visibilityState === 'visible') {
+      .subscribe((update) => {
+        const selectedDate = this.selectedDate ?? this.todayLabel();
+        const targeted = Boolean(update.affected?.length);
+        const affectsEmployee = update.affected?.some(
+          (target) => target.employeeId === this.employeeId && target.date === selectedDate,
+        ) ?? false;
+        if ((targeted ? affectsEmployee : this.isSelectedDateToday()) &&
+            this.document.visibilityState === 'visible') {
           this.loadDay(this.selectedDate, true);
         }
       });
@@ -274,9 +280,12 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
 
   private isSelectedDateToday(): boolean {
     if (!this.selectedDate) return true;
+    return this.selectedDate === this.todayLabel();
+  }
+
+  private todayLabel(): string {
     const now = new Date();
-    const today = `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}-${`${now.getDate()}`.padStart(2, '0')}`;
-    return this.selectedDate === today;
+    return `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}-${`${now.getDate()}`.padStart(2, '0')}`;
   }
 
   private renderMarkers(groups: MarkerGroup[]): void {

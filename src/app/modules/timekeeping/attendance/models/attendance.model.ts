@@ -75,7 +75,13 @@ export interface DailyAttendanceSummary {
 
 export interface AttendanceRealtimeUpdate {
   reasons: Array<'biometric' | 'manual' | 'auto-clock-out'>;
+  affected?: AttendanceUpdateTarget[];
   timestamp: string;
+}
+
+export interface AttendanceUpdateTarget {
+  employeeId: string;
+  date: string;
 }
 
 export interface RecordAttendanceEventPayload {

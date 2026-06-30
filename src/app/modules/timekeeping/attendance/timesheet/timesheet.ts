@@ -18,6 +18,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
 import { AttendanceService } from '../services/attendance.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { Roster } from '../roster/roster';
 import {
   AttendanceEvent,
@@ -56,6 +57,7 @@ export class Timesheet implements OnInit {
   private readonly attendanceService = inject(AttendanceService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
 
   private readonly roster = viewChild(Roster);
 
@@ -160,7 +162,16 @@ export class Timesheet implements OnInit {
 
     this.attendanceService.updates$
       .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadSummary(true));
+      .subscribe((update) => {
+        const userId = this.authService.currentUser()?.id;
+        const now = new Date();
+        const today = `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}-${`${now.getDate()}`.padStart(2, '0')}`;
+        if (!update.affected?.length || update.affected.some(
+          (target) => target.employeeId === userId && target.date === today,
+        )) {
+          this.loadSummary(true);
+        }
+      });
 
     interval(CLOCK_TICK_MS)
       .pipe(takeUntilDestroyed(this.destroyRef))

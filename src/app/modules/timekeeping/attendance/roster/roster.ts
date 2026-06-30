@@ -81,8 +81,14 @@ export class Roster implements OnInit {
 
     this.attendanceService.updates$
       .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        if (this.isToday() && this.document.visibilityState === 'visible') {
+      .subscribe((update) => {
+        const selectedDate = this.toDateParam(this.dateControl.value);
+        const targeted = Boolean(update.affected?.length);
+        const affectsSelectedDate = update.affected?.some(
+          (target) => target.date === selectedDate,
+        ) ?? false;
+        if ((targeted ? affectsSelectedDate : this.isToday()) &&
+            this.document.visibilityState === 'visible') {
           this.fetchRoster(true);
         }
       });
