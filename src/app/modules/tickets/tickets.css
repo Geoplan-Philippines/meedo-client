@@ -86,9 +86,9 @@
 }
 
 .stat-icon--total   { background: var(--color-secondary);        color: var(--color-primary); }
-.stat-icon--urgent  { background: var(--color-muted-destructive); color: var(--color-destructive); }
-.stat-icon--high    { background: #FFEDD5;                        color: #9A3412; } /* orange-100/orange-800 — no theme token */
-.stat-icon--overdue { background: #FEF3C7;                        color: #92400E; } /* amber-100/amber-800 — no theme token */
+.stat-icon--urgent  { background: var(--color-muted-destructive); color: var(--color-muted-destructive-foreground); }
+.stat-icon--high    { background: var(--color-muted-warning);     color: var(--color-muted-warning-foreground); }
+.stat-icon--overdue { background: var(--color-muted-warning);     color: var(--color-muted-warning-foreground); }
 
 .stat-body {
   display: flex;
@@ -290,16 +290,16 @@
   flex-shrink: 0;
 }
 
-.priority-low      { background: var(--color-muted-success); color: #065F46; } /* text: emerald-800 — no dark-success token */
+.priority-low      { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
 .priority-low .priority-dot      { background: var(--color-success); }
 
-.priority-medium   { background: #FEF3C7; color: #92400E; } /* amber-100/amber-800 — no theme token */
-.priority-medium .priority-dot   { background: #F59E0B; } /* amber-400 — no theme token */
+.priority-medium   { background: var(--color-muted-warning); color: var(--color-muted-warning-foreground); }
+.priority-medium .priority-dot   { background: var(--color-warning); }
 
-.priority-high     { background: #FFEDD5; color: #9A3412; } /* orange-100/orange-800 — no theme token */
-.priority-high .priority-dot     { background: #F97316; } /* orange-400 — no theme token */
+.priority-high     { background: var(--color-muted-warning); color: var(--color-muted-warning-foreground); }
+.priority-high .priority-dot     { background: var(--color-warning); }
 
-.priority-urgent   { background: var(--color-muted-destructive); color: var(--color-destructive); }
+.priority-urgent   { background: var(--color-muted-destructive); color: var(--color-muted-destructive-foreground); }
 .priority-urgent .priority-dot   { background: var(--color-destructive); }
 
 /* ─── Ticket Number ────────────────────────────────────── */

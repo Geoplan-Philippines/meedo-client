@@ -29,7 +29,7 @@
     @if (comments().length) {
       <ul class="flex flex-col gap-3 mb-2" aria-label="Comments">
         @for (comment of comments(); track comment.id) {
-          <li class="rounded-base border border-border bg-background p-3">
+          <li class="rounded-base border border-border bg-surface p-3">
             <div class="flex items-center justify-between mb-1 gap-2">
               <span class="text-heading text-sm font-medium">{{ authorName(comment) }}</span>
               <div class="flex items-center gap-2">
