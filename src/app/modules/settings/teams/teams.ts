@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
@@ -49,6 +49,7 @@ export class Teams implements OnInit {
   readonly isSaving = signal(false);
   readonly isDeleting = signal(false);
   readonly selectedTeam = signal<Team | null>(null);
+  readonly isAdmin = computed(() => this.authService.isAdmin());
 
   readonly teamForm = new FormGroup({
     name: new FormControl('', {

@@ -13,12 +13,15 @@
       <h1 class="text-2xl font-semibold text-heading">Teams</h1>
       <p class="text-sm text-body opacity-70">Add, edit, and manage teams.</p>
     </div>
-    <p-button
-      label="New Team"
-      icon="pi pi-plus"
-      (onClick)="openCreateDialog()"
-    />
+    @if (isAdmin()) {
+      <p-button
+        label="New Team"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+      />
+    }
   </header>
+
   <p-table
     [value]="teams()"
     [loading]="isLoading()"
@@ -28,7 +31,9 @@
       <tr>
         <th scope="col">Name</th>
         <th scope="col">Created</th>
-        <th scope="col" style="width: 8rem">Actions</th>
+        @if (isAdmin()) {
+          <th scope="col" style="width: 8rem">Actions</th>
+        }
       </tr>
     </ng-template>
 
@@ -36,26 +41,28 @@
       <tr>
         <td>{{ team.name }}</td>
         <td>{{ team.createdAt | date: 'mediumDate' }}</td>
-        <td>
-          <div class="flex gap-2">
-            <p-button
-              icon="pi pi-pencil"
-              [text]="true"
-              severity="secondary"
-              (onClick)="openEditDialog(team)"
-              aria-label="Edit team"
-            />
-            <p-button
-              icon="pi pi-trash"
-              [text]="true"
-              severity="danger"
-              (onClick)="confirmDelete(team)"
-              aria-label="Delete team"
-              [loading]="isDeleting()"
-              [disabled]="isDeleting()"
-            />
-          </div>
-        </td>
+        @if (isAdmin()) {
+          <td>
+            <div class="flex gap-2">
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                severity="secondary"
+                (onClick)="openEditDialog(team)"
+                aria-label="Edit team"
+              />
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                severity="danger"
+                (onClick)="confirmDelete(team)"
+                aria-label="Delete team"
+                [loading]="isDeleting()"
+                [disabled]="isDeleting()"
+              />
+            </div>
+          </td>
+        }
       </tr>
     </ng-template>
 
