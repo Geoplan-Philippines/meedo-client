@@ -138,6 +138,22 @@ export class TicketThread {
       });
   }
 
+  /** Enter posts the comment; Shift+Enter inserts a newline. */
+  onCommentKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      this.postComment();
+    }
+  }
+
+  /** Enter saves the edit; Shift+Enter inserts a newline. */
+  onEditCommentKeydown(event: KeyboardEvent, comment: TicketComment): void {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      this.saveEditComment(comment);
+    }
+  }
+
   postComment(): void {
     if (this.commentControl.invalid) {
       this.commentControl.markAsTouched();

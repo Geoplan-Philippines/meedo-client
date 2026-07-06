@@ -66,8 +66,11 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    await this.client.signOut();
-    this._session.set(null);
+    try {
+      await this.client.signOut();
+    } finally {
+      this._session.set(null);
+    }
   }
 }
 

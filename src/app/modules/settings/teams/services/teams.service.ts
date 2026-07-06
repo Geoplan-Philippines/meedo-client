@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment.dev';
-import { CreateTeamPayload, Team } from '../models/teams.model';
+import { CreateTeamPayload, Team, TeamMember } from '../models/teams.model';
 
 @Injectable({ providedIn: 'root' })
 export class TeamsService {
@@ -11,6 +11,14 @@ export class TeamsService {
   getTeams(organizationId: string) {
     return this.http.get<Team[]>(`${this.baseUrl}/list-teams`, {
       params: { organizationId },
+      withCredentials: true,
+    });
+  }
+
+  /** Better Auth: the user↔team links for one team (used to scope assignees to a team). */
+  listTeamMembers(teamId: string) {
+    return this.http.get<TeamMember[]>(`${this.baseUrl}/list-team-members`, {
+      params: { teamId },
       withCredentials: true,
     });
   }

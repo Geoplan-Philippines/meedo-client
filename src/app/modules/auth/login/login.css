@@ -2,3 +2,7 @@
 :host ::ng-deep .p-password-panel {
   display: none;
 }
+
+:host ::ng-deep .p-divider-content {
+  background: var(--background);
+}

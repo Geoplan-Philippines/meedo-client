@@ -56,65 +56,11 @@
   outline-offset: 2px;
 }
 
-/* ─── Stats Grid ───────────────────────────────────────── */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-}
-
-.stat-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-
-.stat-icon {
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: var(--radius-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-  flex-shrink: 0;
-}
-
-.stat-icon--total   { background: var(--color-secondary);        color: var(--color-primary); }
-.stat-icon--urgent  { background: var(--color-muted-destructive); color: var(--color-muted-destructive-foreground); }
-.stat-icon--high    { background: var(--color-muted-warning);     color: var(--color-muted-warning-foreground); }
-.stat-icon--overdue { background: var(--color-muted-warning);     color: var(--color-muted-warning-foreground); }
-
-.stat-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  font-family: var(--font-heading);
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  color: var(--color-body);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 /* ─── Table Card ───────────────────────────────────────── */
+/* Surface card: same colour + hairline border as the header and sidebar chrome
+   (--surface on --background canvas). One quiet panel, not a heavy box. */
 .table-card {
-  background: var(--color-background);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
   overflow: hidden;
@@ -154,16 +100,387 @@
   font-family: var(--font-body);
   font-size: 0.875rem;
   color: var(--color-heading);
-  background: var(--color-background);
+  /* Match the PrimeNG selects' field fill so the toolbar controls read as one set. */
+  background: var(--color-surface);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.search-input::placeholder { color: #94a3b8; } /* slate-400 — no muted-placeholder theme token */
+.search-input::placeholder { color: var(--color-muted); }
 
 .search-input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+/* ─── View Tabs (Backlog / Active / All Tickets) ───────── */
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.625rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.375rem 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-base);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.view-tab:hover {
+  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
+  color: var(--color-body);
+}
+
+.view-tab--active {
+  background: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+  font-weight: 600;
+}
+
+.view-tab:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+.view-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.view-tab--active .view-count {
+  color: var(--color-secondary-foreground);
+}
+
+/* ─── Filter Button ────────────────────────────────────── */
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  /* Vertical padding + font-size match .search-input so the button is exactly the
+     search bar's height (both box-sizing: border-box, 1px border). */
+  padding: 0.625rem 0.875rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.filter-btn i { font-size: 0.875rem; }
+
+.filter-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
+}
+
+.filter-btn:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+.filter-btn--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-secondary);
+}
+
+.filter-btn-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.3rem;
+  border-radius: 100px;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Active Filter Chips ──────────────────────────────── */
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.625rem;
+  background: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+  border: none;
+  border-radius: 100px;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.filter-chip:hover {
+  background: color-mix(in srgb, var(--color-secondary) 70%, var(--color-primary));
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+.filter-chip i {
+  font-size: 0.625rem;
+  opacity: 0.7;
+}
+
+.filter-chip:hover i { opacity: 1; }
+
+/* Icon-based chip variant (used for teams, which have no color dot). */
+.chip-icon {
+  font-size: 0.6875rem;
+  opacity: 0.75;
+}
+
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.clear-filters {
+  padding: 0.25rem 0.4rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-base);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.clear-filters:hover { color: var(--color-primary); text-decoration: underline; }
+.clear-filters:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
+/* Standalone priority dots (filter chips + options). The table's .prio-* rules
+   colour via an ancestor; here the dot carries its own colour class. */
+.prio-dot-low    { background: var(--color-success); }
+.prio-dot-medium { background: var(--color-warning); }
+.prio-dot-high   { background: var(--color-destructive); }
+.prio-dot-urgent { background: var(--color-destructive); }
+
+/* ─── Filter Popover ───────────────────────────────────── */
+/* PrimeNG paints the panel surface + overlay shadow from the preset; we only
+   reset its padding and style the projected content. (::ng-deep — the panel is
+   appended to body, outside this component's view.) */
+:host ::ng-deep .filter-popover .p-popover-content {
+  padding: 0;
+}
+
+.filter-menu {
+  width: 16rem;
+  padding: 0.375rem;
+  font-family: var(--font-body);
+}
+
+.filter-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem 0.5rem;
+}
+
+.filter-menu-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+
+.filter-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-left: -0.25rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-base);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.filter-back:hover {
+  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
+  color: var(--color-body);
+}
+
+.filter-back:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
+
+.filter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.filter-facet,
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4375rem 0.5rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-base);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+
+.filter-facet:hover,
+.filter-option:hover {
+  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
+}
+
+.filter-facet:focus-visible,
+.filter-option:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: -2px;
+}
+
+.facet-icon {
+  width: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.facet-label { flex: 1; }
+
+/* Active-selection count badge shown on the root filter menu row. */
+.facet-count {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.125rem 0.375rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Smaller icon inside the team option rows (matches text baseline). */
+.facet-icon--sm {
+  font-size: 0.75rem;
+  width: 0.875rem;
+}
+
+.facet-chevron {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.option-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.0625rem;
+  height: 1.0625rem;
+  flex-shrink: 0;
+  border: 1.5px solid var(--color-border-strong, var(--color-border));
+  border-radius: var(--radius-base);
+  color: var(--color-primary-foreground);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.option-check--on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Empty box hints toward the brand on row hover so it reads as toggleable. */
+.filter-option:hover .option-check:not(.option-check--on) {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border-strong, var(--color-border)));
+}
+
+/* Crisp vector tick that pops in when checked (scales cleanly, unlike the icon font). */
+.option-check-icon {
+  width: 11px;
+  height: 11px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.12s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.option-check--on .option-check-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option-check,
+  .option-check-icon {
+    transition: none;
+  }
+  .option-check-icon {
+    transform: none;
+  }
+}
+
+.option-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.option-count {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-empty {
+  padding: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  text-align: center;
 }
 
 /* ─── Skeleton ─────────────────────────────────────────── */
@@ -180,45 +497,89 @@
 .skeleton-row:last-child { border-bottom: none; }
 
 /* ─── Table Overrides ──────────────────────────────────── */
-:deep(.tickets-table thead) {
-  background: var(--color-secondary);
+/* The table has no fill of its own — every layer is transparent so the
+   `.table-card` surface (the header/sidebar colour) shows through cleanly.
+   PrimeNG fills its rows/cells from the `content.background` token, so neutralise
+   the datatable design tokens here too. */
+:host ::ng-deep .tickets-table {
+  --p-datatable-header-background: transparent;
+  --p-datatable-header-cell-background: transparent;
+  --p-datatable-row-background: transparent;
+  --p-datatable-row-striped-background: transparent;
+  --p-datatable-footer-background: transparent;
+  --p-datatable-footer-cell-background: transparent;
+  --p-datatable-paginator-top-background: transparent;
+  --p-datatable-paginator-bottom-background: transparent;
+  background: transparent;
 }
 
-:deep(.tickets-table th) {
-  background: var(--color-secondary);
-  color: var(--color-secondary-foreground);
+/* PrimeNG paints the header cells with `content.background` via
+   `.p-datatable-thead > tr > th` — higher specificity than a plain
+   `.tickets-table th`, and injected into <head> AFTER this stylesheet (no
+   cssLayer configured), so it wins on both counts. `!important` on the real
+   PrimeNG selectors is the only override that reliably beats it. All layers go
+   transparent so the `.table-card` surface is the single colour behind the rows. */
+:host ::ng-deep .tickets-table,
+:host ::ng-deep .tickets-table .p-datatable-header,
+:host ::ng-deep .tickets-table .p-datatable-table-container,
+:host ::ng-deep .tickets-table .p-datatable-table,
+:host ::ng-deep .tickets-table .p-datatable-thead,
+:host ::ng-deep .tickets-table .p-datatable-thead > tr,
+:host ::ng-deep .tickets-table .p-datatable-thead > tr > th,
+:host ::ng-deep .tickets-table .p-datatable-tbody,
+:host ::ng-deep .tickets-table .p-datatable-tbody > tr,
+:host ::ng-deep .tickets-table .p-datatable-tbody > tr > td {
+  background: transparent !important;
+}
+
+/* Quiet header: muted small labels, a single hairline rule — no blue fill. */
+:host ::ng-deep .tickets-table th {
+  color: var(--color-muted);
   font-weight: 600;
-  padding: 0.625rem 1rem;
+  padding: 0.5rem 0.875rem;
   border: none;
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-family: var(--font-body);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
-:deep(.tickets-table tbody tr) {
-  border-bottom: 1px solid var(--color-border);
-  transition: background-color 0.1s;
+:host ::ng-deep .tickets-table tbody tr {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  transition: background-color 0.12s ease;
 }
 
-:deep(.tickets-table tbody tr:last-child) { border-bottom: none; }
+:host ::ng-deep .tickets-table tbody tr:last-child { border-bottom: none; }
 
-:deep(.tickets-table tbody tr:hover) {
-  background: var(--color-secondary) !important;
+/* Subtle, on-brand hover — a faint wash, not a loud fill.
+   !important overrides PrimeNG's higher-specificity row-hover rule. */
+:host ::ng-deep .tickets-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-secondary) 45%, transparent) !important;
 }
 
 /* Whole row is the click target (keyboard path lives on .ticket-title-btn). */
 .ticket-row { cursor: pointer; }
 
-:deep(.tickets-table td) {
-  padding: 0.5rem 1rem;
+:host ::ng-deep .tickets-table td {
+  padding: 0.4375rem 0.875rem;
   color: var(--color-body);
+  /* Single source of truth for the table's body-cell size: every primary cell
+     (title, status, priority, project, date) and the empty "—" placeholders
+     inherit 14px from here. Secondary text (ticket #number, work-order) opts
+     down to 0.75rem; nothing else in the row sets its own size. */
   font-size: 0.875rem;
   font-family: var(--font-body);
   border: none;
   vertical-align: middle;
 }
+
+/* Align the outer cell edges with the toolbar/paginator inset (1.25rem). */
+:host ::ng-deep .tickets-table th:first-child,
+:host ::ng-deep .tickets-table td:first-child { padding-left: 1.25rem; }
+
+:host ::ng-deep .tickets-table th:last-child,
+:host ::ng-deep .tickets-table td:last-child { padding-right: 1.25rem; }
 
 .th-content {
   display: flex;
@@ -232,9 +593,11 @@
    native click that bubbles up to it — one handler, no double-fire. */
 .ticket-title-btn {
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.0625rem;
   width: 100%;
+  min-width: 0;
   padding: 0;
   margin: 0;
   background: none;
@@ -254,8 +617,10 @@
 .ticket-title {
   font-weight: 600;
   color: var(--color-heading);
-  font-size: 0.875rem;
-  min-width: 0;
+  /* Inherits the 14px body-cell size; prominence comes from weight + heading colour, not size. */
+  width: 100%;
+  /* Single line — truncate with an ellipsis; the #number sits on its own line
+     below, mirroring the project cell's stack. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -270,43 +635,120 @@
   white-space: nowrap;
 }
 
-/* ─── Priority Badge ───────────────────────────────────── */
-.priority-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 100px;
+/* ─── Ticket Number ────────────────────────────────────── */
+.ticket-number {
   font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  white-space: nowrap;
+  color: var(--color-muted);
+  flex-shrink: 0;
 }
 
-.priority-dot {
-  width: 6px;
-  height: 6px;
+/* ─── List Status (dot + name, no fill) ────────────────── */
+.status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.priority-low      { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
-.priority-low .priority-dot      { background: var(--color-success); }
-
-.priority-medium   { background: var(--color-muted-warning); color: var(--color-muted-warning-foreground); }
-.priority-medium .priority-dot   { background: var(--color-warning); }
-
-.priority-high     { background: var(--color-muted-warning); color: var(--color-muted-warning-foreground); }
-.priority-high .priority-dot     { background: var(--color-warning); }
-
-.priority-urgent   { background: var(--color-muted-destructive); color: var(--color-muted-destructive-foreground); }
-.priority-urgent .priority-dot   { background: var(--color-destructive); }
-
-/* ─── Ticket Number ────────────────────────────────────── */
-.ticket-number {
-  font-size: 0.75rem;
+.status-name {
   color: var(--color-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* ─── List Priority (dot + label, no fill) ─────────────── */
+.prio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-body);
+  white-space: nowrap;
+}
+
+.prio-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.prio-low .prio-dot    { background: var(--color-success); }
+.prio-medium .prio-dot { background: var(--color-warning); }
+.prio-high .prio-dot   { background: var(--color-destructive); }
+.prio-urgent .prio-dot { background: var(--color-destructive); }
+.prio-urgent {
+  color: var(--color-muted-destructive-foreground);
+  font-weight: 600;
+}
+
+/* ─── Project Cell (customer + work order, two-line) ───── */
+/* Mirrors the detail dialog's project block so the same record reads the
+   same way in the list and the panel. */
+.project-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.project-customer {
+  font-weight: 500;
+  color: var(--color-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-wo {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Assignee Avatars ─────────────────────────────────── */
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  flex-shrink: 0;
+  /* Ring in the canvas colour so overlapping avatars stay visually separated. */
+  box-shadow: 0 0 0 2px var(--color-background);
+}
+
+.avatar-stack .avatar:not(:first-child) { margin-left: -0.5rem; }
+
+/* Identity palette — fixed hues, intentionally outside the status system
+   (matches the avatars in CRM leads / subscribers). */
+.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
+.avatar-teal   { background: #CCFBF1; color: #0F766E; }
+.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
+.avatar-violet { background: #EDE9FE; color: #7C3AED; }
+.avatar-rose   { background: #FFE4E6; color: #BE123C; }
+.avatar-more   { background: var(--color-secondary); color: var(--color-secondary-foreground); }
+
+/* ─── Empty / muted cell ───────────────────────────────── */
+.muted { color: var(--color-muted); }
 
 /* ─── Description Cell ─────────────────────────────────── */
 .desc-cell {
@@ -317,20 +759,15 @@
   color: var(--color-body);
 }
 
-/* ─── Status Badge ─────────────────────────────────────── */
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.625rem;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 /* ─── Date Cell ────────────────────────────────────────── */
 .date-cell {
   white-space: nowrap;
   color: var(--color-body);
+}
+
+.due-overdue {
+  color: var(--color-muted-destructive-foreground);
+  font-weight: 600;
 }
 
 /* ─── Form ─────────────────────────────────────────────── */
@@ -386,21 +823,21 @@
 }
 
 /* ─── Paginator ────────────────────────────────────────── */
-:deep(.p-paginator) {
-  background: var(--color-secondary);
+:host ::ng-deep .p-paginator {
+  background: transparent;
   border: none;
   border-top: 1px solid var(--color-border);
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1.25rem;
   gap: 0.5rem;
   font-family: var(--font-body);
 }
 
-:deep(.p-paginator-current) {
+:host ::ng-deep .p-paginator-current {
   color: var(--color-body);
   font-size: 0.8125rem;
 }
 
-:deep(.p-paginator .p-paginator-pages .p-paginator-page) {
+:host ::ng-deep .p-paginator .p-paginator-pages .p-paginator-page {
   background: transparent;
   color: var(--color-secondary-foreground);
   border: 1px solid var(--color-border);
@@ -410,22 +847,22 @@
   font-size: 0.8125rem;
 }
 
-:deep(.p-paginator .p-paginator-pages .p-paginator-page.p-highlight) {
+:host ::ng-deep .p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   border-color: var(--color-primary);
 }
 
-:deep(.p-paginator .p-paginator-pages .p-paginator-page:hover:not(.p-highlight)) {
+:host ::ng-deep .p-paginator .p-paginator-pages .p-paginator-page:hover:not(.p-highlight) {
   background: var(--color-background);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
 
-:deep(.p-paginator .p-paginator-prev),
-:deep(.p-paginator .p-paginator-next),
-:deep(.p-paginator .p-paginator-first),
-:deep(.p-paginator .p-paginator-last) {
+:host ::ng-deep .p-paginator .p-paginator-prev,
+:host ::ng-deep .p-paginator .p-paginator-next,
+:host ::ng-deep .p-paginator .p-paginator-first,
+:host ::ng-deep .p-paginator .p-paginator-last {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
   color: var(--color-secondary-foreground);
@@ -434,18 +871,26 @@
   height: 2rem;
 }
 
-:deep(.p-paginator .p-paginator-prev:hover),
-:deep(.p-paginator .p-paginator-next:hover),
-:deep(.p-paginator .p-paginator-first:hover),
-:deep(.p-paginator .p-paginator-last:hover) {
+:host ::ng-deep .p-paginator .p-paginator-prev:hover,
+:host ::ng-deep .p-paginator .p-paginator-next:hover,
+:host ::ng-deep .p-paginator .p-paginator-first:hover,
+:host ::ng-deep .p-paginator .p-paginator-last:hover {
   background: var(--color-background);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
 
 /* ─── Responsive ───────────────────────────────────────── */
+/* Progressive column reveal: drop the lower-priority metadata first so the
+   row never overflows. Title / Status / Priority / Due always stay. */
+.hide-lg, .hide-md { display: table-cell; }
+
 @media (max-width: 1200px) {
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .hide-lg { display: none; }
+}
+
+@media (max-width: 992px) {
+  .hide-md { display: none; }
 }
 
 @media (max-width: 768px) {
@@ -472,18 +917,14 @@
 
   .search-box { max-width: 100%; }
 
-  :deep(.tickets-table th),
-  :deep(.tickets-table td) {
+  :host ::ng-deep .tickets-table th,
+  :host ::ng-deep .tickets-table td {
     padding: 0.75rem 0.625rem;
   }
 
   .ticket-desc { max-width: 160px; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
 }
 
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-}
 /* ─── Dialog Form ──────────────────────────────────────── */
 .dialog-form {
   display: flex;
@@ -504,45 +945,326 @@
   gap: 0.375rem;
 }
 
-/* ─── Detail Dialog ────────────────────────────────────── */
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem 1.5rem;
-  padding: 0.5rem 0;
+/* ─── Compose Modal (Linear-style create) ──────────────── */
+/* Light dialog chrome: no heavy header rule, generous breathing room around the
+   borderless title/body, a quiet footer divider. */
+:host ::ng-deep .ticket-compose .p-dialog-header {
+  padding: 1rem 1.25rem 0.25rem;
+  border-bottom: none;
 }
 
-.detail-field {
-  display: flex;
-  flex-direction: column;
+:host ::ng-deep .ticket-compose .p-dialog-content {
+  padding: 0.5rem 1.25rem 1.125rem;
+}
+
+:host ::ng-deep .ticket-compose .p-dialog-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Context chip in the header (stands in for the breadcrumb in the reference). */
+.compose-chip {
+  display: inline-flex;
+  align-items: center;
   gap: 0.375rem;
-}
-
-.detail-field--full {
-  grid-column: 1 / -1;
-}
-
-.detail-label {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  background: var(--color-background);
+  font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-body);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
-.detail-value {
-  font-size: 0.875rem;
+.compose-chip i {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+.compose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+/* Title: plain text, no box — reads as the document heading. */
+.compose-title {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font-heading);
+  font-size: 1.3125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--color-heading);
+  outline: none;
+}
+
+.compose-title::placeholder {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+/* Body: borderless WYSIWYG markdown editor that grows with content.
+   Empty-field height comes from the shared editor (.md-prose); cap + scroll for the modal. */
+.compose-body {
+  display: block;
+  width: 100%;
+  max-height: 38vh;
+  overflow-y: auto;
+}
+
+/* Pill selectors — the dropdowns recast as minimalist chips. */
+.compose-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+}
+
+.compose-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  height: 1.875rem;
+  max-width: 14rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 100px;
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.compose-pill:hover {
+  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
+  border-color: var(--color-primary);
   color: var(--color-heading);
 }
 
-.detail-title {
-  font-weight: 600;
-  font-size: 1rem;
+.compose-pill:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }
 
-.detail-subvalue {
-  font-size: 0.85em;
+.compose-pill--set { color: var(--color-heading); }
+
+.pill-icon {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.compose-pill:hover .pill-icon { color: var(--color-primary); }
+
+.pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pill-avatars {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pill-avatars .avatar {
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: 0.5rem;
+  box-shadow: 0 0 0 1.5px var(--color-surface);
+}
+
+.pill-avatars .avatar:not(:first-child) { margin-left: -0.375rem; }
+
+/* Footer: actions right-aligned. */
+.compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* ─── Compose picker popovers ───────────────────────────── */
+.opt-check-trail {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.filter-list--scroll {
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.picker-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.375rem 0.375rem;
+}
+
+.picker-search i {
+  position: absolute;
+  left: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+
+.picker-search input {
+  width: 100%;
+  padding: 0.375rem 0.5rem 0.375rem 1.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-heading);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.picker-search input::placeholder { color: var(--color-muted); }
+
+.picker-search input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+/* ─── Assignee picker — select-all & team context ───────── */
+.picker-selectall {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: 0.125rem;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: var(--radius-base);
+  cursor: pointer;
   color: var(--color-body);
 }
 
-.empty-cell { color: var(--color-body); }
+.picker-selectall:hover { background: color-mix(in srgb, var(--color-secondary) 45%, transparent); }
+.picker-selectall:focus-visible { outline: 2px solid var(--color-ring); outline-offset: -2px; }
+
+/* Shared custom-checkbox box used by both compose and detail assignee pickers. */
+.selectall-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.0625rem;
+  height: 1.0625rem;
+  flex-shrink: 0;
+  border: 1.5px solid var(--color-border-strong, var(--color-border));
+  border-radius: calc(var(--radius-base) - 1px);
+  color: var(--color-primary-foreground);
+  transition: background-color 0.12s, border-color 0.12s;
+}
+
+.selectall-box--checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.selectall-box--partial {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.selectall-box svg { width: 11px; height: 11px; }
+
+/* Team-scope context row shown below the search when a team is selected. */
+.picker-team-ctx {
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0 0.5rem 0.3125rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.picker-team-ctx i { font-size: 0.625rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .selectall-box { transition: none; }
+}
+
+/* Two-line project option (customer + work order). */
+.option-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.option-sub {
+  font-size: 0.6875rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Member avatars sit inline in the assignee picker rows. */
+.filter-option .avatar {
+  width: 1.375rem;
+  height: 1.375rem;
+  font-size: 0.5625rem;
+  box-shadow: none;
+}
+
+/* Inline datepicker popover. */
+.filter-menu--date {
+  width: auto;
+  padding: 0.25rem;
+}
+
+.picker-clear {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: calc(100% - 0.5rem);
+  margin: 0.25rem;
+  padding: 0.4375rem 0.5rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-base);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-muted-destructive-foreground);
+  cursor: pointer;
+}
+
+.picker-clear:hover { background: var(--color-muted-destructive); }
+.picker-clear:focus-visible { outline: 2px solid var(--color-ring); outline-offset: -2px; }
+.picker-clear i { font-size: 0.6875rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .compose-pill,
+  .picker-search input { transition: none; }
+}

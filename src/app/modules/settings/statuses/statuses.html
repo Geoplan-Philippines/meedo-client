@@ -5,21 +5,11 @@
     <span class="text-heading">Statuses</span>
   </nav>
 
-  <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-2xl font-semibold text-heading">Statuses</h1>
-      <p class="text-sm text-body/70">Manage the custom statuses available to your tickets.</p>
-    </div>
-    <div class="flex items-center gap-4 flex-wrap">
-      <label for="show-archived" class="flex items-center gap-2 text-sm text-body cursor-pointer select-none">
-        <p-toggleSwitch
-          inputId="show-archived"
-          [formControl]="showArchivedControl"
-        />
-        Show archived
-      </label>
-      <p-button label="New status" icon="pi pi-plus" (onClick)="openCreate()" />
-    </div>
+  <header class="flex flex-col gap-1">
+    <h1 class="text-2xl font-semibold text-heading">Statuses</h1>
+    <p class="text-sm text-body/70">
+      The lifecycle stages a ticket can move through. The standard set is built in; add your own to match how your team works.
+    </p>
   </header>
 
   @if (error()) {
@@ -37,7 +27,64 @@
     </div>
   }
 
-  @if (isLoading()) {
+  <!-- Standard statuses: the fixed baseline every workspace ships with -->
+  <section class="flex flex-col gap-3" aria-labelledby="standard-statuses-heading">
+    <div class="flex flex-col gap-1">
+      <div class="flex items-center gap-2">
+        <h2 id="standard-statuses-heading" class="text-xs font-semibold uppercase tracking-wide text-body/70">
+          Standard
+        </h2>
+        <span class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-body/70">
+          <i class="pi pi-lock text-[10px]" aria-hidden="true"></i> Built-in
+        </span>
+      </div>
+      <p class="text-sm text-body/70">Always available. These can't be edited, archived, or deleted.</p>
+    </div>
+
+    <div class="rounded-base border border-border bg-surface overflow-hidden">
+      <ul class="divide-y divide-border">
+        @for (standard of systemStatuses(); track standard.id) {
+          <li class="flex items-center gap-3 px-4 py-3">
+            <span
+              class="inline-block w-3 h-3 rounded-full border border-border shrink-0"
+              [style.background-color]="standard.color"
+              aria-hidden="true"
+            ></span>
+            <span class="font-medium text-heading min-w-0 truncate">{{ standard.name }}</span>
+            <i
+              class="pi pi-lock ml-auto shrink-0 text-sm text-body/40"
+              pTooltip="Standard status — can't be edited or removed"
+              tooltipPosition="left"
+              
+              aria-label="Locked"
+            ></i>
+          </li>
+        } @empty {
+          <li class="px-4 py-3 text-sm text-body/70">Loading standard statuses…</li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Custom statuses: editable, team-defined -->
+  <section class="flex flex-col gap-3" aria-labelledby="custom-statuses-heading">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex flex-col gap-1">
+        <h2 id="custom-statuses-heading" class="text-xs font-semibold uppercase tracking-wide text-body/70">
+          Custom
+        </h2>
+        <p class="text-sm text-body/70">Extra statuses tailored to your team's workflow.</p>
+      </div>
+      <div class="flex items-center gap-4 flex-wrap">
+        <label for="show-archived" class="flex items-center gap-2 text-sm text-body cursor-pointer select-none">
+          <p-toggleSwitch inputId="show-archived" [formControl]="showArchivedControl" />
+          Show archived
+        </label>
+        <p-button label="New status" icon="pi pi-plus" (onClick)="openCreate()" />
+      </div>
+    </div>
+
+    @if (isLoading()) {
     <div class="flex items-center justify-center py-12 text-body/70">
       <i class="pi pi-spin pi-spinner text-xl mr-2"></i>
       Loading statuses…
@@ -47,18 +94,18 @@
       <i class="pi pi-tag text-3xl text-body/40"></i>
       <p class="text-body font-medium">
         @if (showArchived()) {
-          No statuses yet
-        } @else if (statuses().length > 0) {
-          No active statuses
+          No custom statuses yet
+        } @else if (customStatuses().length > 0) {
+          No active custom statuses
         } @else {
-          No statuses yet
+          No custom statuses yet
         }
       </p>
       <p class="text-sm text-body/70">
-        @if (!showArchived() && statuses().length > 0) {
-          All statuses are archived. Toggle "Show archived" to view them.
+        @if (!showArchived() && customStatuses().length > 0) {
+          All custom statuses are archived. Toggle "Show archived" to view them.
         } @else {
-          Create your first status to get started.
+          The standard statuses above cover the basics. Add one of your own to fit your workflow.
         }
       </p>
       @if (showArchived() || statuses().length === 0) {
@@ -144,6 +191,7 @@
       </p-table>
     </div>
   }
+  </section>
 </main>
 
 <p-dialog
@@ -168,23 +216,28 @@
       }
     </div>
 
-    <div class="flex flex-col gap-1.5">
-      <label for="status-color" class="text-sm font-medium text-heading">Color</label>
-      <div class="flex items-center gap-3">
-        <p-colorPicker inputId="status-color-picker" formControlName="color" />
-        <input
-          id="status-color"
-          pInputText
-          formControlName="color"
-          class="flex-1"
-          placeholder="#3B82F6"
-          autocomplete="off"
-        />
+    <fieldset class="flex flex-col gap-2 m-0 p-0 border-0">
+      <legend class="text-sm font-medium text-heading p-0 mb-0.5">Color</legend>
+      <div class="flex flex-wrap gap-2.5">
+        @for (option of colorOptions; track option.value) {
+          <label class="relative inline-flex cursor-pointer">
+            <input
+              type="radio"
+              formControlName="color"
+              [value]="option.value"
+              [attr.aria-label]="option.name"
+              class="peer sr-only"
+            />
+            <span
+              class="block h-8 w-8 rounded-base border border-border transition-shadow
+                     peer-checked:ring-2 peer-checked:ring-ring peer-checked:ring-offset-2
+                     peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
+              [style.background-color]="option.value"
+            ></span>
+          </label>
+        }
       </div>
-      @if (form.controls.color.invalid && form.controls.color.touched) {
-        <small class="text-destructive">Pick a color (hex, e.g. #3B82F6).</small>
-      }
-    </div>
+    </fieldset>
 
     <div class="flex flex-col gap-1.5">
       <span class="text-xs font-medium text-body/70 uppercase tracking-wide">Preview</span>
