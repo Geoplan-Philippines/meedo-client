@@ -10,9 +10,6 @@ export const timekeepingRoutes: Routes = [
     path: 'attendance',
     loadComponent: () =>
       import('./attendance/timesheet/timesheet').then((m) => m.Timesheet),
-    canDeactivate: [
-      (component: any) => component.confirmDiscardChanges(),
-    ],
   },
   {
     path: 'attendance/recognition',
@@ -23,5 +20,24 @@ export const timekeepingRoutes: Routes = [
     path: 'attendance/:employeeId',
     loadComponent: () =>
       import('./attendance/employee-detail/employee-detail').then((m) => m.EmployeeDetail),
+  },
+  {
+    path: 'timesheet',
+    loadComponent: () =>
+      import('./timesheet/timesheet').then((m) => m.Timesheet),
+    canDeactivate: [
+      (component: { confirmDiscardChanges: () => boolean }) =>
+        component.confirmDiscardChanges(),
+    ],
+  },
+  {
+    path: 'timesheet/approval/review',
+    loadComponent: () =>
+      import('./timesheet/review/timesheet-review').then((m) => m.TimesheetReview),
+  },
+  {
+    path: 'timesheet/approval',
+    loadComponent: () =>
+      import('./timesheet/approval/timesheet-approval').then((m) => m.TimesheetApproval),
   },
 ];
