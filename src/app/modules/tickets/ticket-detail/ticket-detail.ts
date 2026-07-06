@@ -127,7 +127,9 @@ export class TicketDetail {
         if (!teamId) return of(null);
         return this.teamsService.listTeamMembers(teamId).pipe(
           map((rows) => new Set(rows.map((r) => r.userId))),
-          catchError(() => of(null)),
+          // On failure fall back to an empty set (no members), never null — a
+          // team with no members must show no assignees, not the whole org.
+          catchError(() => of(new Set<string>())),
         );
       }),
     ),

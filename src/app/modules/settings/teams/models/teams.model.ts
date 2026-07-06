@@ -12,10 +12,16 @@ export interface CreateTeamPayload {
   organizationId?: string;
 }
 
-/** A row from Better Auth's `list-team-members` (team ↔ user link). */
+/** A team ↔ user link row, plus the linked user (from `settings/teams/:id/members`). */
 export interface TeamMember {
   id: string;
   userId: string;
   teamId: string;
   createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
 }
