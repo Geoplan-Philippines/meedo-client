@@ -1,0 +1,82 @@
+<main class="detail-page">
+  <header class="page-header">
+    <p-button
+      icon="pi pi-arrow-left"
+      label="Back"
+      severity="secondary"
+      [text]="true"
+      (onClick)="goBack()"
+    />
+    <h1 class="page-title">
+      Attendance — {{ summary()?.date ?? null | date: 'fullDate' }}
+    </h1>
+  </header>
+
+  <section class="summary-grid" aria-live="polite">
+    <article class="summary-card">
+      <span class="summary-label">First In</span>
+      <span class="summary-value">{{ firstIn() ? (firstIn() | date: 'shortTime') : '—' }}</span>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Last Out</span>
+      <span class="summary-value">{{ lastOut() ? (lastOut() | date: 'shortTime') : '—' }}</span>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Clocked Hours</span>
+      <span class="summary-value">{{ billableHours() !== null ? billableHours() + ' Hours' : '—' }}</span>
+    </article>
+  </section>
+
+  <section class="detail-grid">
+    <div class="timeline-section">
+      <h2 class="section-title">Timeline of Events</h2>
+
+      @if (isLoading()) {
+        <p class="empty-text">Loading…</p>
+      } @else if (events().length === 0) {
+        <p class="empty-text">No data yet.</p>
+      } @else {
+        <ul class="timeline">
+          @for (event of events(); track event.id) {
+            <li class="timeline-item">
+              <span class="timeline-time">{{ event.timestamp | date: 'shortTime' }}</span>
+              <span class="timeline-type">{{ eventTypeLabel(event.eventType) }}</span>
+              <p-tag [value]="event.source" [severity]="sourceSeverity(event.source)" />
+              @if (event.origin === 'BIOMETRICS') {
+                <span class="timeline-origin" title="From biometric device">
+                  <i class="pi pi-id-card"></i> Biometric
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="map-section">
+      <div class="map-wrapper">
+        <header class="map-overlay-header">
+          <span class="map-overlay-title">
+            <i class="pi pi-map-marker"></i> Punch Locations
+          </span>
+          <span class="map-overlay-status">
+            {{ markerEvents().length }} located
+          </span>
+        </header>
+
+        <div #mapContainer class="map-container"></div>
+
+        @if (!hasLocatedEvents()) {
+          <p class="map-empty">No location data for this day's events.</p>
+        }
+
+        <ul class="map-legend">
+          <li><span class="legend-dot legend-dot--field"></span> Field</li>
+          <li><span class="legend-dot legend-dot--wfh"></span> WFH</li>
+          <li><span class="legend-dot legend-dot--office"></span> Office</li>
+          <li><span class="legend-dot legend-dot--biometric"></span> Biometric</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>

@@ -1,0 +1,170 @@
+<p-toast />
+
+<main class="attendance-page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Attendance</h1>
+      <p class="page-subtitle">First in, last out — across office, field, and work-from-home.</p>
+    </div>
+    <span class="today-pill">{{ summary()?.date ?? null | date: 'fullDate' }}</span>
+  </header>
+
+  <!-- ─── Today's computed summary ─────────────────────── -->
+  <section class="summary-grid" aria-live="polite">
+    <article class="summary-card">
+      <span class="summary-label">First In</span>
+      <span class="summary-value">
+        {{ firstIn() ? (firstIn() | date: 'shortTime') : '—' }}
+      </span>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-label">Last Out</span>
+      <span class="summary-value">
+        {{ lastOut() ? (lastOut() | date: 'shortTime') : '—' }}
+      </span>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-label">Billable Hours</span>
+      <span class="summary-value">
+        {{ billableHours() !== null ? billableHours() + ' Hours' : '—' }}
+      </span>
+    </article>
+
+    <article class="summary-card summary-card--accent">
+      <span class="summary-label">
+        {{ hasClockedIn() ? 'Elapsed' : 'Status' }}
+        @if (hasClockedIn()) {
+          <span class="live-dot" aria-hidden="true"></span>
+        }
+      </span>
+      <span class="summary-value summary-value--mono">
+        {{ hasClockedIn() ? elapsedLabel() : 'Not clocked in' }}
+      </span>
+    </article>
+  </section>
+
+  <!-- ─── Punch panel ──────────────────────────────────── -->
+  <section class="punch-panel">
+    <div class="punch-buttons">
+      <p-button
+        label="Clock In"
+        icon="pi pi-sign-in"
+        severity="primary"
+        size="large"
+        [disabled]="!hasLocation()"
+        (onClick)="openTimeIn()"
+      />
+      <p-button
+        label="Clock Out"
+        icon="pi pi-sign-out"
+        severity="secondary"
+        size="large"
+        [outlined]="true"
+        [disabled]="!canTimeOut() || !hasLocation()"
+        (onClick)="openTimeOut()"
+      />
+    </div>
+
+    <p class="location-status" [class.location-status--ready]="locationStatus() === 'ready'">
+      @switch (locationStatus()) {
+        @case ('pending') {
+          <i class="pi pi-spin pi-spinner"></i> Getting your location…
+        }
+        @case ('ready') {
+          <i class="pi pi-map-marker"></i>
+          <span class="location-text">{{ locationLabel() ?? coordinateLabel() }}</span>
+          @if (locationLabel()) {
+            <span class="location-coords">({{ coordinateLabel() }})</span>
+          }
+        }
+        @case ('denied') {
+          <i class="pi pi-exclamation-triangle"></i>
+          Location permission denied. Enable it to time in or out.
+        }
+        @case ('unavailable') {
+          <i class="pi pi-exclamation-triangle"></i>
+          Location unavailable. Punching is disabled until a location is found.
+        }
+      }
+    </p>
+  </section>
+
+  <!-- ─── In/Out roster (own row for members, all for managers) ─── -->
+  <app-attendance-roster />
+</main>
+
+<!-- ─── Work Type / confirmation dialog ─────────────────── -->
+<p-dialog
+  [header]="dialogTitle()"
+  [visible]="dialogVisible()"
+  (visibleChange)="$event ? null : closeDialog()"
+  [modal]="true"
+  [draggable]="false"
+  [dismissableMask]="true"
+  [style]="{ width: '28rem' }"
+  styleClass="worktype-dialog"
+>
+  <!-- Step 1: choose a work type -->
+  @if (dialogStep() === 'select') {
+    <div class="worktype-list">
+      @for (option of workTypes; track option.type) {
+        <button type="button" class="worktype-row" (click)="selectWorkType(option)">
+          <span class="worktype-icon"><i [class]="option.icon"></i></span>
+          <span class="worktype-label">{{ option.label }}</span>
+          <i class="pi pi-arrow-right worktype-arrow"></i>
+        </button>
+      }
+    </div>
+
+    <div class="quick-tip" role="note">
+      <i class="pi pi-info-circle"></i>
+      <p>
+        <strong>Quick tip.</strong> Your selected work type helps track where your
+        work was done today.
+      </p>
+    </div>
+  }
+
+  <!-- Step 2: confirm the punch -->
+  @if (dialogStep() === 'confirm' && selectedWorkType(); as option) {
+    <div class="confirm-body">
+      <div class="confirm-summary">
+        <span class="worktype-icon worktype-icon--lg"><i [class]="option.icon"></i></span>
+        <div>
+          <p class="confirm-action">
+            {{ dialogMode() === 'in' ? 'Clock In' : 'Clock Out' }} — {{ option.label }}
+          </p>
+          <p class="confirm-time">{{ now() | date: 'EEEE, MMM d • h:mm a' }}</p>
+        </div>
+      </div>
+
+      <div class="confirm-actions">
+        @if (dialogMode() === 'in') {
+          <p-button
+            label="Back"
+            severity="secondary"
+            [text]="true"
+            [disabled]="isPunching()"
+            (onClick)="backToSelect()"
+          />
+        } @else {
+          <p-button
+            label="Cancel"
+            severity="secondary"
+            [text]="true"
+            [disabled]="isPunching()"
+            (onClick)="closeDialog()"
+          />
+        }
+        <p-button
+          [label]="dialogMode() === 'in' ? 'Confirm Clock In' : 'Confirm Clock Out'"
+          icon="pi pi-check"
+          [loading]="isPunching()"
+          (onClick)="confirmPunch()"
+        />
+      </div>
+    </div>
+  }
+</p-dialog>
