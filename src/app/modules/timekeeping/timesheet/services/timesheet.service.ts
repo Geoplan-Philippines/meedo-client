@@ -24,10 +24,12 @@ export class TimesheetService {
   private readonly baseUrl = `${environment.apiBaseUrl}/timekeeping/timesheet`;
 
   getEntries(periodStart: string, periodEnd: string) {
-    return this.http.get<PaginatedApiResponse<TimesheetEntry>>(`${this.baseUrl}/entries`, {
-      params: { periodStart, periodEnd, page: 1, limit: 50 },
-      withCredentials: true,
-    });
+    return this.http
+      .get<ApiResponse<{ data: TimesheetEntry[] }>>(`${this.baseUrl}/entries`, {
+        params: { periodStart, periodEnd },
+        withCredentials: true,
+      })
+      .pipe(map((response) => response.data));
   }
 
   createEntry(payload: TimesheetEntryPayload) {
@@ -49,22 +51,16 @@ export class TimesheetService {
   submitWeek(periodStart: string, periodEnd: string) {
     return this.http
       .post<ApiResponse<SubmitWeekResult>>(
-        `${this.baseUrl}/entries/submit-week`,
+        `${this.baseUrl}/submit-week`,
         { periodStart, periodEnd },
         { withCredentials: true },
       )
       .pipe(map((response) => response.data));
   }
 
-  getProjects(search?: string) {
-    let params = new HttpParams().set('page', 1).set('limit', 50);
-    if (search?.trim()) {
-      params = params.set('search', search.trim());
-    }
-
+  getProjects() {
     return this.http
-      .get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
-        params,
+      .get<ApiResponse<TimesheetProject[]>>(`${this.baseUrl}/projects`, {
         withCredentials: true,
       })
       .pipe(

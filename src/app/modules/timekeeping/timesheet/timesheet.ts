@@ -1,12 +1,11 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CanDeactivateFn } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, Observable } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -18,7 +17,6 @@ import {
   TimesheetProject,
   TimesheetWorkType,
 } from './models/timesheet.model';
-import { ActionDropdownItem } from '../../../shared/ui/action-dropdown';
 import { TimesheetService } from './services/timesheet.service';
 
 interface TimesheetGridCell {
@@ -35,6 +33,7 @@ interface TimesheetGridCell {
 interface TimesheetGridRow {
   localId: string;
   projectId: string | null;
+  customerId: string | null;
   location: string;
   workType: TimesheetWorkType;
   task: string;
@@ -59,6 +58,12 @@ interface TimesheetActivityItem {
   tone: 'success' | 'info' | 'warning';
 }
 
+interface TaskPopover {
+  rowId: string;
+  task: string;
+  readonly: boolean;
+}
+
 const LOCATION_OPTIONS = [
   { label: 'OFC - DW', value: 'OFC - DW', workType: 'OFFICE_DIRECT_WORK' as TimesheetWorkType },
   { label: 'WFH', value: 'WFH', workType: 'WFH' as TimesheetWorkType },
@@ -75,7 +80,6 @@ const LOCATION_OPTIONS = [
     FormsModule,
     ButtonModule,
     DatePickerModule,
-    InputTextModule,
     SelectModule,
     ToastModule,
     DatePipe,
@@ -84,6 +88,9 @@ const LOCATION_OPTIONS = [
   templateUrl: './timesheet.html',
   styleUrl: './timesheet.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(window:beforeunload)': 'beforeUnload($event)',
+  },
 })
 export class Timesheet implements OnInit {
   private readonly timesheetService = inject(TimesheetService);
@@ -98,9 +105,9 @@ export class Timesheet implements OnInit {
   readonly isSubmitting = signal(false);
   readonly isLocked = signal(false);
   readonly lockMessage = signal<string | null>(null);
-  readonly activeRow = signal<TimesheetGridRow | null>(null);
-  readonly showRowDialog = signal(false);
   readonly showHistoryDialog = signal(false);
+  readonly collapsedDays = signal<Set<string>>(new Set());
+  readonly taskPopover = signal<TaskPopover | null>(null);
 
   readonly locationOptions = LOCATION_OPTIONS;
 
@@ -128,10 +135,6 @@ export class Timesheet implements OnInit {
   readonly offsetHours = computed(() => this.sumHours((row) => row.workType === 'OFFSET'));
 
   readonly unsavedCount = computed(() => this.rows().filter((row) => row.dirty || row.cells.some((cell) => cell.dirty)).length);
-  readonly draftCount = computed(() => this.countCellsByStatus('DRAFT'));
-  readonly submittedCount = computed(() => this.countCellsByStatus('SUBMITTED'));
-  readonly approvedCount = computed(() => this.countCellsByStatus('APPROVED'));
-  readonly rejectedCount = computed(() => this.countCellsByStatus('REJECTED'));
 
   readonly dailyTotals = computed(() => {
     const totals = new Map<string, number>();
@@ -140,14 +143,6 @@ export class Timesheet implements OnInit {
       row.cells.forEach((cell) => totals.set(cell.date, (totals.get(cell.date) ?? 0) + (Number(cell.hours) || 0)));
     });
     return totals;
-  });
-
-  readonly currentStatus = computed<TimesheetEntryStatus>(() => {
-    const activeCells = this.rows().flatMap((row) => row.cells).filter((cell) => cell.entryId || Number(cell.hours) > 0);
-    if (activeCells.some((cell) => cell.status === 'REJECTED')) return 'REJECTED';
-    if (activeCells.some((cell) => cell.status === 'SUBMITTED')) return 'SUBMITTED';
-    if (activeCells.length > 0 && activeCells.every((cell) => cell.status === 'APPROVED')) return 'APPROVED';
-    return 'DRAFT';
   });
 
   readonly recentActivity = computed<TimesheetActivityItem[]>(() => {
@@ -171,6 +166,17 @@ export class Timesheet implements OnInit {
     this.rows().some((row) => row.cells.some((cell) => cell.entryId && cell.status === 'DRAFT')),
   );
 
+  readonly uniqueCustomers = computed(() => {
+    const seen = new Set<string>();
+    return this.projects()
+      .filter((project) => {
+        if (seen.has(project.customerName)) return false;
+        seen.add(project.customerName);
+        return true;
+      })
+      .map((project) => ({ label: project.customerName, value: project.customerName }));
+  });
+
   ngOnInit(): void {
     this.loadWeek();
   }
@@ -178,12 +184,10 @@ export class Timesheet implements OnInit {
   onWeekChange(date: Date | Date[] | null): void {
     const selected = Array.isArray(date) ? date[0] : date;
     if (!selected) return;
-
     if (!this.confirmDiscardChanges()) {
       this.selectedDate.set(new Date(this.selectedDate()));
       return;
     }
-
     this.selectedDate.set(selected);
     this.loadWeek();
   }
@@ -203,7 +207,7 @@ export class Timesheet implements OnInit {
           this.projects.set(projects);
           this.rows.set(this.entriesToGridRows(entries.data));
           this.isLocked.set(lock.isLocked);
-          this.lockMessage.set(lock.isLocked ? `This week was locked on ${formatShortDate(new Date(lock.lockedAt ?? lock.updatedAt ?? Date.now()))}.` : null);
+          this.lockMessage.set(lock.isLocked ? `This week was locked on ${formatShortDate(new Date(lock.lockedAt ?? Date.now()))}.` : null);
         },
         error: (err: unknown) => {
           console.error('Error loading timesheet:', err);
@@ -212,36 +216,68 @@ export class Timesheet implements OnInit {
       });
   }
 
+  toggleDay(day: Date): void {
+    const key = toDateInputValue(day);
+    this.collapsedDays.update((set) => {
+      const next = new Set(set);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  isDayCollapsed(day: Date): boolean {
+    return this.collapsedDays().has(toDateInputValue(day));
+  }
+
+  openTaskPopover(row: TimesheetGridRow): void {
+    this.taskPopover.set({
+      rowId: row.localId,
+      task: row.task,
+      readonly: this.isRowReadonly(row),
+    });
+  }
+
+  closeTaskPopover(save = false): void {
+    const popover = this.taskPopover();
+    if (!popover) return;
+
+    if (save && !popover.readonly) {
+      const row = this.rows().find((r) => r.localId === popover.rowId);
+      if (row) {
+        row.task = popover.task;
+        this.markDirty(row);
+      }
+    }
+
+    this.taskPopover.set(null);
+  }
+
   addRow(day: Date = this.weekDays()[0]): void {
     if (this.isLocked()) return;
     const row = this.createEmptyGridRow(true, toDateInputValue(day));
     this.rows.update((rows) => [...rows, row]);
   }
 
-  previousWeek(): void {
-    this.changeWeekBy(-7);
+  workOrdersForRow(row: TimesheetGridRow): { label: string; value: string }[] {
+    if (!row.customerId) return [];
+    return this.projects()
+      .filter((project) => project.customerName === row.customerId)
+      .map((project) => ({ label: project.workOrderNumber, value: project.id }));
   }
 
-  nextWeek(): void {
-    this.changeWeekBy(7);
+  onRowCustomerChange(row: TimesheetGridRow, customerName: string): void {
+    row.customerId = customerName;
+    row.projectId = null;
+    this.markDirty(row);
   }
 
-  openRowDialog(row: TimesheetGridRow): void {
-    this.activeRow.set(row);
-    this.showRowDialog.set(true);
+  onRowWorkOrderChange(row: TimesheetGridRow, projectId: string): void {
+    row.projectId = projectId;
+    this.markDirty(row);
   }
 
-  closeRowDialog(): void {
-    this.showRowDialog.set(false);
-    this.activeRow.set(null);
-  }
-
-  saveActiveRow(): void {
-    const row = this.activeRow();
-    if (!row) return;
-    this.saveRow(row);
-    this.closeRowDialog();
-  }
+  previousWeek(): void { this.changeWeekBy(-7); }
+  nextWeek(): void     { this.changeWeekBy(7); }
 
   markDirty(row: TimesheetGridRow): void {
     if (this.isRowReadonly(row)) return;
@@ -272,9 +308,7 @@ export class Timesheet implements OnInit {
       .filter((item): item is TimesheetDayItem => !!item.cell && (item.cell.entryId !== undefined || Number(item.cell.hours) > 0 || item.row.targetDate === date));
   }
 
-  statusLabel(status: TimesheetEntryStatus): string {
-    return formatStatusLabel(status);
-  }
+  statusLabel(status: TimesheetEntryStatus): string { return formatStatusLabel(status); }
 
   saveButtonLabel(): string {
     return this.unsavedCount() > 0 ? `Save Draft (${this.unsavedCount()})` : 'Save Draft';
@@ -379,66 +413,11 @@ export class Timesheet implements OnInit {
       });
   }
 
-  rowActionItems(row: TimesheetGridRow): ActionDropdownItem[] {
-    const readonly = this.isRowReadonly(row);
-
-    return [
-      {
-        label: readonly ? 'View details' : 'Edit weekly hours',
-        icon: readonly ? 'pi pi-eye' : 'pi pi-pencil',
-        disabled: row.saving,
-        command: () => this.openRowDialog(row),
-      },
-      {
-        label: row.saving ? 'Saving row…' : 'Save row',
-        icon: row.saving ? 'pi pi-spinner pi-spin' : 'pi pi-save',
-        disabled: readonly || !this.hasRowChanges(row) || row.saving,
-        command: () => this.saveRow(row),
-      },
-      {
-        label: 'Delete row',
-        icon: 'pi pi-trash',
-        severity: 'danger',
-        disabled: readonly || row.saving,
-        command: () => this.deleteRow(row),
-      },
-    ];
-  }
-
-  deleteRow(row: TimesheetGridRow): void {
-    if (this.isRowReadonly(row)) return;
-
-    const entryIds = row.cells.filter((cell) => cell.entryId && cell.status === 'DRAFT').map((cell) => cell.entryId!);
-    if (entryIds.length === 0) {
-      this.rows.update((rows) => rows.filter((item) => item !== row));
-      return;
-    }
-
-    row.saving = true;
-    this.rows.update((rows) => [...rows]);
-    forkJoin(entryIds.map((id) => this.timesheetService.deleteEntry(id)))
-      .pipe(finalize(() => {
-        row.saving = false;
-        this.rows.update((rows) => [...rows]);
-      }))
-      .subscribe({
-        next: () => {
-          this.rows.update((rows) => rows.filter((item) => item !== row));
-          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Draft row deleted' });
-        },
-        error: (err: unknown) => {
-          console.error('Error deleting row:', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to delete row') });
-        },
-      });
-  }
-
   submitWeek(): void {
     if (this.hasUnsavedChanges()) {
       this.messageService.add({ severity: 'warn', summary: 'Save drafts first', detail: 'Please save all draft changes before submitting.' });
       return;
     }
-
     if (!this.hasDraftRows()) {
       this.messageService.add({ severity: 'info', summary: 'Nothing to submit', detail: 'There are no draft rows for this week.' });
       return;
@@ -467,24 +446,8 @@ export class Timesheet implements OnInit {
     return this.isLocked() || (!!cell.entryId && cell.status !== 'DRAFT');
   }
 
-  projectTag(projectId: string | null): string {
-    return this.projects().find((project) => project.id === projectId)?.workOrderNumber ?? '—';
-  }
-
-  projectName(projectId: string | null): string {
-    return this.projects().find((project) => project.id === projectId)?.customerName ?? 'Select project';
-  }
-
   statusClass(status: TimesheetEntryStatus): string {
     return `status-badge status-badge--${status.toLowerCase()}`;
-  }
-
-  rowStatus(row: TimesheetGridRow): TimesheetEntryStatus {
-    const activeCells = row.cells.filter((cell) => cell.entryId || Number(cell.hours) > 0);
-    if (activeCells.some((cell) => cell.status === 'REJECTED')) return 'REJECTED';
-    if (activeCells.some((cell) => cell.status === 'SUBMITTED')) return 'SUBMITTED';
-    if (activeCells.length > 0 && activeCells.every((cell) => cell.status === 'APPROVED')) return 'APPROVED';
-    return 'DRAFT';
   }
 
   rowTotal(row: TimesheetGridRow): number {
@@ -503,16 +466,11 @@ export class Timesheet implements OnInit {
     return this.rows().some((row) => this.hasRowChanges(row));
   }
 
-  rejectionReasons(row: TimesheetGridRow): string[] {
-    return row.cells.map((cell) => cell.rejectionReason).filter((reason): reason is string => !!reason);
-  }
-
   confirmDiscardChanges(): boolean {
     if (!this.hasUnsavedChanges()) return true;
     return window.confirm('You have unsaved timesheet changes. Discard them and leave this week?');
   }
 
-  @HostListener('window:beforeunload', ['$event'])
   beforeUnload(event: BeforeUnloadEvent): void {
     if (!this.hasUnsavedChanges()) return;
     event.preventDefault();
@@ -541,39 +499,32 @@ export class Timesheet implements OnInit {
     }
 
     const operations: Observable<unknown>[] = [];
-
     for (const cell of row.cells) {
       if (this.isCellReadonly(cell)) continue;
       if (!cell.dirty && !row.dirty) continue;
-
       const hours = Number(cell.hours) || 0;
       if (cell.entryId && hours <= 0) operations.push(this.timesheetService.deleteEntry(cell.entryId));
       else if (cell.entryId && hours > 0) operations.push(this.timesheetService.updateEntry(cell.entryId, this.rowToPayload(row, cell)));
       else if (!cell.entryId && hours > 0) operations.push(this.timesheetService.createEntry(this.rowToPayload(row, cell)));
     }
-
     return operations;
   }
 
   private validateRow(row: TimesheetGridRow): string | null {
     const activeCells = row.cells.filter((cell) => Number(cell.hours) > 0 || cell.entryId);
     if (activeCells.length === 0) return null;
-
-    if (!row.projectId) return 'Project is required.';
-    if (!row.task.trim()) return 'Task is required.';
+    if (!row.projectId) return 'Please select a project and work order.';
+    if (!row.task.trim()) return 'Task description is required.';
 
     for (const cell of activeCells) {
       const hours = Number(cell.hours) || 0;
       if (hours < 0 || hours > 24) return 'Hours must be between 0 and 24 per day.';
-
       const otherTotal = this.rows()
         .flatMap((item) => item.cells.map((itemCell) => ({ row: item, cell: itemCell })))
         .filter(({ row: itemRow, cell: itemCell }) => itemRow !== row && itemCell.date === cell.date)
         .reduce((total, item) => total + (Number(item.cell.hours) || 0), 0);
-
       if (otherTotal + hours > 24) return 'Total hours for one day cannot exceed 24.';
     }
-
     return null;
   }
 
@@ -597,6 +548,7 @@ export class Timesheet implements OnInit {
         groups.set(key, {
           localId: entry.id,
           projectId: entry.projectId,
+          customerId: entry.project?.customerName ?? null,
           location: entry.location,
           workType: entry.workType,
           task: entry.task,
@@ -630,6 +582,7 @@ export class Timesheet implements OnInit {
     return {
       localId: crypto.randomUUID?.() ?? `row-${Date.now()}-${Math.random()}`,
       projectId: null,
+      customerId: null,
       location: 'OFC - DW',
       workType: 'OFFICE_DIRECT_WORK',
       task: '',
@@ -665,10 +618,6 @@ export class Timesheet implements OnInit {
       isOvertime: row.isOvertime,
       isNightDifferential: row.isNightDifferential,
     };
-  }
-
-  private countCellsByStatus(status: TimesheetEntryStatus): number {
-    return this.rows().flatMap((row) => row.cells).filter((cell) => cell.entryId && cell.status === status).length;
   }
 }
 

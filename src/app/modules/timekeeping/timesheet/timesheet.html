@@ -2,8 +2,6 @@
 
 <div class="timesheet-page">
   <header class="page-header">
-    <span class="page-kicker">Timekeeping</span>
-
     <div class="header-controls" aria-label="Timesheet week controls">
       <div class="week-picker-group" aria-label="Selected timesheet week">
         <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
@@ -21,38 +19,9 @@
       </div>
 
       <div class="action-buttons" aria-label="Timesheet actions">
-        <button
-          class="history-btn"
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          icon="pi pi-history"
-          label="History"
-          (click)="showHistoryDialog.set(true)"
-        ></button>
-        <button
-          class="save-btn"
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          icon="pi pi-save"
-          [label]="saveButtonLabel()"
-          (click)="saveAllDrafts()"
-          [loading]="isSavingAll()"
-          [disabled]="isLocked() || isLoading() || !hasUnsavedChanges()"
-        ></button>
-        <button
-          class="submit-btn"
-          pButton
-          type="button"
-          icon="pi pi-send"
-          label="Submit"
-          (click)="submitWeek()"
-          [loading]="isSubmitting()"
-          [disabled]="isLocked() || isLoading() || hasUnsavedChanges() || !hasDraftRows()"
-        ></button>
+        <button class="history-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-history" label="History" (click)="showHistoryDialog.set(true)"></button>
+        <button class="save-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-save" [label]="saveButtonLabel()" (click)="saveAllDrafts()" [loading]="isSavingAll()" [disabled]="isLocked() || isLoading() || !hasUnsavedChanges()"></button>
+        <button class="submit-btn" pButton type="button" icon="pi pi-send" label="Submit" (click)="submitWeek()" [loading]="isSubmitting()" [disabled]="isLocked() || isLoading() || hasUnsavedChanges() || !hasDraftRows()"></button>
       </div>
     </div>
   </header>
@@ -65,68 +34,87 @@
   }
 
   <section class="hours-strip" aria-label="Timesheet totals">
-    <div class="hours-chip hours-chip--total">
-      <span class="hours-chip-label">Week Total</span>
-      <strong class="hours-chip-value">{{ totalHours() | number: '1.0-2' }}h</strong>
+    <div class="hours-chip">
+      <div class="hours-chip-icon"><i class="pi pi-calendar"></i></div>
+      <div class="hours-chip-body">
+        <span class="hours-chip-label">Week Total</span>
+        <strong class="hours-chip-value">{{ totalHours() | number: '1.0-2' }}h</strong>
+      </div>
     </div>
     <div class="hours-chip">
-      <span class="hours-chip-label">Regular</span>
-      <strong class="hours-chip-value">{{ regularHours() | number: '1.0-2' }}h</strong>
-    </div>
-    <div class="hours-chip hours-chip--ot">
-      <span class="hours-chip-label">Overtime</span>
-      <strong class="hours-chip-value">{{ overtimeHours() | number: '1.0-2' }}h</strong>
-    </div>
-    <div class="hours-chip">
-      <span class="hours-chip-label">Leave / ND</span>
-      <strong class="hours-chip-value">{{ leaveNightHours() | number: '1.0-2' }}h</strong>
+      <div class="hours-chip-icon hours-chip-icon--regular"><i class="pi pi-clock"></i></div>
+      <div class="hours-chip-body">
+        <span class="hours-chip-label">Regular</span>
+        <strong class="hours-chip-value">{{ regularHours() | number: '1.0-2' }}h</strong>
+      </div>
     </div>
     <div class="hours-chip">
-      <span class="hours-chip-label">Offset</span>
-      <strong class="hours-chip-value">{{ offsetHours() | number: '1.0-2' }}h</strong>
+      <div class="hours-chip-icon hours-chip-icon--ot"><i class="pi pi-bolt"></i></div>
+      <div class="hours-chip-body">
+        <span class="hours-chip-label">Overtime</span>
+        <strong class="hours-chip-value">{{ overtimeHours() | number: '1.0-2' }}h</strong>
+      </div>
+    </div>
+    <div class="hours-chip">
+      <div class="hours-chip-icon hours-chip-icon--leave"><i class="pi pi-briefcase"></i></div>
+      <div class="hours-chip-body">
+        <span class="hours-chip-label">Leave / ND</span>
+        <strong class="hours-chip-value">{{ leaveNightHours() | number: '1.0-2' }}h</strong>
+      </div>
+    </div>
+    <div class="hours-chip">
+      <div class="hours-chip-icon hours-chip-icon--offset"><i class="pi pi-sync"></i></div>
+      <div class="hours-chip-body">
+        <span class="hours-chip-label">Offset</span>
+        <strong class="hours-chip-value">{{ offsetHours() | number: '1.0-2' }}h</strong>
+      </div>
     </div>
   </section>
 
-  <div class="timesheet-layout">
-    <main class="day-list" aria-label="Daily timesheet entries">
-      @for (day of weekDays(); track day.toISOString()) {
-        <section class="day-card">
-          <div class="day-card-header">
-            <button type="button" class="day-toggle" aria-label="Timesheet day expanded">
-              <i class="pi pi-chevron-down" aria-hidden="true"></i>
-            </button>
-            <div>
-              <h2>{{ day | date: 'EEE, MMM d, y' }}</h2>
-              <span>Total: {{ totalForDay(day) | number: '1.0-2' }}h</span>
-            </div>
-            <button pButton type="button" size="small" icon="pi pi-plus" label="Add Entry" (click)="addRow(day)" [disabled]="isLocked() || isLoading()"></button>
-          </div>
+  <div class="day-list" aria-label="Daily timesheet entries">
+    @for (day of weekDays(); track day.toISOString()) {
+      @let entries = rowsForDay(day);
+      @let hasEntries = entries.length > 0;
+      @let collapsed = isDayCollapsed(day);
 
+      <section class="day-section" [class.day-section--collapsed]="collapsed">
+        <div class="day-header" (click)="toggleDay(day)" role="button" [attr.aria-expanded]="!collapsed">
+          <i class="pi day-chevron" [class.pi-chevron-down]="!collapsed" [class.pi-chevron-right]="collapsed" aria-hidden="true"></i>
+          <i class="pi pi-calendar day-cal-icon" aria-hidden="true"></i>
+          <h2 class="day-name">{{ day | date: 'EEE, MMM d' }}</h2>
+          @if (hasEntries) {
+            <span class="day-hours-pill">{{ totalForDay(day) | number: '1.0-2' }}h logged</span>
+          }
+          <div class="day-header-actions">
+            <button pButton type="button" size="small" icon="pi pi-plus" label="Add Entry" class="add-entry-btn" (click)="$event.stopPropagation(); addRow(day)" [disabled]="isLocked() || isLoading()"></button>
+          </div>
+        </div>
+
+        @if (!collapsed) {
           <div class="entry-table" role="table" [attr.aria-label]="'Entries for ' + (day | date: 'EEEE, MMMM d')">
             <div class="entry-row entry-row--head" role="row">
-              <span role="columnheader">Project <b>*</b></span>
-              <span role="columnheader">Work Order <b>*</b></span>
-              <span role="columnheader">Task / Description <b>*</b></span>
-              <span role="columnheader">Location <b>*</b></span>
-              <span role="columnheader">Hours <b>*</b></span>
+              <span role="columnheader">Project</span>
+              <span role="columnheader">Work Order</span>
+              <span role="columnheader">Task / Description</span>
+              <span role="columnheader">Location</span>
+              <span role="columnheader">Hours</span>
               <span role="columnheader">OT</span>
               <span role="columnheader">ND</span>
               <span role="columnheader">Status</span>
               <span role="columnheader" aria-label="Actions"></span>
             </div>
 
-            @for (item of rowsForDay(day); track item.row.localId + item.cell.date) {
+            @for (item of entries; track item.row.localId + item.cell.date) {
               <div class="entry-row" role="row" [class.row-readonly]="isRowReadonly(item.row)">
                 <label class="entry-field entry-field--project">
-                  <span>Project</span>
                   <p-select
-                    [(ngModel)]="item.row.projectId"
-                    (ngModelChange)="markDirty(item.row)"
-                    [options]="projects()"
-                    optionLabel="customerName"
-                    optionValue="id"
+                    [ngModel]="item.row.customerId"
+                    (ngModelChange)="onRowCustomerChange(item.row, $event)"
+                    [options]="uniqueCustomers()"
+                    optionLabel="label"
+                    optionValue="value"
                     [filter]="true"
-                    filterBy="customerName,workOrderNumber"
+                    filterBy="label"
                     placeholder="Select project"
                     appendTo="body"
                     [disabled]="isRowReadonly(item.row)"
@@ -135,24 +123,33 @@
                 </label>
 
                 <label class="entry-field">
-                  <span>Work Order</span>
-                  <input pInputText class="cell-input" [value]="projectTag(item.row.projectId)" readonly />
-                </label>
-
-                <label class="entry-field entry-field--task">
-                  <span>Task / Description</span>
-                  <input
-                    pInputText
-                    class="cell-input"
-                    [(ngModel)]="item.row.task"
-                    (ngModelChange)="markDirty(item.row)"
-                    [disabled]="isRowReadonly(item.row)"
-                    placeholder="Work performed"
+                  <p-select
+                    [ngModel]="item.row.projectId"
+                    (ngModelChange)="onRowWorkOrderChange(item.row, $event)"
+                    [options]="workOrdersForRow(item.row)"
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="true"
+                    filterBy="label"
+                    placeholder="Work order"
+                    appendTo="body"
+                    [disabled]="isRowReadonly(item.row) || !item.row.customerId"
+                    styleClass="entry-select"
                   />
                 </label>
 
+                <div class="entry-field entry-field--task">
+                  <div
+                    class="task-preview"
+                    [class.task-preview--readonly]="isRowReadonly(item.row)"
+                    [class.task-preview--empty]="!item.row.task"
+                    (click)="openTaskPopover(item.row)"
+                  >
+                    {{ item.row.task || 'Work performed' }}
+                  </div>
+                </div>
+
                 <label class="entry-field">
-                  <span>Location</span>
                   <p-select
                     [(ngModel)]="item.row.location"
                     (ngModelChange)="onLocationChange(item.row)"
@@ -166,7 +163,6 @@
                 </label>
 
                 <label class="entry-field entry-field--hours">
-                  <span>Hours</span>
                   <input
                     type="number"
                     class="cell-input hours-input"
@@ -179,15 +175,13 @@
                   />
                 </label>
 
-                <label class="check-field">
-                  <span>OT</span>
+                <div class="check-field">
                   <input type="checkbox" [(ngModel)]="item.row.isOvertime" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
-                </label>
+                </div>
 
-                <label class="check-field">
-                  <span>ND</span>
+                <div class="check-field">
                   <input type="checkbox" [(ngModel)]="item.row.isNightDifferential" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
-                </label>
+                </div>
 
                 <div class="entry-status">
                   <span [class]="statusClass(item.cell.status)">{{ statusLabel(item.cell.status) }}</span>
@@ -196,36 +190,172 @@
                   }
                 </div>
 
-                <button
-                  pButton
-                  type="button"
-                  severity="secondary"
-                  [text]="true"
-                  icon="pi pi-trash"
-                  aria-label="Delete entry"
-                  (click)="deleteDayEntry(item.row, item.cell)"
-                  [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"
-                ></button>
+                <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Delete entry" (click)="deleteDayEntry(item.row, item.cell)" [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"></button>
               </div>
-            } @empty {
+            }
+
+            @if (!hasEntries) {
               <div class="empty-day">
-                <i class="pi pi-calendar-plus" aria-hidden="true"></i>
-                <span>No entries for this day yet.</span>
+                <i class="pi pi-calendar-plus"></i>
+                <span>No entries for this day. Click "+ Add Entry" to get started.</span>
               </div>
             }
           </div>
 
-        </section>
-      }
-    </main>
+          <div class="entry-cards">
+            @for (item of entries; track item.row.localId + item.cell.date) {
+              <div class="entry-card" [class.entry-card--readonly]="isRowReadonly(item.row)">
+                <div class="entry-card-header">
+                  <div class="entry-card-project">
+                    <p-select
+                      [ngModel]="item.row.customerId"
+                      (ngModelChange)="onRowCustomerChange(item.row, $event)"
+                      [options]="uniqueCustomers()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [filter]="true"
+                      filterBy="label"
+                      placeholder="Select project"
+                      appendTo="body"
+                      [disabled]="isRowReadonly(item.row)"
+                      styleClass="entry-select"
+                    />
+                  </div>
+                  <div class="entry-card-meta">
+                    <span [class]="statusClass(item.cell.status)">{{ statusLabel(item.cell.status) }}</span>
+                    <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Delete entry" (click)="deleteDayEntry(item.row, item.cell)" [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"></button>
+                  </div>
+                </div>
+
+                <div class="entry-card-work-order">
+                  <p-select
+                    [ngModel]="item.row.projectId"
+                    (ngModelChange)="onRowWorkOrderChange(item.row, $event)"
+                    [options]="workOrdersForRow(item.row)"
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="true"
+                    filterBy="label"
+                    placeholder="Select work order"
+                    appendTo="body"
+                    [disabled]="isRowReadonly(item.row) || !item.row.customerId"
+                    styleClass="entry-select"
+                  />
+                </div>
+
+                <div
+                  class="entry-card-task"
+                  [class.entry-card-task--empty]="!item.row.task"
+                  (click)="openTaskPopover(item.row)"
+                >
+                  <span>{{ item.row.task || 'Tap to add task description...' }}</span>
+                  <i class="pi pi-pencil"></i>
+                </div>
+
+                <div class="entry-card-footer">
+                  <label class="entry-card-field">
+                    <span>Location</span>
+                    <p-select
+                      [(ngModel)]="item.row.location"
+                      (ngModelChange)="onLocationChange(item.row)"
+                      [options]="locationOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      appendTo="body"
+                      [disabled]="isRowReadonly(item.row)"
+                      styleClass="entry-select"
+                    />
+                  </label>
+
+                  <label class="entry-card-field entry-card-field--hours">
+                    <span>Hours</span>
+                    <input
+                      type="number"
+                      class="cell-input hours-input"
+                      min="0"
+                      max="24"
+                      step="0.25"
+                      [(ngModel)]="item.cell.hours"
+                      (ngModelChange)="markCellDirty(item.row, item.cell)"
+                      [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"
+                    />
+                  </label>
+
+                  <label class="entry-card-field entry-card-field--check">
+                    <span>OT</span>
+                    <input type="checkbox" [(ngModel)]="item.row.isOvertime" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
+                  </label>
+
+                  <label class="entry-card-field entry-card-field--check">
+                    <span>ND</span>
+                    <input type="checkbox" [(ngModel)]="item.row.isNightDifferential" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
+                  </label>
+                </div>
+
+                @if (item.cell.rejectionReason) {
+                  <div class="entry-card-rejection">
+                    <i class="pi pi-exclamation-circle"></i>
+                    <span>{{ item.cell.rejectionReason }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (!hasEntries) {
+              <div class="empty-day">
+                <i class="pi pi-calendar-plus"></i>
+                <span>No entries. Tap "+ Add Entry" to get started.</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
   </div>
+
+  @if (taskPopover(); as popover) {
+    <div class="dialog-backdrop" role="presentation" (click)="closeTaskPopover(false)">
+      <div class="app-dialog task-popover-dialog" role="dialog" aria-modal="true" aria-labelledby="task-popover-title" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h3 id="task-popover-title" class="dialog-title">
+            {{ popover.readonly ? 'Task Description' : 'Edit Task Description' }}
+          </h3>
+        </div>
+
+        <div class="task-popover-body">
+          @if (popover.readonly) {
+            <div class="task-popover-readonly">
+              {{ popover.task || 'No description provided.' }}
+            </div>
+          } @else {
+            <textarea
+              class="task-popover-textarea"
+              [(ngModel)]="popover.task"
+              placeholder="Describe the work performed..."
+              rows="6"
+              autofocus
+            ></textarea>
+          }
+        </div>
+
+        <div class="task-popover-actions">
+          @if (popover.readonly) {
+            <button pButton type="button" label="Close" (click)="closeTaskPopover(false)"></button>
+          } @else {
+            <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="closeTaskPopover(false)"></button>
+            <button pButton type="button" icon="pi pi-check" label="Done" (click)="closeTaskPopover(true)"></button>
+          }
+        </div>
+      </div>
+    </div>
+  }
 
   @if (showHistoryDialog()) {
     <div class="dialog-backdrop" role="presentation" (click)="showHistoryDialog.set(false)">
       <div class="app-dialog history-dialog" role="dialog" aria-modal="true" aria-labelledby="history-dialog-title" (click)="$event.stopPropagation()">
         <div class="dialog-header">
           <h3 id="history-dialog-title" class="dialog-title">Activity History</h3>
-          <button type="button" class="dialog-close-btn" (click)="showHistoryDialog.set(false)" aria-label="Close activity history">
+          <button type="button" class="dialog-close-btn" (click)="showHistoryDialog.set(false)" aria-label="Close">
             <i class="pi pi-times" aria-hidden="true"></i>
           </button>
         </div>
