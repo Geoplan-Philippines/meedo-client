@@ -4,7 +4,6 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DividerModule } from 'primeng/divider';
@@ -18,7 +17,6 @@ import { AuthService } from '../../../core/auth/auth.service';
     RouterLink,
     NgOptimizedImage,
     InputTextModule,
-    PasswordModule,
     ButtonModule,
     CheckboxModule,
     DividerModule,
@@ -34,12 +32,17 @@ export class Login {
 
   isSubmitting = signal(false);
   errorMessage = signal('');
+  passwordVisible = signal(false);
 
   readonly loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
     rememberMe: [false],
   });
+
+  togglePasswordVisibility(): void {
+    this.passwordVisible.update((visible) => !visible);
+  }
 
   async onSubmit(): Promise<void> {
     if (this.isSubmitting()) return;

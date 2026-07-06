@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/* On small screens the sidebar is an off-canvas overlay, so the host should
+   not reserve horizontal layout space. */
+@media (max-width: 767.98px) {
+  :host {
+    width: 0;
+    flex: 0 0 0;
+  }
+}
+
+@media (min-width: 768px) {
+  :host {
+    width: 16rem;
+    flex: 0 0 16rem;
+    transition: width 200ms ease-in-out, flex-basis 200ms ease-in-out;
+  }
+
+  :host(.sidebar-collapsed) {
+    width: 4.75rem;
+    flex-basis: 4.75rem;
+  }
+
+  .sidebar-shell {
+    width: 100%;
+  }
+
+  :host(.sidebar-collapsed) .sidebar-nav {
+    gap: 0.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  :host(.sidebar-collapsed) .sidebar-section-title,
+  :host(.sidebar-collapsed) .sidebar-label {
+    display: none;
+  }
+
+  :host(.sidebar-collapsed) .sidebar-link {
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0.75rem;
+  }
+}

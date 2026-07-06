@@ -1,0 +1,296 @@
+<p-toast />
+
+<div class="review-page">
+
+  <!-- ─── Scrollable Body ──────────────────────────────────────────────────── -->
+  <div class="review-body">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <button type="button" class="breadcrumb-link" (click)="goBack()">Approvals</button>
+      <i class="pi pi-chevron-right breadcrumb-sep" aria-hidden="true"></i>
+      <span class="breadcrumb-current" aria-current="page">Review Timesheet</span>
+    </nav>
+
+    @if (isLoading() && !employee()) {
+      <!-- Loading skeleton -->
+      <div class="loading-state">
+        <div class="empty-icon"><i class="pi pi-spin pi-spinner" aria-hidden="true"></i></div>
+        <p class="empty-title">Loading timesheet review…</p>
+      </div>
+
+    } @else if (employee(); as emp) {
+
+      <!-- Page title row -->
+      <div class="review-title-row">
+        <div>
+          <h1 class="review-title">Review Timesheet</h1>
+          <p class="review-subtitle">Review submitted timesheet entries and provide approval.</p>
+        </div>
+        <div class="title-row-actions">
+          @if (isLoading()) {
+            <i class="pi pi-spin pi-spinner refresh-spinner" aria-label="Refreshing" aria-hidden="true"></i>
+          }
+          <button
+            pButton
+            type="button"
+            [text]="true"
+            size="small"
+            icon="pi pi-history"
+            (click)="showHistoryDialog.set(true)"
+            pTooltip="Activity history"
+            tooltipPosition="bottom"
+            aria-label="Show activity history"
+          ></button>
+          @if (isPeriodLocked()) {
+            <span class="top-notice--locked">
+              <i class="pi pi-lock" aria-hidden="true"></i> Period locked
+            </span>
+          } @else if (hasSubmittedEntries()) {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              icon="pi pi-refresh"
+              label="Request Changes"
+              (click)="openRejectDialog('changes')"
+              [disabled]="isApproving() || isRejecting()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              severity="danger"
+              [outlined]="true"
+              size="small"
+              icon="pi pi-times"
+              label="Reject"
+              (click)="openRejectDialog('reject')"
+              [disabled]="isApproving() || isRejecting()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              class="btn-approve"
+              size="small"
+              icon="pi pi-check"
+              label="Approve Timesheet"
+              (click)="approveTimesheet()"
+              [loading]="isApproving()"
+              [disabled]="isRejecting()"
+            ></button>
+          }
+        </div>
+      </div>
+
+      <!-- Employee summary card -->
+      <div class="emp-card">
+        <div class="emp-card-top">
+          <div class="emp-avatar" aria-hidden="true">{{ getInitials(emp.employeeName) }}</div>
+          <div class="emp-info">
+            <h2 class="emp-name">{{ emp.employeeName }}</h2>
+            <div class="emp-meta">
+              @if (emp.department) {
+                <span><i class="pi pi-building" aria-hidden="true"></i> {{ emp.department }}</span>
+              }
+              <span><i class="pi pi-calendar" aria-hidden="true"></i> {{ weekLabel() }}</span>
+              <span><i class="pi pi-clock" aria-hidden="true"></i> Total: {{ emp.totalHours | number: '1.1-1' }}h</span>
+            </div>
+          </div>
+          <span [class]="statusClass(emp.status)" class="emp-status">{{ emp.status }}</span>
+        </div>
+
+        <!-- Hours breakdown strip -->
+        <div class="hours-strip" aria-label="Hours breakdown">
+          <div class="hours-chip hours-chip--pending">
+            <span class="hours-chip-label">Pending</span>
+            <strong class="hours-chip-value">{{ pendingHours() | number: '1.0-1' }}h</strong>
+          </div>
+          <div class="hours-chip">
+            <span class="hours-chip-label">Regular</span>
+            <strong class="hours-chip-value">{{ emp.regularHours | number: '1.0-1' }}h</strong>
+          </div>
+          <div class="hours-chip hours-chip--ot">
+            <span class="hours-chip-label">Overtime</span>
+            <strong class="hours-chip-value">{{ emp.overtimeHours | number: '1.0-1' }}h</strong>
+          </div>
+          <div class="hours-chip">
+            <span class="hours-chip-label">Leave</span>
+            <strong class="hours-chip-value">{{ emp.leaveHours | number: '1.0-1' }}h</strong>
+          </div>
+          <div class="hours-chip">
+            <span class="hours-chip-label">Offset</span>
+            <strong class="hours-chip-value">{{ emp.offsetHours | number: '1.0-1' }}h</strong>
+          </div>
+          <div class="hours-chip">
+            <span class="hours-chip-label">Others</span>
+            <strong class="hours-chip-value">0h</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Timesheet Details -->
+      <div class="daily-section">
+        <div class="daily-section-header">
+          <div>
+            <h3 class="section-title">Daily Timesheet Details</h3>
+            <p class="section-sub">Review all entries for this submission</p>
+          </div>
+          <button
+            type="button"
+            class="expand-toggle"
+            (click)="allExpanded() ? collapseAll() : expandAll()"
+          >
+            {{ allExpanded() ? 'Collapse All' : 'Expand All' }}
+          </button>
+        </div>
+
+        @for (group of dayGroups(); track group.date) {
+          <div class="day-group">
+            <button
+              type="button"
+              class="day-group-btn"
+              (click)="toggleDate(group.date)"
+              [attr.aria-expanded]="isDateExpanded(group.date)"
+            >
+              <i
+                class="pi day-group-chevron"
+                [class.pi-chevron-down]="isDateExpanded(group.date)"
+                [class.pi-chevron-right]="!isDateExpanded(group.date)"
+                aria-hidden="true"
+              ></i>
+              <strong class="day-date-label">{{ formatDayHeader(group.date) }}</strong>
+              <span class="day-total-badge">{{ groupTotal(group.entries) | number: '1.1-1' }}h</span>
+              <span class="day-entry-count">{{ group.entries.length }} entry/entries</span>
+            </button>
+
+            @if (isDateExpanded(group.date)) {
+              <div class="day-entries-wrap">
+                <table class="day-entries-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Project</th>
+                      <th scope="col">Work Order</th>
+                      <th scope="col">Task / Description</th>
+                      <th scope="col">Location</th>
+                      <th scope="col" class="col-num">Hours</th>
+                      <th scope="col" class="col-flag">OT</th>
+                      <th scope="col" class="col-flag">ND</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (entry of group.entries; track entry.id) {
+                      <tr [class.entry--approved]="entry.status === 'APPROVED'" [class.entry--rejected]="entry.status === 'REJECTED'">
+                        <td class="td-project">{{ projectLabel(entry) }}</td>
+                        <td class="td-wo">{{ workOrderLabel(entry) }}</td>
+                        <td class="td-task">{{ entry.task }}</td>
+                        <td class="td-loc">{{ entry.location }}</td>
+                        <td class="col-num td-hrs">{{ entry.hours | number: '1.1-1' }}</td>
+                        <td class="col-flag td-flag">
+                          @if (entry.isOvertime) {
+                            <span class="flag-yes">Yes</span>
+                          } @else {
+                            <span class="flag-no">—</span>
+                          }
+                        </td>
+                        <td class="col-flag td-flag">
+                          @if (entry.isNightDifferential) {
+                            <span class="flag-yes">Yes</span>
+                          } @else {
+                            <span class="flag-no">—</span>
+                          }
+                        </td>
+                        <td>
+                          <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
+                          @if (entry.rejectionReason) {
+                            <small class="rejection-note">{{ entry.rejectionReason }}</small>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        } @empty {
+          <div class="empty-state">
+            <div class="empty-icon"><i class="pi pi-inbox" aria-hidden="true"></i></div>
+            <p class="empty-title">No entries found</p>
+          </div>
+        }
+      </div>
+
+    } @else if (!isLoading()) {
+      <div class="not-found">
+        <div class="empty-icon"><i class="pi pi-search" aria-hidden="true"></i></div>
+        <p class="empty-title">Employee not found</p>
+        <p class="empty-body">This employee has no timesheet entries for the selected period.</p>
+        <button pButton type="button" label="Back to Approvals" icon="pi pi-arrow-left" (click)="goBack()"></button>
+      </div>
+    }
+
+  </div>
+
+  <!-- ─── Reject / Request Changes Dialog ─────────────────────────────────── -->
+  @if (showRejectDialog()) {
+    <div class="dialog-backdrop" role="presentation" (click)="cancelReject()">
+      <div class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="reject-dialog-title" (click)="$event.stopPropagation()">
+        <h3 id="reject-dialog-title" class="dialog-title">{{ dialogTitle() }}</h3>
+        <p class="dialog-body">{{ dialogBody() }}</p>
+        <textarea
+          class="dialog-textarea"
+          rows="4"
+          [ngModel]="rejectReason()"
+          (ngModelChange)="rejectReason.set($event)"
+          [placeholder]="rejectMode() === 'changes' ? 'Describe what needs to be corrected…' : 'Reason for rejection…'"
+          aria-label="Reason"
+        ></textarea>
+        <div class="dialog-actions">
+          <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="cancelReject()" [disabled]="isRejecting()"></button>
+          <button
+            pButton
+            type="button"
+            [severity]="rejectMode() === 'changes' ? 'secondary' : 'danger'"
+            [label]="dialogConfirmLabel()"
+            (click)="confirmReject()"
+            [loading]="isRejecting()"
+          ></button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ─── Activity History Dialog ──────────────────────────────────────────── -->
+  @if (showHistoryDialog()) {
+    <div class="dialog-backdrop" role="presentation" (click)="showHistoryDialog.set(false)">
+      <div class="app-dialog history-dialog" role="dialog" aria-modal="true" aria-labelledby="history-dialog-title" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h3 id="history-dialog-title" class="dialog-title">Activity History</h3>
+          <button type="button" class="dialog-close-btn" (click)="showHistoryDialog.set(false)" aria-label="Close activity history">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </div>
+        <ul class="activity-list">
+          @for (log of auditLogs(); track log.id) {
+            <li class="activity-item">
+              <div class="activity-dot" aria-hidden="true"></div>
+              <div class="activity-body">
+                <span class="activity-action">{{ auditLabel(log) }}</span>
+                <span class="activity-by">by {{ actorName(log) }}</span>
+                <time class="activity-time" [attr.datetime]="log.createdAt">
+                  {{ log.createdAt | date: 'MMM d, y · h:mm a' }}
+                </time>
+              </div>
+            </li>
+          } @empty {
+            <li class="activity-empty">No activity recorded yet.</li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+</div>
