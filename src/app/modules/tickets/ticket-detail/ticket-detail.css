@@ -259,7 +259,8 @@
 .project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .project-wo { font-size: 0.75rem; color: var(--color-muted); font-weight: 400; }
 
-/* Avatar identity palette — fixed decorative hues, outside the status system. */
+/* Assignee / picker avatar sizing. The colour palette (.avatar-*) is
+   defined globally in src/styles.css. */
 .assignee .avatar,
 .pick-opt .avatar {
   width: 1.375rem;
@@ -273,12 +274,6 @@
   font-weight: 700;
   flex-shrink: 0;
 }
-
-.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
-.avatar-teal   { background: #CCFBF1; color: #0F766E; }
-.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
-.avatar-violet { background: #EDE9FE; color: #7C3AED; }
-.avatar-rose   { background: #FFE4E6; color: #BE123C; }
 
 /* ─── Linked tickets ───────────────────────────────────── */
 .link-list {

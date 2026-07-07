@@ -37,12 +37,13 @@ import { OrgMember } from '../models/members.model';
 import { TicketCategory } from '../models/ticket-categories.model';
 import { Team } from '../../settings/teams/models/teams.model';
 import { getAvatarClass } from '../../../shared/utils/avatar.utils';
-
-interface AssigneeAvatar {
-  initials: string;
-  className: string;
-  name: string;
-}
+import {
+  AssigneeAvatar,
+  initialsFrom,
+  toAssigneeAvatar,
+  safeStatusColor as safeStatusColorUtil,
+  startOfToday,
+} from '../utils/ticket.utils';
 
 type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
@@ -194,24 +195,11 @@ export class TicketDetail {
   });
 
   readonly assigneeAvatars = computed<AssigneeAvatar[]>(() =>
-    (this.ticket()?.assignees ?? []).map((assignee) => {
-      const name = assignee.member?.user?.name ?? assignee.member?.user?.email ?? '';
-      return {
-        initials: this.initialsFrom(name),
-        className: getAvatarClass(name || assignee.memberId),
-        name: name || 'Unknown',
-      };
-    }),
+    (this.ticket()?.assignees ?? []).map(toAssigneeAvatar),
   );
 
-  private readonly hexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-
   /** Start of today, computed once — used to flag overdue due dates. */
-  private readonly today = (() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    return date;
-  })();
+  private readonly today = startOfToday();
 
   constructor() {
     // Seed from the row we navigated from so the page renders instantly.
@@ -486,7 +474,7 @@ export class TicketDetail {
 
   // ─── Helpers ────────────────────────────────────────────
   safeStatusColor(color?: string | null): string {
-    return color && this.hexColorPattern.test(color) ? color : 'var(--text-body)';
+    return safeStatusColorUtil(color);
   }
 
   priorityDotClass(priority?: string | null): string {
@@ -494,17 +482,10 @@ export class TicketDetail {
   }
 
   memberInitials(member: OrgMember): string {
-    return this.initialsFrom(member.displayName || member.user?.name || member.user?.email || '');
+    return initialsFrom(member.displayName || member.user?.name || member.user?.email || '');
   }
 
   memberAvatarClass(member: OrgMember): string {
     return getAvatarClass(member.displayName || member.id);
-  }
-
-  private initialsFrom(value: string): string {
-    const parts = value.trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return '?';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 }

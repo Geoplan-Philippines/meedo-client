@@ -169,3 +169,14 @@ button, input, textarea, select {
 .main-container {
   @apply px-4 mx-auto max-w-7xl w-full;
 }
+
+/* Avatar identity palette — fixed decorative hues for user/entity avatars,
+   intentionally outside the status system and constant across light/dark.
+   Single source of truth; used by tickets, ticket detail, the tickets
+   dashboard, and CRM leads / newsletter subscribers. */
+.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
+.avatar-teal   { background: #CCFBF1; color: #0F766E; }
+.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
+.avatar-violet { background: #EDE9FE; color: #7C3AED; }
+.avatar-rose   { background: #FFE4E6; color: #BE123C; }
+.avatar-more   { background: var(--color-secondary); color: var(--color-secondary-foreground); }

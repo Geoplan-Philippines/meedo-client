@@ -287,7 +287,12 @@ export class MarkdownEditor implements AfterViewInit {
         TaskItem.configure({ nested: true }),
         Placeholder.configure({ placeholder: () => this.placeholder() }),
         Markdown.configure({
-          // html: true is required so <u> tags round-trip through the database for underline.
+          // html: true lets raw HTML (e.g. <u>) survive the markdown round-trip — required
+          // for underline. It also preserves ANY HTML pasted into the description, so this is
+          // only XSS-safe while the SOLE render path is back through this TipTap schema
+          // (ProseMirror drops nodes/marks not in the schema — <script>, onerror, etc.).
+          // If description is ever rendered via a different markdown→HTML path (email digest,
+          // PDF export, an [innerHTML] binding), sanitize (e.g. DOMPurify) at that boundary.
           html: true,
           tightLists: true,
           transformPastedText: true,

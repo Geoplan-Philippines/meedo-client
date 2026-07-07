@@ -48,12 +48,14 @@ import {
 import { Team } from '../settings/teams/models/teams.model';
 import { getAvatarClass } from '../../shared/utils/avatar.utils';
 import { MarkdownEditor } from '../../shared/ui/markdown-editor/markdown-editor';
-
-interface AssigneeAvatar {
-  initials: string;
-  className: string;
-  name: string;
-}
+import {
+  AssigneeAvatar,
+  initialsFrom,
+  visibleAssignees as visibleAssigneesUtil,
+  extraAssigneeCount as extraAssigneeCountUtil,
+  safeStatusColor as safeStatusColorUtil,
+  startOfToday,
+} from './utils/ticket.utils';
 
 @Component({
   selector: 'app-tickets',
@@ -150,11 +152,7 @@ export class Tickets implements OnInit {
     return this.teams().filter((team) => ids.has(team.id));
   });
 
-  readonly minDueDate = (() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    return date;
-  })();
+  readonly minDueDate = startOfToday();
 
   readonly createDialogVisible = signal(false);
   readonly selectedTicket = signal<Ticket | null>(null);
@@ -170,11 +168,7 @@ export class Tickets implements OnInit {
   readonly members = signal<OrgMember[]>([]);
 
   // Start of today, computed once — used to flag overdue due dates in the list.
-  private readonly today = (() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    return date;
-  })();
+  private readonly today = startOfToday();
 
   readonly priorities: { label: string; value: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' }[] = [
     { label: 'Low', value: 'LOW' },
@@ -233,7 +227,7 @@ export class Tickets implements OnInit {
     this.selectedAssignees().slice(0, 3).map((member) => {
       const name = member.displayName || member.user?.name || member.user?.email || '';
       return {
-        initials: this.initialsFrom(name),
+        initials: initialsFrom(name),
         className: getAvatarClass(name || member.id),
         name: name || 'Member',
       };
@@ -569,32 +563,15 @@ export class Tickets implements OnInit {
 
   /** Up to three assignee avatars for the row; the rest collapse into a +N chip. */
   visibleAssignees(ticket: Ticket): AssigneeAvatar[] {
-    return (ticket.assignees ?? []).slice(0, 3).map((assignee) => {
-      const name = assignee.member?.user?.name ?? assignee.member?.user?.email ?? '';
-      return {
-        initials: this.initialsFrom(name),
-        className: getAvatarClass(name || assignee.memberId),
-        name: name || 'Unknown',
-      };
-    });
+    return visibleAssigneesUtil(ticket);
   }
 
   extraAssigneeCount(ticket: Ticket): number {
-    return Math.max(0, (ticket.assignees?.length ?? 0) - 3);
+    return extraAssigneeCountUtil(ticket);
   }
 
-  private initialsFrom(value: string): string {
-    const parts = value.trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return '?';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-
-  private readonly hexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-
-  /** Only let validated hex colors from the API into inline styles; otherwise fall back to a theme token. */
   safeStatusColor(color?: string | null): string {
-    return color && this.hexColorPattern.test(color) ? color : 'var(--text-body)';
+    return safeStatusColorUtil(color);
   }
 
   openCreateDialog(): void {
@@ -681,7 +658,7 @@ export class Tickets implements OnInit {
   }
 
   memberInitials(member: OrgMember): string {
-    return this.initialsFrom(member.displayName || member.user?.name || member.user?.email || '');
+    return initialsFrom(member.displayName || member.user?.name || member.user?.email || '');
   }
 
   memberAvatarClass(member: OrgMember): string {

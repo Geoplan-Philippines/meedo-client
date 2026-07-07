@@ -18,13 +18,13 @@ import { Status, TicketStatusCategory } from '../models/status.model';
 import { Ticket, TicketFacets } from '../models/ticket.model';
 import { TicketStats } from '../models/ticket-stats.model';
 import { DashboardMetric, PrioritySegment, StatusSegment } from './models/dashboard.model';
-import { getAvatarClass } from '../../../shared/utils/avatar.utils';
-
-interface AssigneeAvatar {
-  initials: string;
-  className: string;
-  name: string;
-}
+import {
+  AssigneeAvatar,
+  visibleAssignees as visibleAssigneesUtil,
+  extraAssigneeCount as extraAssigneeCountUtil,
+  safeStatusColor as safeStatusColorUtil,
+  startOfToday,
+} from '../utils/ticket.utils';
 
 type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
@@ -71,14 +71,7 @@ export class Dashboard implements OnInit {
   readonly skeletonRows = [0, 1, 2, 3];
 
   // Start of today, computed once — used to flag overdue due dates.
-  private readonly today = (() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    return date;
-  })();
-
-  // Only validated hex from the API is allowed into inline styles; anything else falls back to a token.
-  private readonly hexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+  private readonly today = startOfToday();
 
   readonly hasTickets = computed(() => (this.stats()?.total ?? this.facets()?.views.all ?? 0) > 0);
 
@@ -215,7 +208,7 @@ export class Dashboard implements OnInit {
   }
 
   safeStatusColor(color?: string | null): string {
-    return color && this.hexColorPattern.test(color) ? color : 'var(--color-muted)';
+    return safeStatusColorUtil(color, 'var(--color-muted)');
   }
 
   statusColorOf(ticket: Ticket): string {
@@ -228,25 +221,11 @@ export class Dashboard implements OnInit {
 
   /** Up to three assignee avatars for the row; the rest collapse into a +N chip. */
   visibleAssignees(ticket: Ticket): AssigneeAvatar[] {
-    return (ticket.assignees ?? []).slice(0, 3).map((assignee) => {
-      const name = assignee.member?.user?.name ?? assignee.member?.user?.email ?? '';
-      return {
-        initials: this.initialsFrom(name),
-        className: getAvatarClass(name || assignee.memberId),
-        name: name || 'Unknown',
-      };
-    });
+    return visibleAssigneesUtil(ticket);
   }
 
   extraAssigneeCount(ticket: Ticket): number {
-    return Math.max(0, (ticket.assignees?.length ?? 0) - 3);
-  }
-
-  private initialsFrom(value: string): string {
-    const parts = value.trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return '?';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return extraAssigneeCountUtil(ticket);
   }
 
   /** Open the full ticket detail page, seeding it with the row data. */
