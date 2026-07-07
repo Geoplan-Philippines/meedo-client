@@ -49,6 +49,7 @@ export class Teams implements OnInit {
   readonly isSaving = signal(false);
   readonly isDeleting = signal(false);
   readonly selectedTeam = signal<Team | null>(null);
+  readonly isAdmin = this.authService.isAdmin;
 
   readonly teamForm = new FormGroup({
     name: new FormControl('', {

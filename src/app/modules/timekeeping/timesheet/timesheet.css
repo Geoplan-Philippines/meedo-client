@@ -1,0 +1,726 @@
+.timesheet-page {
+  min-height: 100%;
+  padding: 1.5rem 2rem;
+  background: var(--color-background);
+  color: var(--color-body);
+}
+
+.page-header,
+.day-card-header,
+.entry-row,
+.add-task-link,
+.add-week-entry,
+.lock-status,
+.activity-item {
+  display: flex;
+  align-items: center;
+}
+
+.page-header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-copy {
+  min-width: 0;
+  padding-top: 0.1rem;
+}
+
+.page-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.page-title {
+  margin: 0 0 0.3rem;
+  color: var(--color-heading);
+  font-family: var(--font-heading);
+  font-size: clamp(1.55rem, 2vw, 1.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.week-picker-group,
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.week-picker-group {
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: color-mix(in srgb, var(--color-secondary) 22%, var(--color-background));
+}
+
+.week-range-label {
+  padding: 0 0.4rem;
+  color: var(--color-body);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .week-picker-group .p-datepicker {
+  width: 11.75rem;
+}
+
+:host ::ng-deep .week-picker-group .p-inputtext {
+  min-height: 2rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+:host ::ng-deep .week-picker-group .p-button,
+:host ::ng-deep .action-buttons .p-button {
+  min-height: 2rem;
+  padding-block: 0.35rem;
+  padding-inline: 0.65rem;
+  border-radius: var(--radius-base);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .week-nav-btn.p-button {
+  width: 2rem;
+  padding-inline: 0;
+}
+
+:host ::ng-deep .submit-btn.p-button {
+  min-width: 5.75rem;
+}
+
+:host ::ng-deep .save-btn.p-button,
+:host ::ng-deep .history-btn.p-button {
+  background: var(--color-background);
+}
+
+.lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-background));
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.hours-strip {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+.hours-chip {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.625rem 0.5rem;
+  border-right: 1px solid var(--color-border);
+  text-align: center;
+  background: color-mix(in srgb, var(--color-secondary) 20%, var(--color-background));
+}
+
+.hours-chip:last-child {
+  border-right: none;
+}
+
+.hours-chip-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-body);
+}
+
+.hours-chip-value {
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--color-heading);
+}
+
+.hours-chip--total {
+  background: color-mix(in srgb, var(--color-secondary) 60%, var(--color-background));
+}
+
+.hours-chip--total .hours-chip-value {
+  color: var(--color-primary);
+}
+
+.hours-chip--ot {
+  background: color-mix(in srgb, var(--color-muted-success) 40%, var(--color-background));
+}
+
+.hours-chip--ot .hours-chip-value {
+  color: color-mix(in srgb, var(--color-success) 70%, var(--color-heading));
+}
+
+.day-card,
+.side-card,
+.add-week-entry {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-background);
+}
+
+
+.entry-row--head,
+.entry-field span,
+.check-field span {
+  display: block;
+  color: color-mix(in srgb, var(--color-body) 78%, var(--color-heading));
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.status-badge,
+.lock-status {
+  width: max-content;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-badge--draft {
+  background: #fff7ed;
+  color: #c56a00;
+}
+
+.status-badge--submitted {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-background));
+  color: var(--color-primary);
+}
+
+.status-badge--approved {
+  background: var(--color-muted-success);
+  color: color-mix(in srgb, var(--color-success) 58%, var(--color-heading));
+}
+
+.status-badge--rejected {
+  background: var(--color-muted-destructive);
+  color: color-mix(in srgb, var(--color-destructive) 62%, var(--color-heading));
+}
+
+.lock-status {
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.lock-status--locked {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.timesheet-layout {
+  display: block;
+}
+
+.day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.day-card {
+  overflow: hidden;
+}
+
+.day-card-header {
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day-card-header h2 {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.day-card-header span {
+  font-size: 0.78rem;
+  color: var(--color-body);
+}
+
+.day-toggle {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-heading);
+}
+
+:host ::ng-deep .day-card-header .p-button {
+  margin-left: auto;
+  min-height: 2.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.entry-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.entry-row {
+  display: grid;
+  grid-template-columns:
+    minmax(7.5rem, 1.1fr)
+    minmax(6.5rem, 0.85fr)
+    minmax(10rem, 1.4fr)
+    minmax(6.25rem, 0.75fr)
+    minmax(3.75rem, 0.38fr)
+    2.25rem
+    2.25rem
+    minmax(5.25rem, 0.62fr)
+    2.25rem;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.entry-row--head {
+  padding-top: 0.65rem;
+  padding-bottom: 0.35rem;
+  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
+}
+
+.entry-row--head b {
+  color: var(--color-destructive);
+}
+
+.entry-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.entry-field span,
+.check-field span {
+  display: none;
+}
+
+.cell-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.45rem;
+  background: var(--color-background);
+  color: var(--color-heading);
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.5rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cell-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.cell-input:disabled,
+.cell-input[readonly] {
+  background: color-mix(in srgb, var(--color-secondary) 40%, transparent);
+  color: color-mix(in srgb, var(--color-body) 85%, var(--color-heading));
+}
+
+.hours-input {
+  text-align: center;
+}
+
+:host ::ng-deep .entry-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.15rem;
+}
+
+:host ::ng-deep .entry-select .p-select-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.check-field {
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.check-field input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-primary);
+}
+
+.entry-status {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.entry-status small {
+  max-width: 7rem;
+  color: var(--color-destructive);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-readonly {
+  opacity: 0.78;
+}
+
+.empty-day {
+  min-width: 0;
+  padding: 1.2rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--color-body);
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.add-task-link,
+.add-week-entry {
+  gap: 0.45rem;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.add-task-link {
+  margin: 0.55rem 1rem 0.8rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.add-task-link:disabled,
+.add-week-entry:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.add-week-entry {
+  justify-content: flex-start;
+  padding: 1rem 1.25rem;
+  border-style: dashed;
+  background: color-mix(in srgb, var(--color-background) 92%, var(--color-primary));
+}
+
+.side-card {
+  padding: 1rem;
+}
+
+.side-card h2 {
+  margin: 0 0 0.85rem;
+  color: var(--color-heading);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+}
+
+.summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.summary-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summary-list dt {
+  color: var(--color-body);
+  font-size: 0.85rem;
+}
+
+.summary-list dd {
+  margin: 0;
+  color: var(--color-heading);
+  font-weight: 800;
+}
+
+.summary-total {
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.activity-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-item {
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.activity-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.3rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.activity-item--success .activity-dot { background: #16a34a; box-shadow: 0 0 0 4px #dcfce7; }
+.activity-item--warning .activity-dot { background: #f97316; box-shadow: 0 0 0 4px #ffedd5; }
+
+.activity-item strong,
+.activity-item small {
+  display: block;
+}
+
+.activity-item strong {
+  color: var(--color-heading);
+  font-size: 0.84rem;
+}
+
+.activity-item small {
+  margin-top: 0.2rem;
+  color: var(--color-body);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+/* ─── Activity History Dialog ───────────────────────────────────────────── */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-heading) 45%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+}
+
+.app-dialog {
+  width: min(36rem, 100%);
+  max-height: min(42rem, calc(100vh - 2rem));
+  background: var(--color-background);
+  border-radius: var(--radius-base);
+  border: 1px solid var(--color-border);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--color-heading);
+}
+
+.dialog-close-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-body);
+  padding: 0.3rem;
+  border-radius: var(--radius-base);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.dialog-close-btn:hover {
+  color: var(--color-heading);
+  background: var(--color-secondary);
+}
+
+.dialog-close-btn:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+.history-dialog .activity-list {
+  max-height: 28rem;
+  overflow-y: auto;
+}
+
+.activity-body {
+  min-width: 0;
+}
+
+@media (max-width: 1120px) {
+  .timesheet-page {
+    padding: 1rem;
+  }
+
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-controls {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .week-picker-group,
+  .action-buttons {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+}
+
+@media (max-width: 900px) {
+  .entry-row,
+  .empty-day {
+    min-width: 50rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .week-picker-group,
+  .action-buttons,
+  :host ::ng-deep .week-picker-group .p-datepicker,
+  :host ::ng-deep .action-buttons .p-button {
+    width: 100%;
+  }
+
+  .week-range-label {
+    width: 100%;
+    padding: 0.15rem 0.25rem 0;
+  }
+
+  :host ::ng-deep .week-nav-btn.p-button {
+    flex: 1 1 0;
+    width: auto;
+  }
+
+  .hours-strip {
+    flex-wrap: wrap;
+  }
+
+  .hours-chip {
+    min-width: calc(33.33% - 1px);
+  }
+
+  .entry-row,
+  .empty-day {
+    min-width: 0;
+  }
+
+  .entry-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .entry-row--head {
+    display: none;
+  }
+
+  .entry-field span,
+  .check-field span {
+    display: block;
+  }
+
+  .check-field {
+    justify-content: space-between;
+  }
+
+  .entry-status {
+    align-items: flex-start;
+  }
+
+  .day-card-header {
+    flex-wrap: wrap;
+  }
+
+  :host ::ng-deep .day-card-header .p-button {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .hours-chip {
+    min-width: calc(50% - 1px);
+  }
+}
