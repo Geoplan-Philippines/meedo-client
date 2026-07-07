@@ -6,11 +6,11 @@ import { finalize, forkJoin, Observable } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { EditorModule } from 'primeng/editor';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
+import { RichTextEditor } from '../../../shared/ui/rich-text-editor';
 import {
   TimesheetEntry,
   TimesheetEntryPayload,
@@ -51,7 +51,6 @@ interface EntryModalState {
   projectId: string;
   hours: number | null;
   workType: TimesheetWorkType;
-  location: string;
   task: string;
   isOvertime: boolean;
   isNightDifferential: boolean;
@@ -75,23 +74,19 @@ const WORK_TYPE_OPTIONS: { label: string; value: TimesheetWorkType }[] = [
   { label: 'Holiday', value: 'HOLIDAY' },
 ];
 
-const LOCATION_OPTIONS: { label: string; value: string }[] = [
-  { label: 'OFC - DW', value: 'OFC - DW' },
-  { label: 'FIELD', value: 'FIELD' },
-  { label: 'WFH', value: 'WFH' },
-];
-
-const DEFAULT_LOCATION = 'OFC - DW';
-
 const LOCATION_BY_WORK_TYPE: Record<TimesheetWorkType, string> = {
   OFFICE: 'OFC - DW',
   OFFICE_DIRECT_WORK: 'OFC - DW',
-  FIELD: 'FIELD',
+  FIELD: 'FLD',
   WFH: 'WFH',
-  LEAVE: 'OFC - DW',
+  LEAVE: 'LVE',
   OFFSET: 'OFC - DW',
   HOLIDAY: 'OFC - DW',
 };
+
+function locationForWorkType(workType: TimesheetWorkType): string {
+  return LOCATION_BY_WORK_TYPE[workType];
+}
 
 function stripHtml(value: string): string {
   if (!value) return '';
@@ -107,10 +102,10 @@ function stripHtml(value: string): string {
     FormsModule,
     ButtonModule,
     DatePickerModule,
-    EditorModule,
     SelectModule,
     ToastModule,
     DatePipe,
+    RichTextEditor,
   ],
   providers: [MessageService],
   templateUrl: './timesheet.html',
@@ -141,7 +136,6 @@ export class Timesheet implements OnInit {
   readonly addProjectModal = signal<AddProjectModalState | null>(null);
 
   readonly workTypeOptions = WORK_TYPE_OPTIONS;
-  readonly locationOptions = LOCATION_OPTIONS;
 
   readonly weekDays = computed(() => {
     const start = this.selectedWeek();
@@ -361,7 +355,6 @@ export class Timesheet implements OnInit {
       projectId,
       hours: null,
       workType: 'OFFICE',
-      location: DEFAULT_LOCATION,
       task: '',
       isOvertime: false,
       isNightDifferential: false,
@@ -380,7 +373,6 @@ export class Timesheet implements OnInit {
       projectId: entry.projectId,
       hours: entry.hours,
       workType: entry.workType,
-      location: entry.location || DEFAULT_LOCATION,
       task: entry.task,
       isOvertime: entry.isOvertime,
       isNightDifferential: entry.isNightDifferential,
@@ -392,7 +384,11 @@ export class Timesheet implements OnInit {
   }
 
   onEntryWorkTypeChange(value: TimesheetWorkType): void {
-    this.entryModal.update((modal) => modal && { ...modal, workType: value, location: LOCATION_BY_WORK_TYPE[value] });
+    this.patchEntryModal({ workType: value });
+  }
+
+  patchEntryModal(patch: Partial<EntryModalState>): void {
+    this.entryModal.update((modal) => modal && { ...modal, ...patch });
   }
 
   entryHoursInvalid(): boolean {
@@ -422,7 +418,7 @@ export class Timesheet implements OnInit {
           projectId: modal.projectId,
           hours: modal.hours,
           workType: modal.workType,
-          location: modal.location,
+          location: locationForWorkType(modal.workType),
           task: modal.task,
           isOvertime: modal.isOvertime,
           isNightDifferential: modal.isNightDifferential,
@@ -435,7 +431,7 @@ export class Timesheet implements OnInit {
         if (entry && !this.isEntryReadonly(entry)) {
           entry.hours = modal.hours;
           entry.task = modal.task;
-          entry.location = modal.location;
+          entry.location = locationForWorkType(modal.workType);
           entry.isOvertime = modal.isOvertime;
           entry.isNightDifferential = modal.isNightDifferential;
           entry.workType = modal.workType;

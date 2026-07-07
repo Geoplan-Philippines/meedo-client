@@ -91,9 +91,6 @@
           <div class="grid-row" role="row">
             <span class="grid-cell grid-cell--label" role="rowheader">
               <span class="grid-cell-project-name">{{ projectName(projectId) }}</span>
-              @if (projectWorkOrder(projectId)) {
-                <span class="entry-item-tag">{{ projectWorkOrder(projectId) }}</span>
-              }
             </span>
             @for (day of weekDays(); track day.toISOString()) {
               @let entry = entryForCell(projectId, day);
@@ -169,7 +166,7 @@
   }
 
   @if (entryModal(); as entry) {
-    <div class="dialog-backdrop" role="presentation" (click)="closeEntryModal(false)">
+    <div class="dialog-backdrop" role="presentation">
       <div class="app-dialog entry-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="entry-modal-title" (click)="$event.stopPropagation()">
         <div class="dialog-header">
           <h3 id="entry-modal-title" class="dialog-title">
@@ -182,23 +179,21 @@
 
         <div class="modal-body">
           <div class="entry-summary-card">
-            <div class="entry-summary-row">
+            <div class="entry-summary-cell">
               <span class="entry-summary-label">Date</span>
               <strong class="entry-summary-value">{{ entry.date | date: 'EEEE, MMM d' }}</strong>
             </div>
-            <div class="entry-summary-row">
+            <div class="entry-summary-cell">
               <span class="entry-summary-label">Project Name</span>
               <strong class="entry-summary-value">{{ projectName(entry.projectId) }}</strong>
             </div>
-            @if (projectWorkOrder(entry.projectId)) {
-              <div class="entry-summary-row">
-                <span class="entry-summary-label">Project Tag</span>
-                <span class="entry-summary-tag">{{ projectWorkOrder(entry.projectId) }}</span>
-              </div>
-            }
-            <div class="entry-summary-row">
+            <div class="entry-summary-cell">
+              <span class="entry-summary-label">Project Tag</span>
+              <strong class="entry-summary-value">{{ projectWorkOrder(entry.projectId) || '—' }}</strong>
+            </div>
+            <div class="entry-summary-cell">
               <span class="entry-summary-label">Status</span>
-              <span [class]="statusBadgeClass(entry.status)">{{ statusBadgeLabel(entry.status) }}</span>
+              <strong class="entry-summary-value">{{ statusBadgeLabel(entry.status) }}</strong>
             </div>
           </div>
 
@@ -219,7 +214,8 @@
                 min="0"
                 max="24"
                 step="0.25"
-                [(ngModel)]="entry.hours"
+                [ngModel]="entry.hours"
+                (ngModelChange)="patchEntryModal({ hours: $event })"
                 [disabled]="entry.readonly"
               />
               @if (entryHoursInvalid()) {
@@ -242,55 +238,38 @@
             </label>
           </div>
 
-          <div class="modal-field-row grid grid-cols-2 gap-4">
-            <label class="modal-field">
-              <span>Location</span>
-              <p-select
-                [(ngModel)]="entry.location"
-                [options]="locationOptions"
-                optionLabel="label"
-                optionValue="value"
-                [editable]="true"
-                [disabled]="entry.readonly"
-                appendTo="body"
-                styleClass="entry-select"
-              />
-            </label>
-
-            <div class="modal-field modal-field--checkboxes">
-              <span>Flags</span>
-              <div class="modal-checkbox-row">
-                <label class="modal-checkbox">
-                  <input type="checkbox" [(ngModel)]="entry.isOvertime" [disabled]="entry.readonly" />
-                  <span>Overtime (OT)</span>
-                </label>
-                <label class="modal-checkbox">
-                  <input type="checkbox" [(ngModel)]="entry.isNightDifferential" [disabled]="entry.readonly" />
-                  <span>Night Differential (ND)</span>
-                </label>
-              </div>
+          <div class="modal-field modal-field--checkboxes">
+            <span>Flags</span>
+            <div class="modal-checkbox-row">
+              <label class="modal-checkbox">
+                <input
+                  type="checkbox"
+                  [ngModel]="entry.isOvertime"
+                  (ngModelChange)="patchEntryModal({ isOvertime: $event })"
+                  [disabled]="entry.readonly"
+                />
+                <span>Overtime (OT)</span>
+              </label>
+              <label class="modal-checkbox">
+                <input
+                  type="checkbox"
+                  [ngModel]="entry.isNightDifferential"
+                  (ngModelChange)="patchEntryModal({ isNightDifferential: $event })"
+                  [disabled]="entry.readonly"
+                />
+                <span>Night Differential (ND)</span>
+              </label>
             </div>
           </div>
 
           <div class="modal-field">
             <span>Task</span>
-            <p-editor
-              [(ngModel)]="entry.task"
-              [disabled]="entry.readonly"
-              [class.cell-input--invalid]="entryTaskInvalid()"
-              styleClass="entry-editor"
-            >
-              <ng-template pTemplate="header">
-                <span class="ql-formats">
-                  <button class="ql-bold" aria-label="Bold" type="button"></button>
-                  <button class="ql-italic" aria-label="Italic" type="button"></button>
-                </span>
-                <span class="ql-formats">
-                  <button class="ql-list" value="ordered" aria-label="Ordered list" type="button"></button>
-                  <button class="ql-list" value="bullet" aria-label="Bullet list" type="button"></button>
-                </span>
-              </ng-template>
-            </p-editor>
+            <app-rich-text-editor
+              [content]="entry.task"
+              (contentChange)="patchEntryModal({ task: $event })"
+              [editable]="!entry.readonly"
+              placeholder="What are you working on? Type / for options…"
+            />
             @if (entryTaskInvalid()) {
               <small class="modal-field-error">Task is required.</small>
             }

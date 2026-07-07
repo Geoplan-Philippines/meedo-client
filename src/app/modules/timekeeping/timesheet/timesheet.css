@@ -193,6 +193,13 @@
   overflow-x: auto;
 }
 
+.grid-table,
+.grid-table ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
 .grid-table {
   min-width: 58rem;
   display: flex;
@@ -205,6 +212,7 @@
   grid-template-columns: minmax(19rem, 1.6fr) repeat(7, minmax(4.5rem, 1fr)) 3rem;
   align-items: center;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  list-style: none;
 }
 
 .grid-row:last-child { border-bottom: none; }
@@ -347,18 +355,6 @@ button.grid-cell--value:hover {
   font-size: 0.85rem;
 }
 
-.entry-item-tag {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-background));
-  color: var(--color-primary);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
 :host ::ng-deep .entry-select {
   width: 100%;
   min-width: 0;
@@ -407,34 +403,6 @@ button.grid-cell--value:hover {
   color: var(--color-body);
 }
 
-.task-popover-readonly {
-  padding: 0.75rem;
-  background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-background));
-  border: 1px solid var(--color-border);
-  border-radius: 0.45rem;
-  font-size: 0.88rem;
-  line-height: 1.65;
-  color: var(--color-heading);
-  white-space: pre-wrap;
-  min-height: 4rem;
-}
-
-.task-popover-readonly ul {
-  list-style-type: disc;
-  padding-left: 1.25rem;
-  margin: 0.25rem 0;
-}
-
-.task-popover-readonly ol {
-  list-style-type: decimal;
-  padding-left: 1.25rem;
-  margin: 0.25rem 0;
-}
-
-.task-popover-readonly li {
-  margin: 0.15rem 0;
-}
-
 .dialog-backdrop {
   position: fixed;
   inset: 0;
@@ -457,6 +425,33 @@ button.grid-cell--value:hover {
   flex-direction: column;
   gap: 0.875rem;
   overflow-y: auto;
+}
+
+/* The entry modal always uses the app's light theme tokens, regardless of
+   the global dark-mode toggle (`.app-dark` on <html>). */
+.entry-modal-dialog {
+  --background: #F8FBFF;
+  --foreground: #0B161F;
+  --text-heading: #0B161F;
+  --text-body: #365261;
+
+  --primary: #0B4EA2;
+  --primary-hover: #03285A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8F1FF;
+  --secondary-foreground: #0B4EA2;
+  --accent: #22D3EE;
+  --accent-foreground: #083344;
+
+  --border: #DBE5F0;
+  --input: #DBE5F0;
+  --ring: #22D3EE;
+
+  --destructive: #FF4B4B;
+  --muted-destructive: #FFE1DE;
+  --success: #3DBE81;
+  --muted-success: #D1EDE0;
+  --success-foreground: #FFFFFF;
 }
 
 .add-project-dialog {
@@ -546,8 +541,8 @@ button.grid-cell--value:hover {
 
 .modal-checkbox-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  flex-direction: row;
+  gap: 1.5rem;
   padding-top: 0.35rem;
 }
 
@@ -567,60 +562,35 @@ button.grid-cell--value:hover {
 
 .entry-summary-card {
   display: grid;
-  grid-template-columns: auto auto;
-  align-self: flex-start;
-  column-gap: 1.25rem;
-  row-gap: 0.4rem;
-  width: fit-content;
-  min-width: 18rem;
-  max-width: 100%;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 1.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
+  border-radius: var(--radius-base);
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
-.entry-summary-row {
-  display: contents;
+.entry-summary-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .entry-summary-label {
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-body);
-  text-align: left;
+  margin-bottom: 0.15rem;
 }
 
 .entry-summary-value {
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.9375rem;
+  font-weight: 600;
   color: var(--color-heading);
-  text-align: left;
-  justify-self: start;
-}
-
-.entry-summary-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-background));
-  color: var(--color-primary);
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-:host ::ng-deep .entry-editor .p-editor-content {
-  height: 150px;
-}
-
-:host ::ng-deep .entry-editor .p-editor-content .ql-container {
-  height: 150px;
-}
-
-:host ::ng-deep .entry-editor .p-editor-content .ql-editor {
-  height: 150px;
-  overflow-y: auto;
-  font-size: 0.85rem;
 }
 
 .modal-actions {
