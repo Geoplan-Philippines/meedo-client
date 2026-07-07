@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CrmService } from '../../services/crm.service';
-import { getAvatarClass } from '../../utils/avatar.utils';
+import { getAvatarClass } from '../../../../shared/utils/avatar.utils';
 import { Subscriber } from '../../models/crm.model';
 
 @Component({

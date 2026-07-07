@@ -3,7 +3,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { map } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment.dev';
-import { CreateTicketPayload, Ticket, TicketListParams, UpdateTicketPayload } from '../models/ticket.model';
+import {
+  CreateTicketPayload,
+  Ticket,
+  TicketFacets,
+  TicketFacetsParams,
+  TicketListParams,
+  UpdateTicketPayload,
+} from '../models/ticket.model';
 import { TicketStats } from '../models/ticket-stats.model';
 import { ApiResponse } from '../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
@@ -19,8 +26,11 @@ export class TicketsService {
       .set('limit', params.limit);
 
     if (params.search) httpParams = httpParams.set('search', params.search);
-    if (params.ticketStatusId) httpParams = httpParams.set('ticketStatusId', params.ticketStatusId);
-    if (params.priority) httpParams = httpParams.set('priority', params.priority);
+    if (params.view) httpParams = httpParams.set('view', params.view);
+    // Multi-select facets go out as repeated params (?ticketStatusId=a&ticketStatusId=b).
+    for (const id of params.ticketStatusId ?? []) httpParams = httpParams.append('ticketStatusId', id);
+    for (const priority of params.priority ?? []) httpParams = httpParams.append('priority', priority);
+    for (const id of params.teamId ?? []) httpParams = httpParams.append('teamId', id);
     if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
     if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
 
@@ -30,9 +40,28 @@ export class TicketsService {
     });
   }
 
+  getFacets(params: TicketFacetsParams) {
+    let httpParams = new HttpParams();
+    if (params.view) httpParams = httpParams.set('view', params.view);
+    if (params.search) httpParams = httpParams.set('search', params.search);
+
+    return this.http
+      .get<ApiResponse<TicketFacets>>(`${this.baseUrl}/facets`, {
+        params: httpParams,
+        withCredentials: true,
+      })
+      .pipe(map(res => res.data));
+  }
+
   getStats() {
     return this.http
       .get<ApiResponse<TicketStats>>(`${this.baseUrl}/stats`, { withCredentials: true })
+      .pipe(map(res => res.data));
+  }
+
+  getById(id: string) {
+    return this.http
+      .get<ApiResponse<Ticket>>(`${this.baseUrl}/${id}`, { withCredentials: true })
       .pipe(map(res => res.data));
   }
 

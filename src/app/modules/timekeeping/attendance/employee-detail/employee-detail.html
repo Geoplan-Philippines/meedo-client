@@ -1,15 +1,47 @@
 <main class="detail-page">
+  <header class="detail-topbar">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <button type="button" class="crumb-link" (click)="goBack()">Attendance</button>
+      <i class="pi pi-angle-right crumb-sep" aria-hidden="true"></i>
+      <span class="crumb-title">{{ employeeName() ?? 'Employee' }}</span>
+    </nav>
+
+    <div class="date-nav">
+      <p-datepicker
+        [formControl]="dateControl"
+        dateFormat="yy-mm-dd"
+        [showIcon]="true"
+        iconDisplay="input"
+        [readonlyInput]="true"
+        [maxDate]="maxDate"
+        appendTo="body"
+      />
+      <p-button
+        icon="pi pi-chevron-left"
+        [text]="true"
+        severity="secondary"
+        (onClick)="previousDay()"
+        ariaLabel="Previous day"
+      />
+      <p-button
+        icon="pi pi-chevron-right"
+        [text]="true"
+        severity="secondary"
+        [disabled]="isToday()"
+        (onClick)="nextDay()"
+        ariaLabel="Next day"
+      />
+    </div>
+  </header>
+
   <header class="page-header">
-    <p-button
-      icon="pi pi-arrow-left"
-      label="Back"
-      severity="secondary"
-      [text]="true"
-      (onClick)="goBack()"
-    />
-    <h1 class="page-title">
-      Attendance — {{ summary()?.date ?? null | date: 'fullDate' }}
-    </h1>
+    <h1 class="page-title">{{ employeeName() ?? 'Attendance' }}</h1>
+    <p class="page-subtitle">
+      {{ selectedDay() | date: 'fullDate' }}
+      @if (employeeMeta(); as meta) {
+        <span class="meta-sep" aria-hidden="true">·</span> {{ meta }}
+      }
+    </p>
   </header>
 
   <section class="summary-grid" aria-live="polite">
@@ -29,28 +61,54 @@
 
   <section class="detail-grid">
     <div class="timeline-section">
-      <h2 class="section-title">Timeline of Events</h2>
+      <header class="section-header">
+        <h2 class="section-title">Timeline</h2>
+        @if (!isLoading() && events().length > 0) {
+          <span class="section-count">{{ events().length }}</span>
+        }
+      </header>
 
-      @if (isLoading()) {
-        <p class="empty-text">Loading…</p>
-      } @else if (events().length === 0) {
-        <p class="empty-text">No data yet.</p>
-      } @else {
-        <ul class="timeline">
-          @for (event of events(); track event.id) {
-            <li class="timeline-item">
-              <span class="timeline-time">{{ event.timestamp | date: 'shortTime' }}</span>
-              <span class="timeline-type">{{ eventTypeLabel(event.eventType) }}</span>
-              <p-tag [value]="event.source" [severity]="sourceSeverity(event.source)" />
-              @if (event.origin === 'BIOMETRICS') {
-                <span class="timeline-origin" title="From biometric device">
-                  <i class="pi pi-id-card"></i> Biometric
+      <div class="timeline-panel">
+        @if (isLoading()) {
+          <p class="sr-only" role="status">Loading timeline…</p>
+          <ul class="timeline" aria-hidden="true">
+            @for (row of skeletonRows; track row) {
+              <li class="timeline-item">
+                <span class="timeline-time"><span class="skeleton skeleton--time"></span></span>
+                <span class="timeline-rail"><span class="skeleton-dot"></span></span>
+                <div class="timeline-main"><span class="skeleton skeleton--label"></span></div>
+              </li>
+            }
+          </ul>
+        } @else if (events().length === 0) {
+          <div class="timeline-empty">
+            <div class="empty-icon" aria-hidden="true">
+              <i class="pi pi-clock"></i>
+            </div>
+            <p class="empty-title">No punches recorded</p>
+            <p class="empty-body">Clock-ins and door taps for this day will appear here.</p>
+          </div>
+        } @else {
+          <ul class="timeline">
+            @for (event of events(); track event.id) {
+              <li class="timeline-item">
+                <span class="timeline-time">{{ event.timestamp | date: 'h:mm a' }}</span>
+                <span class="timeline-rail">
+                  <span class="timeline-dot" [style.--dot]="eventColor(event)"></span>
                 </span>
-              }
-            </li>
-          }
-        </ul>
-      }
+                <div class="timeline-main">
+                  <span class="timeline-type">{{ eventTypeLabel(event.eventType) }}</span>
+                  @if (event.origin === 'BIOMETRICS') {
+                    <span class="timeline-origin" title="From biometric device">
+                      <i class="pi pi-id-card" aria-hidden="true"></i> Biometric
+                    </span>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
     </div>
 
     <div class="map-section">

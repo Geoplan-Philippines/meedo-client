@@ -3,6 +3,8 @@ export interface Status {
   name: string;
   color: string;
   isArchived: boolean;
+  /** Built-in "standard" status: always present, never editable/archivable/deletable. */
+  isSystem: boolean;
   organizationId: string;
   createdAt: string;
   updatedAt: string;

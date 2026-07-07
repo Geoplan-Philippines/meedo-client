@@ -287,11 +287,7 @@
   letter-spacing: 0.02em;
 }
 
-.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
-.avatar-teal   { background: #CCFBF1; color: #0F766E; }
-.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
-.avatar-violet { background: #EDE9FE; color: #7C3AED; }
-.avatar-rose   { background: #FFE4E6; color: #BE123C; }
+/* Avatar identity palette (.avatar-*) is defined globally in src/styles.css. */
 
 /* ─── Cells ────────────────────────────────────────────── */
 .subscriber-name {
