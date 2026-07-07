@@ -14,7 +14,7 @@ const emptyEntries: PaginatedApiResponse<TimesheetEntry> = {
 };
 
 const projects: TimesheetProject[] = [
-  { id: 'project-1', customerName: 'Geoplan Internal Operations', workOrderNumber: 'WO-001', status: 'Open' },
+  { id: 'project-1', customerName: 'Geoplan Internal Operations', workOrderNumber: 'WO-001', status: 'Open', displayName: 'Geoplan Internal Operations — WO-001' },
 ];
 
 const unlocked: TimesheetPeriodLock = {
@@ -89,22 +89,52 @@ describe('Timesheet', () => {
     expect(component.projects()[0].workOrderNumber).toBe('WO-001');
   });
 
-  it('blocks adding rows when the period is locked', () => {
-    component.isLocked.set(true);
-    component.addRow();
+  it('adds a project row and a new entry from the entry modal', () => {
+    component.openAddProjectModal();
+    component.onAddProjectChange('project-1');
+    component.confirmAddProject();
 
-    expect(component.rows().length).toBe(0);
+    expect(component.tableProjectIds()).toEqual(['project-1']);
+
+    const day = component.weekDays()[0];
+    component.openEntryCellModal('project-1', day);
+    const modal = component.entryModal();
+    if (modal) {
+      modal.hours = 8;
+      modal.task = 'Inspection';
+    }
+    component.closeEntryModal(true);
+
+    expect(component.entries().length).toBe(1);
+    expect(component.entries()[0].projectId).toBe('project-1');
+  });
+
+  it('does not add a project row when the period is locked', () => {
+    component.isLocked.set(true);
+    component.openAddProjectModal();
+    component.onAddProjectChange('project-1');
+    component.confirmAddProject();
+
+    expect(component.tableProjectIds()).toEqual([]);
   });
 
   it('shows validation by not saving invalid hours', () => {
-    component.addRow();
-    const row = component.rows()[0];
-    row.projectId = 'project-1';
-    row.task = 'Inspection';
-    row.cells[0].hours = 25;
-    row.cells[0].dirty = true;
+    component.openAddProjectModal();
+    component.onAddProjectChange('project-1');
+    component.confirmAddProject();
 
-    component.saveRow(row);
+    const day = component.weekDays()[0];
+    component.openEntryCellModal('project-1', day);
+    const modal = component.entryModal();
+    if (modal) {
+      modal.hours = 25;
+      modal.task = 'Inspection';
+    }
+    component.closeEntryModal(true);
+
+    const entry = component.entries()[0];
+    entry.dirty = true;
+    component.saveDrafts();
 
     expect(createCalls).toBe(0);
   });

@@ -6,6 +6,7 @@ import { finalize, forkJoin, Observable } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { EditorModule } from 'primeng/editor';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -19,37 +20,23 @@ import {
 } from './models/timesheet.model';
 import { TimesheetService } from './services/timesheet.service';
 
-interface TimesheetGridCell {
-  date: string;
+interface TimesheetDayEntry {
+  localId: string;
   entryId?: string;
+  date: string;
+  projectId: string | null;
   hours: number | null;
+  workType: TimesheetWorkType;
+  location: string;
+  task: string;
+  isOvertime: boolean;
+  isNightDifferential: boolean;
   status: TimesheetEntryStatus;
   rejectionReason?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   dirty: boolean;
-}
-
-interface TimesheetGridRow {
-  localId: string;
-  projectId: string | null;
-  customerId: string | null;
-  location: string;
-  workType: TimesheetWorkType;
-  task: string;
-  isOvertime: boolean;
-  isNightDifferential: boolean;
-  projectDescription: string;
-  targetDate?: string;
-  cells: TimesheetGridCell[];
-  dirty: boolean;
-  isNew: boolean;
   saving: boolean;
-}
-
-interface TimesheetDayItem {
-  row: TimesheetGridRow;
-  cell: TimesheetGridCell;
 }
 
 interface TimesheetActivityItem {
@@ -58,20 +45,60 @@ interface TimesheetActivityItem {
   tone: 'success' | 'info' | 'warning';
 }
 
-interface TaskPopover {
-  rowId: string;
+interface EntryModalState {
+  localId: string;
+  date: string;
+  projectId: string;
+  hours: number | null;
+  workType: TimesheetWorkType;
+  location: string;
   task: string;
+  isOvertime: boolean;
+  isNightDifferential: boolean;
+  status: TimesheetEntryStatus;
+  rejectionReason?: string | null;
+  isNew: boolean;
   readonly: boolean;
 }
 
-const LOCATION_OPTIONS = [
-  { label: 'OFC - DW', value: 'OFC - DW', workType: 'OFFICE_DIRECT_WORK' as TimesheetWorkType },
-  { label: 'WFH', value: 'WFH', workType: 'WFH' as TimesheetWorkType },
-  { label: 'FIELD', value: 'FIELD', workType: 'FIELD' as TimesheetWorkType },
-  { label: 'LEAVE', value: 'LEAVE', workType: 'LEAVE' as TimesheetWorkType },
-  { label: 'HOLIDAY', value: 'HOLIDAY', workType: 'HOLIDAY' as TimesheetWorkType },
-  { label: 'OFFSET', value: 'OFFSET', workType: 'OFFSET' as TimesheetWorkType },
+interface AddProjectModalState {
+  projectId: string | null;
+}
+
+const WORK_TYPE_OPTIONS: { label: string; value: TimesheetWorkType }[] = [
+  { label: 'Office', value: 'OFFICE' },
+  { label: 'Office - Direct Work', value: 'OFFICE_DIRECT_WORK' },
+  { label: 'Field', value: 'FIELD' },
+  { label: 'Work From Home', value: 'WFH' },
+  { label: 'Leave', value: 'LEAVE' },
+  { label: 'Offset', value: 'OFFSET' },
+  { label: 'Holiday', value: 'HOLIDAY' },
 ];
+
+const LOCATION_OPTIONS: { label: string; value: string }[] = [
+  { label: 'OFC - DW', value: 'OFC - DW' },
+  { label: 'FIELD', value: 'FIELD' },
+  { label: 'WFH', value: 'WFH' },
+];
+
+const DEFAULT_LOCATION = 'OFC - DW';
+
+const LOCATION_BY_WORK_TYPE: Record<TimesheetWorkType, string> = {
+  OFFICE: 'OFC - DW',
+  OFFICE_DIRECT_WORK: 'OFC - DW',
+  FIELD: 'FIELD',
+  WFH: 'WFH',
+  LEAVE: 'OFC - DW',
+  OFFSET: 'OFC - DW',
+  HOLIDAY: 'OFC - DW',
+};
+
+function stripHtml(value: string): string {
+  if (!value) return '';
+  const container = document.createElement('div');
+  container.innerHTML = value;
+  return container.textContent?.trim() ?? '';
+}
 
 @Component({
   selector: 'app-timesheet',
@@ -80,6 +107,7 @@ const LOCATION_OPTIONS = [
     FormsModule,
     ButtonModule,
     DatePickerModule,
+    EditorModule,
     SelectModule,
     ToastModule,
     DatePipe,
@@ -98,17 +126,21 @@ export class Timesheet implements OnInit {
 
   readonly selectedDate = signal<Date>(new Date());
   readonly selectedWeek = computed(() => startOfWeek(this.selectedDate()));
-  readonly rows = signal<TimesheetGridRow[]>([]);
+  readonly entries = signal<TimesheetDayEntry[]>([]);
   readonly projects = signal<TimesheetProject[]>([]);
   readonly isLoading = signal(false);
-  readonly isSavingAll = signal(false);
+  readonly isSavingDrafts = signal(false);
   readonly isSubmitting = signal(false);
   readonly isLocked = signal(false);
   readonly lockMessage = signal<string | null>(null);
   readonly showHistoryDialog = signal(false);
-  readonly collapsedDays = signal<Set<string>>(new Set());
-  readonly taskPopover = signal<TaskPopover | null>(null);
+  readonly searchText = signal('');
+  readonly addedProjectIds = signal<Set<string>>(new Set());
+  readonly entryModal = signal<EntryModalState | null>(null);
+  readonly entrySaveAttempted = signal(false);
+  readonly addProjectModal = signal<AddProjectModalState | null>(null);
 
+  readonly workTypeOptions = WORK_TYPE_OPTIONS;
   readonly locationOptions = LOCATION_OPTIONS;
 
   readonly weekDays = computed(() => {
@@ -125,36 +157,28 @@ export class Timesheet implements OnInit {
     return `${formatShortDate(start)} – ${formatShortDate(end)}`;
   });
 
-  readonly totalHours = computed(() =>
-    this.rows().reduce((total, row) => total + this.rowTotal(row), 0),
-  );
-
-  readonly regularHours = computed(() => this.sumHours((row) => !row.isOvertime && !row.isNightDifferential && !['LEAVE', 'HOLIDAY', 'OFFSET'].includes(row.workType)));
-  readonly overtimeHours = computed(() => this.sumHours((row) => row.isOvertime));
-  readonly leaveNightHours = computed(() => this.sumHours((row) => row.isNightDifferential || ['LEAVE', 'HOLIDAY'].includes(row.workType)));
-  readonly offsetHours = computed(() => this.sumHours((row) => row.workType === 'OFFSET'));
-
-  readonly unsavedCount = computed(() => this.rows().filter((row) => row.dirty || row.cells.some((cell) => cell.dirty)).length);
+  readonly totalHours = computed(() => this.sumAllHours(() => true));
+  readonly regularHours = computed(() => this.sumAllHours((entry) => !entry.isOvertime && !entry.isNightDifferential && !['LEAVE', 'HOLIDAY', 'OFFSET'].includes(entry.workType)));
+  readonly overtimeHours = computed(() => this.sumAllHours((entry) => entry.isOvertime));
+  readonly leaveNightHours = computed(() => this.sumAllHours((entry) => entry.isNightDifferential || ['LEAVE', 'HOLIDAY'].includes(entry.workType)));
+  readonly offsetHours = computed(() => this.sumAllHours((entry) => entry.workType === 'OFFSET'));
 
   readonly dailyTotals = computed(() => {
     const totals = new Map<string, number>();
     this.weekDates().forEach((date) => totals.set(date, 0));
-    this.rows().forEach((row) => {
-      row.cells.forEach((cell) => totals.set(cell.date, (totals.get(cell.date) ?? 0) + (Number(cell.hours) || 0)));
-    });
+    this.entries().forEach((entry) => totals.set(entry.date, (totals.get(entry.date) ?? 0) + (Number(entry.hours) || 0)));
     return totals;
   });
 
   readonly recentActivity = computed<TimesheetActivityItem[]>(() => {
-    const activities = this.rows()
-      .flatMap((row) => row.cells.map((cell) => ({ row, cell })))
-      .filter(({ cell }) => cell.entryId && (cell.createdAt || cell.updatedAt))
-      .sort((a, b) => new Date(b.cell.updatedAt ?? b.cell.createdAt ?? 0).getTime() - new Date(a.cell.updatedAt ?? a.cell.createdAt ?? 0).getTime())
+    const activities = this.entries()
+      .filter((entry) => entry.entryId && (entry.createdAt || entry.updatedAt))
+      .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() - new Date(a.updatedAt ?? a.createdAt ?? 0).getTime())
       .slice(0, 4)
-      .map(({ row, cell }) => ({
-        title: `${formatStatusLabel(cell.status)} entry ${cell.status === 'DRAFT' ? 'saved' : 'updated'}`,
-        time: `${formatShortDate(new Date(cell.updatedAt ?? cell.createdAt ?? Date.now()))} • ${projectNameFromList(this.projects(), row.projectId)}`,
-        tone: cell.status === 'REJECTED' ? 'warning' as const : cell.status === 'APPROVED' ? 'success' as const : 'info' as const,
+      .map((entry) => ({
+        title: `${formatStatusLabel(entry.status)} entry ${entry.status === 'DRAFT' ? 'saved' : 'updated'}`,
+        time: `${formatShortDate(new Date(entry.updatedAt ?? entry.createdAt ?? Date.now()))} • ${projectNameFromList(this.projects(), entry.projectId)}`,
+        tone: entry.status === 'REJECTED' ? 'warning' as const : entry.status === 'APPROVED' ? 'success' as const : 'info' as const,
       }));
 
     return activities.length > 0
@@ -163,18 +187,24 @@ export class Timesheet implements OnInit {
   });
 
   readonly hasDraftRows = computed(() =>
-    this.rows().some((row) => row.cells.some((cell) => cell.entryId && cell.status === 'DRAFT')),
+    this.entries().some((entry) => entry.entryId && entry.status === 'DRAFT'),
   );
 
-  readonly uniqueCustomers = computed(() => {
-    const seen = new Set<string>();
-    return this.projects()
-      .filter((project) => {
-        if (seen.has(project.customerName)) return false;
-        seen.add(project.customerName);
-        return true;
-      })
-      .map((project) => ({ label: project.customerName, value: project.customerName }));
+  readonly projectOptions = computed(() =>
+    this.projects().map((project) => ({ label: formatProjectLabel(project), value: project.id })),
+  );
+
+  readonly tableProjectIds = computed(() => {
+    const ids = new Set<string>();
+    this.entries().forEach((entry) => { if (entry.projectId) ids.add(entry.projectId); });
+    this.addedProjectIds().forEach((id) => ids.add(id));
+    return [...ids];
+  });
+
+  readonly filteredProjectIds = computed(() => {
+    const query = this.searchText().trim().toLowerCase();
+    if (!query) return this.tableProjectIds();
+    return this.tableProjectIds().filter((id) => this.projectName(id).toLowerCase().includes(query));
   });
 
   ngOnInit(): void {
@@ -205,9 +235,10 @@ export class Timesheet implements OnInit {
       .subscribe({
         next: ({ entries, projects, lock }) => {
           this.projects.set(projects);
-          this.rows.set(this.entriesToGridRows(entries.data));
+          this.entries.set(this.entriesToDayEntries(entries.data));
           this.isLocked.set(lock.isLocked);
           this.lockMessage.set(lock.isLocked ? `This week was locked on ${formatShortDate(new Date(lock.lockedAt ?? Date.now()))}.` : null);
+          this.addedProjectIds.set(new Set());
         },
         error: (err: unknown) => {
           console.error('Error loading timesheet:', err);
@@ -216,199 +247,236 @@ export class Timesheet implements OnInit {
       });
   }
 
-  toggleDay(day: Date): void {
-    const key = toDateInputValue(day);
-    this.collapsedDays.update((set) => {
-      const next = new Set(set);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
+  totalForDay(day: Date): number {
+    return this.dailyTotals().get(toDateInputValue(day)) ?? 0;
   }
 
-  isDayCollapsed(day: Date): boolean {
-    return this.collapsedDays().has(toDateInputValue(day));
+  projectName(projectId: string | null): string {
+    return this.projects().find((project) => project.id === projectId)?.customerName ?? 'Unknown project';
   }
 
-  openTaskPopover(row: TimesheetGridRow): void {
-    this.taskPopover.set({
-      rowId: row.localId,
-      task: row.task,
-      readonly: this.isRowReadonly(row),
-    });
+  projectWorkOrder(projectId: string | null): string {
+    return this.projects().find((project) => project.id === projectId)?.workOrderNumber ?? '';
   }
 
-  closeTaskPopover(save = false): void {
-    const popover = this.taskPopover();
-    if (!popover) return;
-
-    if (save && !popover.readonly) {
-      const row = this.rows().find((r) => r.localId === popover.rowId);
-      if (row) {
-        row.task = popover.task;
-        this.markDirty(row);
-      }
-    }
-
-    this.taskPopover.set(null);
-  }
-
-  addRow(day: Date = this.weekDays()[0]): void {
-    if (this.isLocked()) return;
-    const row = this.createEmptyGridRow(true, toDateInputValue(day));
-    this.rows.update((rows) => [...rows, row]);
-  }
-
-  workOrdersForRow(row: TimesheetGridRow): { label: string; value: string }[] {
-    if (!row.customerId) return [];
-    return this.projects()
-      .filter((project) => project.customerName === row.customerId)
-      .map((project) => ({ label: project.workOrderNumber, value: project.id }));
-  }
-
-  onRowCustomerChange(row: TimesheetGridRow, customerName: string): void {
-    row.customerId = customerName;
-    row.projectId = null;
-    this.markDirty(row);
-  }
-
-  onRowWorkOrderChange(row: TimesheetGridRow, projectId: string): void {
-    row.projectId = projectId;
-    this.markDirty(row);
-  }
-
-  previousWeek(): void { this.changeWeekBy(-7); }
-  nextWeek(): void     { this.changeWeekBy(7); }
-
-  markDirty(row: TimesheetGridRow): void {
-    if (this.isRowReadonly(row)) return;
-    row.dirty = true;
-    row.cells.forEach((cell) => {
-      if (cell.entryId || Number(cell.hours) > 0) cell.dirty = true;
-    });
-    this.rows.update((rows) => [...rows]);
-  }
-
-  markCellDirty(row: TimesheetGridRow, cell: TimesheetGridCell): void {
-    if (this.isCellReadonly(cell) || this.isRowReadonly(row)) return;
-    row.dirty = true;
-    cell.dirty = true;
-    this.rows.update((rows) => [...rows]);
-  }
-
-  onLocationChange(row: TimesheetGridRow): void {
-    const match = this.locationOptions.find((option) => option.value === row.location);
-    row.workType = match?.workType ?? 'OFFICE_DIRECT_WORK';
-    this.markDirty(row);
-  }
-
-  rowsForDay(day: Date): TimesheetDayItem[] {
+  entryForCell(projectId: string, day: Date): TimesheetDayEntry | undefined {
     const date = toDateInputValue(day);
-    return this.rows()
-      .map((row) => ({ row, cell: row.cells.find((item) => item.date === date) }))
-      .filter((item): item is TimesheetDayItem => !!item.cell && (item.cell.entryId !== undefined || Number(item.cell.hours) > 0 || item.row.targetDate === date));
+    return this.entries().find((entry) => entry.projectId === projectId && entry.date === date);
   }
 
-  statusLabel(status: TimesheetEntryStatus): string { return formatStatusLabel(status); }
-
-  saveButtonLabel(): string {
-    return this.unsavedCount() > 0 ? `Save Draft (${this.unsavedCount()})` : 'Save Draft';
+  cellLabel(entry: TimesheetDayEntry | undefined): string {
+    const hours = Number(entry?.hours) || 0;
+    return hours > 0 ? `${trimNumber(hours)} hr` : '------';
   }
 
-  deleteDayEntry(row: TimesheetGridRow, cell: TimesheetGridCell): void {
-    if (this.isRowReadonly(row) || this.isCellReadonly(cell)) return;
+  cellStatusClass(entry: TimesheetDayEntry | undefined): string {
+    return entry?.status ? `grid-cell--status-${entry.status.toLowerCase()}` : '';
+  }
 
-    if (!cell.entryId) {
-      cell.hours = null;
-      cell.dirty = false;
-      if (!row.cells.some((item) => item.entryId || Number(item.hours) > 0)) {
-        this.rows.update((rows) => rows.filter((item) => item !== row));
-      } else {
-        this.rows.update((rows) => [...rows]);
+  isEntryReadonly(entry: TimesheetDayEntry): boolean {
+    return this.isLocked() || (!!entry.entryId && entry.status !== 'DRAFT' && entry.status !== 'REJECTED');
+  }
+
+  statusBadgeClass(status: TimesheetEntryStatus): string {
+    switch (status) {
+      case 'SUBMITTED': return 'status-badge status-badge--submitted';
+      case 'APPROVED': return 'status-badge status-badge--approved';
+      case 'REJECTED': return 'status-badge status-badge--rejected';
+      default: return 'status-badge status-badge--draft';
+    }
+  }
+
+  statusBadgeLabel(status: TimesheetEntryStatus): string {
+    return formatStatusLabel(status);
+  }
+
+  openAddProjectModal(): void {
+    this.addProjectModal.set({ projectId: null });
+  }
+
+  closeAddProjectModal(): void {
+    this.addProjectModal.set(null);
+  }
+
+  onAddProjectChange(projectId: string): void {
+    this.addProjectModal.set({ projectId });
+  }
+
+  confirmAddProject(): void {
+    if (this.isLocked()) return;
+    const modal = this.addProjectModal();
+    if (!modal?.projectId) return;
+
+    if (this.tableProjectIds().includes(modal.projectId)) {
+      this.messageService.add({ severity: 'info', summary: 'Already added', detail: 'This project is already on your timesheet.' });
+      return;
+    }
+
+    this.addedProjectIds.update((ids) => new Set(ids).add(modal.projectId!));
+    this.addProjectModal.set(null);
+  }
+
+  removeProjectRow(projectId: string): void {
+    if (this.isLocked()) return;
+    const entryIds = this.entries()
+      .filter((entry) => entry.projectId === projectId && entry.entryId)
+      .map((entry) => entry.entryId!);
+
+    if (entryIds.length === 0) {
+      this.addedProjectIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(projectId);
+        return next;
+      });
+      return;
+    }
+
+    this.isSavingDrafts.set(true);
+    forkJoin(entryIds.map((id) => this.timesheetService.deleteEntry(id)))
+      .pipe(finalize(() => this.isSavingDrafts.set(false)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Removed', detail: 'Project removed from timesheet' });
+          this.loadWeek();
+        },
+        error: (err: unknown) => {
+          console.error('Error removing project:', err);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to remove project') });
+        },
+      });
+  }
+
+  openEntryCellModal(projectId: string, day: Date): void {
+    const existing = this.entryForCell(projectId, day);
+    if (existing) {
+      this.openEditEntryModal(existing);
+      return;
+    }
+
+    if (this.isLocked()) return;
+    this.entrySaveAttempted.set(false);
+    this.entryModal.set({
+      localId: crypto.randomUUID?.() ?? `entry-${Date.now()}-${Math.random()}`,
+      date: toDateInputValue(day),
+      projectId,
+      hours: null,
+      workType: 'OFFICE',
+      location: DEFAULT_LOCATION,
+      task: '',
+      isOvertime: false,
+      isNightDifferential: false,
+      status: 'DRAFT',
+      isNew: true,
+      readonly: false,
+    });
+  }
+
+  openEditEntryModal(entry: TimesheetDayEntry): void {
+    if (!entry.projectId) return;
+    this.entrySaveAttempted.set(false);
+    this.entryModal.set({
+      localId: entry.localId,
+      date: entry.date,
+      projectId: entry.projectId,
+      hours: entry.hours,
+      workType: entry.workType,
+      location: entry.location || DEFAULT_LOCATION,
+      task: entry.task,
+      isOvertime: entry.isOvertime,
+      isNightDifferential: entry.isNightDifferential,
+      status: entry.status,
+      rejectionReason: entry.rejectionReason,
+      isNew: false,
+      readonly: this.isEntryReadonly(entry),
+    });
+  }
+
+  onEntryWorkTypeChange(value: TimesheetWorkType): void {
+    this.entryModal.update((modal) => modal && { ...modal, workType: value, location: LOCATION_BY_WORK_TYPE[value] });
+  }
+
+  entryHoursInvalid(): boolean {
+    const modal = this.entryModal();
+    return !!modal && this.entrySaveAttempted() && !(Number(modal.hours) > 0);
+  }
+
+  entryTaskInvalid(): boolean {
+    const modal = this.entryModal();
+    return !!modal && this.entrySaveAttempted() && !stripHtml(modal.task);
+  }
+
+  closeEntryModal(save: boolean): void {
+    const modal = this.entryModal();
+    if (!modal) return;
+
+    if (save && !modal.readonly) {
+      if (!(Number(modal.hours) > 0) || !stripHtml(modal.task)) {
+        this.entrySaveAttempted.set(true);
+        return;
       }
-      return;
+
+      if (modal.isNew) {
+        this.entries.update((entries) => [...entries, {
+          localId: modal.localId,
+          date: modal.date,
+          projectId: modal.projectId,
+          hours: modal.hours,
+          workType: modal.workType,
+          location: modal.location,
+          task: modal.task,
+          isOvertime: modal.isOvertime,
+          isNightDifferential: modal.isNightDifferential,
+          status: 'DRAFT',
+          dirty: true,
+          saving: false,
+        }]);
+      } else {
+        const entry = this.entries().find((item) => item.localId === modal.localId);
+        if (entry && !this.isEntryReadonly(entry)) {
+          entry.hours = modal.hours;
+          entry.task = modal.task;
+          entry.location = modal.location;
+          entry.isOvertime = modal.isOvertime;
+          entry.isNightDifferential = modal.isNightDifferential;
+          entry.workType = modal.workType;
+          entry.dirty = true;
+          this.entries.update((entries) => [...entries]);
+        }
+      }
     }
 
-    row.saving = true;
-    this.rows.update((rows) => [...rows]);
-    this.timesheetService.deleteEntry(cell.entryId)
-      .pipe(finalize(() => {
-        row.saving = false;
-        this.rows.update((rows) => [...rows]);
-      }))
-      .subscribe({
-        next: () => {
-          cell.entryId = undefined;
-          cell.hours = null;
-          cell.dirty = false;
-          if (!row.cells.some((item) => item.entryId || Number(item.hours) > 0)) {
-            this.rows.update((rows) => rows.filter((item) => item !== row));
-          }
-          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Draft entry deleted' });
-          this.loadWeek();
-        },
-        error: (err: unknown) => {
-          console.error('Error deleting entry:', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to delete entry') });
-        },
-      });
+    this.entryModal.set(null);
   }
 
-  saveRow(row: TimesheetGridRow): void {
-    const operations = this.buildSaveOperations(row);
-    if (!operations) return;
+  saveDrafts(): void {
+    const targets = this.entries().filter((entry) => entry.dirty && !this.isEntryReadonly(entry));
+    if (targets.length === 0) return;
 
-    if (operations.length === 0) {
-      this.messageService.add({ severity: 'info', summary: 'No hours', detail: 'Enter hours for at least one day before saving.' });
-      return;
+    for (const entry of targets) {
+      const error = this.validateEntry(entry);
+      if (error) {
+        this.messageService.add({ severity: 'warn', summary: 'Check entry', detail: error });
+        return;
+      }
     }
 
-    row.saving = true;
-    this.rows.update((rows) => [...rows]);
+    const operations = targets
+      .map((entry) => this.buildEntryOperation(entry))
+      .filter((op): op is Observable<unknown> => !!op);
 
+    if (operations.length === 0) return;
+
+    this.isSavingDrafts.set(true);
     forkJoin(operations)
-      .pipe(finalize(() => {
-        row.saving = false;
-        this.rows.update((rows) => [...rows]);
-      }))
+      .pipe(finalize(() => this.isSavingDrafts.set(false)))
       .subscribe({
         next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Weekly row saved as draft' });
-          this.loadWeek();
-        },
-        error: (err: unknown) => {
-          console.error('Error saving row:', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save row') });
-        },
-      });
-  }
-
-  saveAllDrafts(): void {
-    const editableRows = this.rows().filter((row) => (row.dirty || row.cells.some((cell) => cell.dirty)) && !this.isRowReadonly(row));
-    if (editableRows.length === 0) return;
-
-    const operations: Observable<unknown>[] = [];
-    for (const row of editableRows) {
-      const rowOperations = this.buildSaveOperations(row, false);
-      if (!rowOperations) return;
-      operations.push(...rowOperations);
-    }
-
-    if (operations.length === 0) {
-      this.messageService.add({ severity: 'info', summary: 'No hours', detail: 'Enter hours for at least one day before saving.' });
-      return;
-    }
-
-    this.isSavingAll.set(true);
-    forkJoin(operations)
-      .pipe(finalize(() => this.isSavingAll.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'All draft rows saved' });
+          this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Draft entries saved' });
           this.loadWeek();
         },
         error: (err: unknown) => {
           console.error('Error saving drafts:', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save all drafts') });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save drafts') });
         },
       });
   }
@@ -438,32 +506,8 @@ export class Timesheet implements OnInit {
       });
   }
 
-  isRowReadonly(row: TimesheetGridRow): boolean {
-    return this.isLocked() || row.saving || row.cells.some((cell) => cell.entryId && cell.status !== 'DRAFT');
-  }
-
-  isCellReadonly(cell: TimesheetGridCell): boolean {
-    return this.isLocked() || (!!cell.entryId && cell.status !== 'DRAFT');
-  }
-
-  statusClass(status: TimesheetEntryStatus): string {
-    return `status-badge status-badge--${status.toLowerCase()}`;
-  }
-
-  rowTotal(row: TimesheetGridRow): number {
-    return row.cells.reduce((total, cell) => total + (Number(cell.hours) || 0), 0);
-  }
-
-  totalForDay(day: Date): number {
-    return this.dailyTotals().get(toDateInputValue(day)) ?? 0;
-  }
-
-  hasRowChanges(row: TimesheetGridRow): boolean {
-    return row.dirty || row.cells.some((cell) => cell.dirty);
-  }
-
   hasUnsavedChanges(): boolean {
-    return this.rows().some((row) => this.hasRowChanges(row));
+    return this.entries().some((entry) => entry.dirty);
   }
 
   confirmDiscardChanges(): boolean {
@@ -477,146 +521,73 @@ export class Timesheet implements OnInit {
     event.returnValue = '';
   }
 
+  previousWeek(): void { this.changeWeekBy(-7); }
+  nextWeek(): void     { this.changeWeekBy(7); }
+
   private changeWeekBy(days: number): void {
     if (!this.confirmDiscardChanges()) return;
     this.selectedDate.set(addDays(this.selectedDate(), days));
     this.loadWeek();
   }
 
-  private sumHours(predicate: (row: TimesheetGridRow) => boolean): number {
-    return this.rows().reduce((total, row) => {
-      if (!predicate(row)) return total;
-      return total + this.rowTotal(row);
-    }, 0);
+  private sumAllHours(predicate: (entry: TimesheetDayEntry) => boolean): number {
+    return this.entries().reduce((total, entry) => (predicate(entry) ? total + (Number(entry.hours) || 0) : total), 0);
   }
 
-  private buildSaveOperations(row: TimesheetGridRow, showValidation = true): Observable<unknown>[] | null {
-    const error = this.validateRow(row);
-    if (error) {
-      if (showValidation) this.messageService.add({ severity: 'warn', summary: 'Check row', detail: error });
-      else this.messageService.add({ severity: 'warn', summary: 'Check rows', detail: error });
-      return null;
-    }
-
-    const operations: Observable<unknown>[] = [];
-    for (const cell of row.cells) {
-      if (this.isCellReadonly(cell)) continue;
-      if (!cell.dirty && !row.dirty) continue;
-      const hours = Number(cell.hours) || 0;
-      if (cell.entryId && hours <= 0) operations.push(this.timesheetService.deleteEntry(cell.entryId));
-      else if (cell.entryId && hours > 0) operations.push(this.timesheetService.updateEntry(cell.entryId, this.rowToPayload(row, cell)));
-      else if (!cell.entryId && hours > 0) operations.push(this.timesheetService.createEntry(this.rowToPayload(row, cell)));
-    }
-    return operations;
-  }
-
-  private validateRow(row: TimesheetGridRow): string | null {
-    const activeCells = row.cells.filter((cell) => Number(cell.hours) > 0 || cell.entryId);
-    if (activeCells.length === 0) return null;
-    if (!row.projectId) return 'Please select a project and work order.';
-    if (!row.task.trim()) return 'Task description is required.';
-
-    for (const cell of activeCells) {
-      const hours = Number(cell.hours) || 0;
-      if (hours < 0 || hours > 24) return 'Hours must be between 0 and 24 per day.';
-      const otherTotal = this.rows()
-        .flatMap((item) => item.cells.map((itemCell) => ({ row: item, cell: itemCell })))
-        .filter(({ row: itemRow, cell: itemCell }) => itemRow !== row && itemCell.date === cell.date)
-        .reduce((total, item) => total + (Number(item.cell.hours) || 0), 0);
-      if (otherTotal + hours > 24) return 'Total hours for one day cannot exceed 24.';
-    }
+  private buildEntryOperation(entry: TimesheetDayEntry): Observable<unknown> | null {
+    if (!entry.projectId) return null;
+    const hours = Number(entry.hours) || 0;
+    if (entry.entryId && hours <= 0) return this.timesheetService.deleteEntry(entry.entryId);
+    if (entry.entryId && hours > 0) return this.timesheetService.updateEntry(entry.entryId, this.entryToPayload(entry));
+    if (!entry.entryId && hours > 0) return this.timesheetService.createEntry(this.entryToPayload(entry));
     return null;
   }
 
-  private entriesToGridRows(entries: TimesheetEntry[]): TimesheetGridRow[] {
-    const groups = new Map<string, TimesheetGridRow>();
+  private validateEntry(entry: TimesheetDayEntry): string | null {
+    const hours = Number(entry.hours) || 0;
+    if (hours <= 0) return null;
+    if (!entry.projectId) return 'Please select a project for this entry.';
+    if (!stripHtml(entry.task)) return 'Task description is required.';
+    if (hours > 24) return 'Hours must be between 0 and 24 per day.';
 
-    entries.forEach((entry) => {
-      const date = entry.workDate.slice(0, 10);
-      const key = [
-        entry.projectId,
-        entry.location,
-        entry.workType,
-        entry.task,
-        entry.projectDescription ?? '',
-        entry.isOvertime ? 'OT' : 'REG',
-        entry.isNightDifferential ? 'ND' : 'DAY',
-        entry.status,
-      ].join('|');
-
-      if (!groups.has(key)) {
-        groups.set(key, {
-          localId: entry.id,
-          projectId: entry.projectId,
-          customerId: entry.project?.customerName ?? null,
-          location: entry.location,
-          workType: entry.workType,
-          task: entry.task,
-          isOvertime: entry.isOvertime,
-          isNightDifferential: entry.isNightDifferential,
-          projectDescription: entry.projectDescription ?? '',
-          cells: this.emptyCells(),
-          dirty: false,
-          isNew: false,
-          saving: false,
-        });
-      }
-
-      const row = groups.get(key)!;
-      const cell = row.cells.find((item) => item.date === date);
-      if (cell) {
-        cell.entryId = entry.id;
-        cell.hours = entry.hours;
-        cell.status = entry.status;
-        cell.rejectionReason = entry.rejectionReason;
-        cell.createdAt = entry.createdAt;
-        cell.updatedAt = entry.updatedAt;
-        cell.dirty = false;
-      }
-    });
-
-    return [...groups.values()];
+    const otherTotal = this.entries()
+      .filter((item) => item !== entry && item.date === entry.date)
+      .reduce((total, item) => total + (Number(item.hours) || 0), 0);
+    if (otherTotal + hours > 24) return 'Total hours for one day cannot exceed 24.';
+    return null;
   }
 
-  private createEmptyGridRow(isNew: boolean, targetDate?: string): TimesheetGridRow {
-    return {
-      localId: crypto.randomUUID?.() ?? `row-${Date.now()}-${Math.random()}`,
-      projectId: null,
-      customerId: null,
-      location: 'OFC - DW',
-      workType: 'OFFICE_DIRECT_WORK',
-      task: '',
-      isOvertime: false,
-      isNightDifferential: false,
-      projectDescription: '',
-      targetDate,
-      cells: this.emptyCells(),
-      dirty: isNew,
-      isNew,
-      saving: false,
-    };
-  }
-
-  private emptyCells(): TimesheetGridCell[] {
-    return this.weekDates().map((date) => ({
-      date,
-      hours: null,
-      status: 'DRAFT' as TimesheetEntryStatus,
+  private entriesToDayEntries(entries: TimesheetEntry[]): TimesheetDayEntry[] {
+    return entries.map((entry) => ({
+      localId: entry.id,
+      entryId: entry.id,
+      date: entry.workDate.slice(0, 10),
+      projectId: entry.projectId,
+      hours: entry.hours,
+      workType: entry.workType,
+      location: entry.location,
+      task: entry.task,
+      isOvertime: entry.isOvertime,
+      isNightDifferential: entry.isNightDifferential,
+      status: entry.status,
+      rejectionReason: entry.rejectionReason,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
       dirty: false,
+      saving: false,
     }));
   }
 
-  private rowToPayload(row: TimesheetGridRow, cell: TimesheetGridCell): TimesheetEntryPayload {
+  private entryToPayload(entry: TimesheetDayEntry): TimesheetEntryPayload {
     return {
-      projectId: row.projectId!,
-      workDate: cell.date,
-      hours: Number(cell.hours),
-      location: row.location,
-      workType: row.workType,
-      task: row.task.trim(),
-      projectDescription: row.projectDescription.trim() || null,
-      isOvertime: row.isOvertime,
-      isNightDifferential: row.isNightDifferential,
+      projectId: entry.projectId!,
+      workDate: entry.date,
+      hours: Number(entry.hours),
+      workType: entry.workType,
+      location: entry.location,
+      task: entry.task.trim(),
+      isOvertime: entry.isOvertime,
+      isNightDifferential: entry.isNightDifferential,
     };
   }
 }
@@ -660,6 +631,15 @@ function formatStatusLabel(status: TimesheetEntryStatus): string {
 
 function projectNameFromList(projects: TimesheetProject[], projectId: string | null): string {
   return projects.find((project) => project.id === projectId)?.customerName ?? 'Timesheet';
+}
+
+function formatProjectLabel(project: TimesheetProject): string {
+  const workOrder = project.workOrderNumber?.trim() || 'No Work Order';
+  return `${project.customerName} — ${workOrder}`;
+}
+
+function trimNumber(value: number): string {
+  return Number(value.toFixed(2)).toString();
 }
 
 function apiErrorMessage(err: unknown, fallback: string): string {

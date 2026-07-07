@@ -2,6 +2,11 @@
 
 <div class="timesheet-page">
   <header class="page-header">
+    <div>
+      <h1 class="page-title">Timesheet</h1>
+      <p class="page-subtitle">Your weekly work log.</p>
+    </div>
+
     <div class="header-controls" aria-label="Timesheet week controls">
       <div class="week-picker-group" aria-label="Selected timesheet week">
         <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
@@ -20,8 +25,8 @@
 
       <div class="action-buttons" aria-label="Timesheet actions">
         <button class="history-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-history" label="History" (click)="showHistoryDialog.set(true)"></button>
-        <button class="save-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-save" [label]="saveButtonLabel()" (click)="saveAllDrafts()" [loading]="isSavingAll()" [disabled]="isLocked() || isLoading() || !hasUnsavedChanges()"></button>
-        <button class="submit-btn" pButton type="button" icon="pi pi-send" label="Submit" (click)="submitWeek()" [loading]="isSubmitting()" [disabled]="isLocked() || isLoading() || hasUnsavedChanges() || !hasDraftRows()"></button>
+        <button class="save-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-save" label="Save Draft" (click)="saveDrafts()" [loading]="isSavingDrafts()" [disabled]="isLocked() || isLoading() || !hasUnsavedChanges()"></button>
+        <button class="submit-btn" pButton type="button" icon="pi pi-send" label="Submit" (click)="submitWeek()" [loading]="isSubmitting()" [disabled]="isLocked() || isLoading() || isSubmitting()"></button>
       </div>
     </div>
   </header>
@@ -34,316 +39,270 @@
   }
 
   <section class="hours-strip" aria-label="Timesheet totals">
-    <div class="hours-chip">
-      <div class="hours-chip-icon"><i class="pi pi-calendar"></i></div>
-      <div class="hours-chip-body">
-        <span class="hours-chip-label">Week Total</span>
-        <strong class="hours-chip-value">{{ totalHours() | number: '1.0-2' }}h</strong>
-      </div>
+    <div class="hours-item">
+      <span class="hours-label">Week Total</span>
+      <strong class="hours-value">{{ totalHours() | number: '1.0-2' }}h</strong>
     </div>
-    <div class="hours-chip">
-      <div class="hours-chip-icon hours-chip-icon--regular"><i class="pi pi-clock"></i></div>
-      <div class="hours-chip-body">
-        <span class="hours-chip-label">Regular</span>
-        <strong class="hours-chip-value">{{ regularHours() | number: '1.0-2' }}h</strong>
-      </div>
+    <span class="hours-divider" aria-hidden="true"></span>
+    <div class="hours-item">
+      <span class="hours-label">Regular</span>
+      <strong class="hours-value">{{ regularHours() | number: '1.0-2' }}h</strong>
     </div>
-    <div class="hours-chip">
-      <div class="hours-chip-icon hours-chip-icon--ot"><i class="pi pi-bolt"></i></div>
-      <div class="hours-chip-body">
-        <span class="hours-chip-label">Overtime</span>
-        <strong class="hours-chip-value">{{ overtimeHours() | number: '1.0-2' }}h</strong>
-      </div>
+    <span class="hours-divider" aria-hidden="true"></span>
+    <div class="hours-item">
+      <span class="hours-label">Overtime</span>
+      <strong class="hours-value">{{ overtimeHours() | number: '1.0-2' }}h</strong>
     </div>
-    <div class="hours-chip">
-      <div class="hours-chip-icon hours-chip-icon--leave"><i class="pi pi-briefcase"></i></div>
-      <div class="hours-chip-body">
-        <span class="hours-chip-label">Leave / ND</span>
-        <strong class="hours-chip-value">{{ leaveNightHours() | number: '1.0-2' }}h</strong>
-      </div>
+    <span class="hours-divider" aria-hidden="true"></span>
+    <div class="hours-item">
+      <span class="hours-label">Leave / ND</span>
+      <strong class="hours-value">{{ leaveNightHours() | number: '1.0-2' }}h</strong>
     </div>
-    <div class="hours-chip">
-      <div class="hours-chip-icon hours-chip-icon--offset"><i class="pi pi-sync"></i></div>
-      <div class="hours-chip-body">
-        <span class="hours-chip-label">Offset</span>
-        <strong class="hours-chip-value">{{ offsetHours() | number: '1.0-2' }}h</strong>
-      </div>
+    <span class="hours-divider" aria-hidden="true"></span>
+    <div class="hours-item">
+      <span class="hours-label">Offset</span>
+      <strong class="hours-value">{{ offsetHours() | number: '1.0-2' }}h</strong>
     </div>
   </section>
 
-  <div class="day-list" aria-label="Daily timesheet entries">
-    @for (day of weekDays(); track day.toISOString()) {
-      @let entries = rowsForDay(day);
-      @let hasEntries = entries.length > 0;
-      @let collapsed = isDayCollapsed(day);
-
-      <section class="day-section" [class.day-section--collapsed]="collapsed">
-        <div class="day-header" (click)="toggleDay(day)" role="button" [attr.aria-expanded]="!collapsed">
-          <i class="pi day-chevron" [class.pi-chevron-down]="!collapsed" [class.pi-chevron-right]="collapsed" aria-hidden="true"></i>
-          <i class="pi pi-calendar day-cal-icon" aria-hidden="true"></i>
-          <h2 class="day-name">{{ day | date: 'EEE, MMM d' }}</h2>
-          @if (hasEntries) {
-            <span class="day-hours-pill">{{ totalForDay(day) | number: '1.0-2' }}h logged</span>
-          }
-          <div class="day-header-actions">
-            <button pButton type="button" size="small" icon="pi pi-plus" label="Add Entry" class="add-entry-btn" (click)="$event.stopPropagation(); addRow(day)" [disabled]="isLocked() || isLoading()"></button>
-          </div>
-        </div>
-
-        @if (!collapsed) {
-          <div class="entry-table" role="table" [attr.aria-label]="'Entries for ' + (day | date: 'EEEE, MMMM d')">
-            <div class="entry-row entry-row--head" role="row">
-              <span role="columnheader">Project</span>
-              <span role="columnheader">Work Order</span>
-              <span role="columnheader">Task / Description</span>
-              <span role="columnheader">Location</span>
-              <span role="columnheader">Hours</span>
-              <span role="columnheader">OT</span>
-              <span role="columnheader">ND</span>
-              <span role="columnheader">Status</span>
-              <span role="columnheader" aria-label="Actions"></span>
-            </div>
-
-            @for (item of entries; track item.row.localId + item.cell.date) {
-              <div class="entry-row" role="row" [class.row-readonly]="isRowReadonly(item.row)">
-                <label class="entry-field entry-field--project">
-                  <p-select
-                    [ngModel]="item.row.customerId"
-                    (ngModelChange)="onRowCustomerChange(item.row, $event)"
-                    [options]="uniqueCustomers()"
-                    optionLabel="label"
-                    optionValue="value"
-                    [filter]="true"
-                    filterBy="label"
-                    placeholder="Select project"
-                    appendTo="body"
-                    [disabled]="isRowReadonly(item.row)"
-                    styleClass="entry-select"
-                  />
-                </label>
-
-                <label class="entry-field">
-                  <p-select
-                    [ngModel]="item.row.projectId"
-                    (ngModelChange)="onRowWorkOrderChange(item.row, $event)"
-                    [options]="workOrdersForRow(item.row)"
-                    optionLabel="label"
-                    optionValue="value"
-                    [filter]="true"
-                    filterBy="label"
-                    placeholder="Work order"
-                    appendTo="body"
-                    [disabled]="isRowReadonly(item.row) || !item.row.customerId"
-                    styleClass="entry-select"
-                  />
-                </label>
-
-                <div class="entry-field entry-field--task">
-                  <div
-                    class="task-preview"
-                    [class.task-preview--readonly]="isRowReadonly(item.row)"
-                    [class.task-preview--empty]="!item.row.task"
-                    (click)="openTaskPopover(item.row)"
-                  >
-                    {{ item.row.task || 'Work performed' }}
-                  </div>
-                </div>
-
-                <label class="entry-field">
-                  <p-select
-                    [(ngModel)]="item.row.location"
-                    (ngModelChange)="onLocationChange(item.row)"
-                    [options]="locationOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    appendTo="body"
-                    [disabled]="isRowReadonly(item.row)"
-                    styleClass="entry-select"
-                  />
-                </label>
-
-                <label class="entry-field entry-field--hours">
-                  <input
-                    type="number"
-                    class="cell-input hours-input"
-                    min="0"
-                    max="24"
-                    step="0.25"
-                    [(ngModel)]="item.cell.hours"
-                    (ngModelChange)="markCellDirty(item.row, item.cell)"
-                    [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"
-                  />
-                </label>
-
-                <div class="check-field">
-                  <input type="checkbox" [(ngModel)]="item.row.isOvertime" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
-                </div>
-
-                <div class="check-field">
-                  <input type="checkbox" [(ngModel)]="item.row.isNightDifferential" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
-                </div>
-
-                <div class="entry-status">
-                  <span [class]="statusClass(item.cell.status)">{{ statusLabel(item.cell.status) }}</span>
-                  @if (item.cell.rejectionReason) {
-                    <small [title]="item.cell.rejectionReason">{{ item.cell.rejectionReason }}</small>
-                  }
-                </div>
-
-                <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Delete entry" (click)="deleteDayEntry(item.row, item.cell)" [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"></button>
-              </div>
-            }
-
-            @if (!hasEntries) {
-              <div class="empty-day">
-                <i class="pi pi-calendar-plus"></i>
-                <span>No entries for this day. Click "+ Add Entry" to get started.</span>
-              </div>
-            }
-          </div>
-
-          <div class="entry-cards">
-            @for (item of entries; track item.row.localId + item.cell.date) {
-              <div class="entry-card" [class.entry-card--readonly]="isRowReadonly(item.row)">
-                <div class="entry-card-header">
-                  <div class="entry-card-project">
-                    <p-select
-                      [ngModel]="item.row.customerId"
-                      (ngModelChange)="onRowCustomerChange(item.row, $event)"
-                      [options]="uniqueCustomers()"
-                      optionLabel="label"
-                      optionValue="value"
-                      [filter]="true"
-                      filterBy="label"
-                      placeholder="Select project"
-                      appendTo="body"
-                      [disabled]="isRowReadonly(item.row)"
-                      styleClass="entry-select"
-                    />
-                  </div>
-                  <div class="entry-card-meta">
-                    <span [class]="statusClass(item.cell.status)">{{ statusLabel(item.cell.status) }}</span>
-                    <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Delete entry" (click)="deleteDayEntry(item.row, item.cell)" [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"></button>
-                  </div>
-                </div>
-
-                <div class="entry-card-work-order">
-                  <p-select
-                    [ngModel]="item.row.projectId"
-                    (ngModelChange)="onRowWorkOrderChange(item.row, $event)"
-                    [options]="workOrdersForRow(item.row)"
-                    optionLabel="label"
-                    optionValue="value"
-                    [filter]="true"
-                    filterBy="label"
-                    placeholder="Select work order"
-                    appendTo="body"
-                    [disabled]="isRowReadonly(item.row) || !item.row.customerId"
-                    styleClass="entry-select"
-                  />
-                </div>
-
-                <div
-                  class="entry-card-task"
-                  [class.entry-card-task--empty]="!item.row.task"
-                  (click)="openTaskPopover(item.row)"
-                >
-                  <span>{{ item.row.task || 'Tap to add task description...' }}</span>
-                  <i class="pi pi-pencil"></i>
-                </div>
-
-                <div class="entry-card-footer">
-                  <label class="entry-card-field">
-                    <span>Location</span>
-                    <p-select
-                      [(ngModel)]="item.row.location"
-                      (ngModelChange)="onLocationChange(item.row)"
-                      [options]="locationOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      appendTo="body"
-                      [disabled]="isRowReadonly(item.row)"
-                      styleClass="entry-select"
-                    />
-                  </label>
-
-                  <label class="entry-card-field entry-card-field--hours">
-                    <span>Hours</span>
-                    <input
-                      type="number"
-                      class="cell-input hours-input"
-                      min="0"
-                      max="24"
-                      step="0.25"
-                      [(ngModel)]="item.cell.hours"
-                      (ngModelChange)="markCellDirty(item.row, item.cell)"
-                      [disabled]="isRowReadonly(item.row) || isCellReadonly(item.cell)"
-                    />
-                  </label>
-
-                  <label class="entry-card-field entry-card-field--check">
-                    <span>OT</span>
-                    <input type="checkbox" [(ngModel)]="item.row.isOvertime" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
-                  </label>
-
-                  <label class="entry-card-field entry-card-field--check">
-                    <span>ND</span>
-                    <input type="checkbox" [(ngModel)]="item.row.isNightDifferential" (ngModelChange)="markDirty(item.row)" [disabled]="isRowReadonly(item.row)" />
-                  </label>
-                </div>
-
-                @if (item.cell.rejectionReason) {
-                  <div class="entry-card-rejection">
-                    <i class="pi pi-exclamation-circle"></i>
-                    <span>{{ item.cell.rejectionReason }}</span>
-                  </div>
-                }
-              </div>
-            }
-
-            @if (!hasEntries) {
-              <div class="empty-day">
-                <i class="pi pi-calendar-plus"></i>
-                <span>No entries. Tap "+ Add Entry" to get started.</span>
-              </div>
-            }
-          </div>
-        }
-      </section>
-    }
+  <div class="grid-toolbar">
+    <label class="grid-search" aria-label="Search projects">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input type="text" placeholder="Search projects…" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" />
+    </label>
+    <button pButton type="button" icon="pi pi-plus" label="Add Project" class="add-project-btn" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
   </div>
 
-  @if (taskPopover(); as popover) {
-    <div class="dialog-backdrop" role="presentation" (click)="closeTaskPopover(false)">
-      <div class="app-dialog task-popover-dialog" role="dialog" aria-modal="true" aria-labelledby="task-popover-title" (click)="$event.stopPropagation()">
-        <div class="dialog-header">
-          <h3 id="task-popover-title" class="dialog-title">
-            {{ popover.readonly ? 'Task Description' : 'Edit Task Description' }}
-          </h3>
-        </div>
-
-        <div class="task-popover-body">
-          @if (popover.readonly) {
-            <div class="task-popover-readonly">
-              {{ popover.task || 'No description provided.' }}
-            </div>
-          } @else {
-            <textarea
-              class="task-popover-textarea"
-              [(ngModel)]="popover.task"
-              placeholder="Describe the work performed..."
-              rows="6"
-              autofocus
-            ></textarea>
+  <div class="grid-card">
+    <div class="grid-scroll">
+      <div class="grid-table" role="table" aria-label="Weekly timesheet grid">
+        <div class="grid-row grid-row--head" role="row">
+          <span class="grid-cell grid-cell--label" role="columnheader">Task List</span>
+          @for (day of weekDays(); track day.toISOString()) {
+            <span class="grid-cell grid-cell--day" role="columnheader">
+              <strong>{{ day | date: 'EEE' }}</strong>
+              <small>{{ day | date: 'M/d' }}</small>
+            </span>
           }
+          <span class="grid-cell grid-cell--actions" role="columnheader" aria-label="Actions"></span>
         </div>
 
-        <div class="task-popover-actions">
-          @if (popover.readonly) {
-            <button pButton type="button" label="Close" (click)="closeTaskPopover(false)"></button>
+        @for (projectId of filteredProjectIds(); track projectId) {
+          <div class="grid-row" role="row">
+            <span class="grid-cell grid-cell--label" role="rowheader">
+              <span class="grid-cell-project-name">{{ projectName(projectId) }}</span>
+              @if (projectWorkOrder(projectId)) {
+                <span class="entry-item-tag">{{ projectWorkOrder(projectId) }}</span>
+              }
+            </span>
+            @for (day of weekDays(); track day.toISOString()) {
+              @let entry = entryForCell(projectId, day);
+              <button
+                type="button"
+                class="grid-cell grid-cell--value"
+                [class]="cellStatusClass(entry)"
+                (click)="openEntryCellModal(projectId, day)"
+              >
+                {{ cellLabel(entry) }}
+                @if (entry) {
+                  <span [class]="statusBadgeClass(entry.status)" [title]="entry.status === 'REJECTED' ? entry.rejectionReason ?? '' : ''">
+                    {{ statusBadgeLabel(entry.status) }}
+                  </span>
+                }
+              </button>
+            }
+            <span class="grid-cell grid-cell--actions">
+              <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Remove project" (click)="removeProjectRow(projectId)" [disabled]="isLocked() || isSavingDrafts()"></button>
+            </span>
+          </div>
+        }
+
+        @if (filteredProjectIds().length === 0) {
+          <div class="grid-empty">
+            <i class="pi pi-briefcase" aria-hidden="true"></i>
+            <span>No projects added yet. Click "+ Add Project" to get started.</span>
+          </div>
+        }
+
+        <div class="grid-row grid-row--total" role="row">
+          <span class="grid-cell grid-cell--label">Total</span>
+          @for (day of weekDays(); track day.toISOString()) {
+            <span class="grid-cell grid-cell--value">{{ totalForDay(day) | number: '1.0-2' }} hr</span>
+          }
+          <span class="grid-cell grid-cell--actions"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @if (addProjectModal(); as addProject) {
+    <div class="dialog-backdrop" role="presentation" (click)="closeAddProjectModal()">
+      <div class="app-dialog add-project-dialog" role="dialog" aria-modal="true" aria-labelledby="add-project-title" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h3 id="add-project-title" class="dialog-title">Add Project</h3>
+        </div>
+
+        <div class="modal-body">
+          <label class="modal-field">
+            <span>Project</span>
+            <p-select
+              [ngModel]="addProject.projectId"
+              (ngModelChange)="onAddProjectChange($event)"
+              [options]="projectOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              placeholder="Select a project"
+              appendTo="body"
+              styleClass="entry-select"
+            />
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="closeAddProjectModal()"></button>
+          <button pButton type="button" icon="pi pi-plus" label="Add" [disabled]="!addProject.projectId" (click)="confirmAddProject()"></button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (entryModal(); as entry) {
+    <div class="dialog-backdrop" role="presentation" (click)="closeEntryModal(false)">
+      <div class="app-dialog entry-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="entry-modal-title" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h3 id="entry-modal-title" class="dialog-title">
+            {{ entry.readonly ? 'Entry Details' : entry.isNew ? 'Add Entry' : 'Edit Entry' }}
+          </h3>
+          <button type="button" class="dialog-close-btn" (click)="closeEntryModal(false)" aria-label="Close">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="entry-summary-card">
+            <div class="entry-summary-row">
+              <span class="entry-summary-label">Date</span>
+              <strong class="entry-summary-value">{{ entry.date | date: 'EEEE, MMM d' }}</strong>
+            </div>
+            <div class="entry-summary-row">
+              <span class="entry-summary-label">Project Name</span>
+              <strong class="entry-summary-value">{{ projectName(entry.projectId) }}</strong>
+            </div>
+            @if (projectWorkOrder(entry.projectId)) {
+              <div class="entry-summary-row">
+                <span class="entry-summary-label">Project Tag</span>
+                <span class="entry-summary-tag">{{ projectWorkOrder(entry.projectId) }}</span>
+              </div>
+            }
+            <div class="entry-summary-row">
+              <span class="entry-summary-label">Status</span>
+              <span [class]="statusBadgeClass(entry.status)">{{ statusBadgeLabel(entry.status) }}</span>
+            </div>
+          </div>
+
+          @if (entry.status === 'REJECTED' && entry.rejectionReason) {
+            <div class="entry-modal-rejection">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              <span>Rejected: {{ entry.rejectionReason }}</span>
+            </div>
+          }
+
+          <div class="modal-field-row grid grid-cols-2 gap-4">
+            <label class="modal-field">
+              <span>Hours</span>
+              <input
+                type="number"
+                class="cell-input"
+                [class.cell-input--invalid]="entryHoursInvalid()"
+                min="0"
+                max="24"
+                step="0.25"
+                [(ngModel)]="entry.hours"
+                [disabled]="entry.readonly"
+              />
+              @if (entryHoursInvalid()) {
+                <small class="modal-field-error">Hours is required and must be greater than 0.</small>
+              }
+            </label>
+
+            <label class="modal-field">
+              <span>Work Type</span>
+              <p-select
+                [ngModel]="entry.workType"
+                (ngModelChange)="onEntryWorkTypeChange($event)"
+                [options]="workTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                [disabled]="entry.readonly"
+                appendTo="body"
+                styleClass="entry-select"
+              />
+            </label>
+          </div>
+
+          <div class="modal-field-row grid grid-cols-2 gap-4">
+            <label class="modal-field">
+              <span>Location</span>
+              <p-select
+                [(ngModel)]="entry.location"
+                [options]="locationOptions"
+                optionLabel="label"
+                optionValue="value"
+                [editable]="true"
+                [disabled]="entry.readonly"
+                appendTo="body"
+                styleClass="entry-select"
+              />
+            </label>
+
+            <div class="modal-field modal-field--checkboxes">
+              <span>Flags</span>
+              <div class="modal-checkbox-row">
+                <label class="modal-checkbox">
+                  <input type="checkbox" [(ngModel)]="entry.isOvertime" [disabled]="entry.readonly" />
+                  <span>Overtime (OT)</span>
+                </label>
+                <label class="modal-checkbox">
+                  <input type="checkbox" [(ngModel)]="entry.isNightDifferential" [disabled]="entry.readonly" />
+                  <span>Night Differential (ND)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-field">
+            <span>Task</span>
+            <p-editor
+              [(ngModel)]="entry.task"
+              [disabled]="entry.readonly"
+              [class.cell-input--invalid]="entryTaskInvalid()"
+              styleClass="entry-editor"
+            >
+              <ng-template pTemplate="header">
+                <span class="ql-formats">
+                  <button class="ql-bold" aria-label="Bold" type="button"></button>
+                  <button class="ql-italic" aria-label="Italic" type="button"></button>
+                </span>
+                <span class="ql-formats">
+                  <button class="ql-list" value="ordered" aria-label="Ordered list" type="button"></button>
+                  <button class="ql-list" value="bullet" aria-label="Bullet list" type="button"></button>
+                </span>
+              </ng-template>
+            </p-editor>
+            @if (entryTaskInvalid()) {
+              <small class="modal-field-error">Task is required.</small>
+            }
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          @if (entry.readonly) {
+            <button pButton type="button" label="Close" (click)="closeEntryModal(false)"></button>
           } @else {
-            <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="closeTaskPopover(false)"></button>
-            <button pButton type="button" icon="pi pi-check" label="Done" (click)="closeTaskPopover(true)"></button>
+            <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="closeEntryModal(false)"></button>
+            <button pButton type="button" icon="pi pi-check" label="Save" (click)="closeEntryModal(true)"></button>
           }
         </div>
       </div>

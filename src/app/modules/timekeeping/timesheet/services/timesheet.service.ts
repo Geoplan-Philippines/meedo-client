@@ -51,7 +51,7 @@ export class TimesheetService {
   submitWeek(periodStart: string, periodEnd: string) {
     return this.http
       .post<ApiResponse<SubmitWeekResult>>(
-        `${this.baseUrl}/submit-week`,
+        `${this.baseUrl}/entries/submit-week`,
         { periodStart, periodEnd },
         { withCredentials: true },
       )
