@@ -1,0 +1,582 @@
+<p-toast />
+
+<div class="approval-page">
+
+  <!-- ─── Header ──────────────────────────────────────────────────────── -->
+  <header class="page-header">
+    <div class="header-left">
+      <span class="page-kicker">Timekeeping</span>
+      <h1 class="page-title">Approvals</h1>
+    </div>
+
+    <div class="header-right">
+      <div class="week-picker-group">
+        <p-datepicker
+          inputId="approval-week"
+          [ngModel]="selectedDate()"
+          (ngModelChange)="onWeekChange($event)"
+          [showIcon]="true"
+          dateFormat="M d, yy"
+          appendTo="body"
+        />
+        <span class="week-range-label">{{ weekLabel() }}</span>
+        @if (isPeriodLocked()) {
+          <span class="lock-badge" aria-label="Period is locked">
+            <i class="pi pi-lock" aria-hidden="true"></i> Locked
+          </span>
+        }
+      </div>
+
+      <div class="header-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          icon="pi pi-refresh"
+          (click)="loadData()"
+          [loading]="isLoading()"
+          aria-label="Reload data"
+        ></button>
+        @if (isPeriodLocked()) {
+          <button pButton type="button" icon="pi pi-lock-open" label="Unlock" (click)="openUnlockDialog()" [loading]="isUnlocking()" [disabled]="isLoading()"></button>
+        } @else {
+          <button pButton type="button" severity="danger" [outlined]="true" icon="pi pi-lock" label="Lock week" (click)="lockPeriod()" [loading]="isLocking()" [disabled]="isLoading()"></button>
+        }
+        <button pButton type="button" icon="pi pi-file-excel" label="Export" (click)="exportWorkbook()" [loading]="isExporting()" [disabled]="isLoading()"></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Stats Strip ──────────────────────────────────────────────────── -->
+  <section class="hours-strip" aria-label="Week statistics">
+    <div class="hours-chip hours-chip--total">
+      <span class="hours-chip-label">Pending Approvals</span>
+      <strong class="hours-chip-value">{{ summary()?.totalsByStatus?.['SUBMITTED'] ?? 0 }}</strong>
+    </div>
+
+    <div class="hours-chip">
+      <span class="hours-chip-label">Approved This Week</span>
+      <strong class="hours-chip-value">{{ summary()?.totalsByStatus?.['APPROVED'] ?? 0 }}</strong>
+    </div>
+
+    <div class="hours-chip hours-chip--rejected">
+      <span class="hours-chip-label">Rejected</span>
+      <strong class="hours-chip-value">{{ summary()?.totalsByStatus?.['REJECTED'] ?? 0 }}</strong>
+    </div>
+
+    <div class="hours-chip">
+      <span class="hours-chip-label">Submitted Hours</span>
+      <strong class="hours-chip-value">{{ (summary()?.totalHours ?? 0) | number: '1.0-0' }}h</strong>
+    </div>
+
+    <div class="hours-chip hours-chip--ot">
+      <span class="hours-chip-label">Overtime Hours</span>
+      <strong class="hours-chip-value">{{ totalOvertimeHours() | number: '1.0-0' }}h</strong>
+    </div>
+  </section>
+
+  <!-- ─── Filter + Tab Bar ─────────────────────────────────────────────── -->
+  <div class="filter-bar">
+    <div class="status-tabs" role="tablist" aria-label="Filter by status">
+      <button
+        role="tab"
+        class="tab-btn"
+        [class.tab-btn--active]="activeTab() === null"
+        [attr.aria-selected]="activeTab() === null"
+        (click)="setActiveTab(null)"
+      >
+        All
+        <span class="tab-count">{{ tabCounts().all }}</span>
+      </button>
+      <button
+        role="tab"
+        class="tab-btn"
+        [class.tab-btn--active]="activeTab() === 'SUBMITTED'"
+        [attr.aria-selected]="activeTab() === 'SUBMITTED'"
+        (click)="setActiveTab('SUBMITTED')"
+      >
+        Submitted
+        <span class="tab-count tab-count--pending">{{ tabCounts().submitted }}</span>
+      </button>
+      <button
+        role="tab"
+        class="tab-btn"
+        [class.tab-btn--active]="activeTab() === 'APPROVED'"
+        [attr.aria-selected]="activeTab() === 'APPROVED'"
+        (click)="setActiveTab('APPROVED')"
+      >
+        Approved
+        <span class="tab-count tab-count--approved">{{ tabCounts().approved }}</span>
+      </button>
+      <button
+        role="tab"
+        class="tab-btn"
+        [class.tab-btn--active]="activeTab() === 'REJECTED'"
+        [attr.aria-selected]="activeTab() === 'REJECTED'"
+        (click)="setActiveTab('REJECTED')"
+      >
+        Rejected
+        <span class="tab-count tab-count--rejected">{{ tabCounts().rejected }}</span>
+      </button>
+    </div>
+
+    <div class="filter-inputs">
+      <input
+        pInputText
+        [ngModel]="employeeFilter()"
+        (ngModelChange)="employeeFilter.set($event)"
+        placeholder="Search employee…"
+        class="filter-search"
+        aria-label="Search employees by name or email"
+      />
+      <p-select
+        [ngModel]="projectFilter()"
+        (ngModelChange)="projectFilter.set($event)"
+        [options]="projects()"
+        optionLabel="displayName"
+        optionValue="id"
+        [filter]="true"
+        [showClear]="true"
+        placeholder="All projects"
+        appendTo="body"
+        (onChange)="applyFilters()"
+        aria-label="Filter by project"
+      />
+    </div>
+  </div>
+
+  <!-- Bulk action bar (appears when rows are selected) -->
+  @if (selectedCount() > 0) {
+    <div class="bulk-bar" role="status" aria-live="polite">
+      <span class="bulk-count">{{ selectedCount() }} row(s) selected</span>
+      <div class="bulk-actions">
+        <button pButton type="button" size="small" icon="pi pi-check" label="Approve" (click)="approveSelected()" [loading]="isApproving()" [disabled]="isPeriodLocked()"></button>
+        <button pButton type="button" size="small" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject" (click)="openRejectDialog()" [disabled]="isPeriodLocked() || isApproving()"></button>
+        <button pButton type="button" size="small" severity="secondary" [text]="true" label="Clear selection" (click)="toggleAllSubmitted(false)"></button>
+      </div>
+    </div>
+  }
+
+  <!-- ─── Desktop Split Layout ──────────────────────────────────────────── -->
+  <div class="main-split" [class.main-split--panel]="selectedEmployee()">
+
+    <!-- Employee Table -->
+    <section class="table-panel" aria-label="Employee timesheet list">
+      <div class="table-wrap">
+        <p-table
+          [value]="filteredEmployees()"
+          [loading]="isLoading()"
+          [rowHover]="true"
+          class="approval-table"
+          [tableStyle]="{ 'min-width': '600px' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" class="col-check">
+                <input
+                  type="checkbox"
+                  [checked]="selectedCount() > 0 && selectedCount() === submittedEntryIds().length"
+                  (change)="toggleAllSubmitted($any($event.target).checked)"
+                  [disabled]="isPeriodLocked() || submittedEntryIds().length === 0"
+                  aria-label="Select all submitted entries"
+                />
+              </th>
+              <th scope="col">Employee</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="col-num">Total</th>
+              <th scope="col" class="col-num">Regular</th>
+              <th scope="col" class="col-num">OT</th>
+              <th scope="col" class="col-num">Pending</th>
+              <th scope="col" class="col-chevron"></th>
+              <th scope="col" class="col-action"></th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-employee>
+            <tr
+              [class.row--active]="selectedEmployee()?.userId === employee.userId"
+              (click)="selectEmployee(employee)"
+              style="cursor: pointer"
+            >
+              <td class="col-check" (click)="$event.stopPropagation()">
+                <input
+                  type="checkbox"
+                  [checked]="employeeAllSubmittedSelected(employee)"
+                  [indeterminate]="employeeSomeSubmittedSelected(employee)"
+                  (change)="toggleEmployeeSubmitted(employee, $any($event.target).checked)"
+                  [disabled]="isPeriodLocked() || employeeSubmittedCount(employee) === 0"
+                  [attr.aria-label]="'Select submitted entries for ' + employee.employeeName"
+                />
+              </td>
+              <td>
+                <div class="employee-cell">
+                  <div class="employee-avatar" aria-hidden="true">{{ getInitials(employee.employeeName) }}</div>
+                  <div class="employee-info">
+                    <strong>{{ employee.employeeName }}</strong>
+                    <small>{{ employee.employeeEmail }}</small>
+                  </div>
+                </div>
+              </td>
+              <td><span [class]="statusClass(employee.status)">{{ employee.status }}</span></td>
+              <td class="col-num">{{ employee.totalHours | number: '1.1-1' }}h</td>
+              <td class="col-num">{{ employee.regularHours | number: '1.1-1' }}h</td>
+              <td class="col-num">{{ employee.overtimeHours | number: '1.1-1' }}h</td>
+              <td class="col-num">
+                @if (employeeSubmittedCount(employee) > 0) {
+                  <span class="pending-pill">{{ employeeSubmittedCount(employee) }}</span>
+                } @else {
+                  <span class="no-value">—</span>
+                }
+              </td>
+              <td class="col-chevron">
+                <i class="pi pi-chevron-right row-chevron" aria-hidden="true"></i>
+              </td>
+              <td class="col-action" (click)="$event.stopPropagation()">
+                <button
+                  pButton
+                  type="button"
+                  [text]="true"
+                  size="small"
+                  icon="pi pi-eye"
+                  (click)="navigateToReview($event, employee)"
+                  [attr.aria-label]="'Review timesheet for ' + employee.employeeName"
+                  pTooltip="Review full timesheet"
+                  tooltipPosition="left"
+                ></button>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="9">
+                <div class="empty-state">
+                  <div class="empty-icon"><i class="pi pi-inbox" aria-hidden="true"></i></div>
+                  <p class="empty-title">No timesheets found</p>
+                  <p class="empty-body">Try changing the week or adjusting your filters.</p>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      @if (!isLoading() && filteredEmployees().length > 0) {
+        <div class="table-footer">
+          Showing {{ filteredEmployees().length }} of {{ employees().length }} employee(s)
+        </div>
+      }
+    </section>
+
+    <!-- ─── Submission Detail Panel ──────────────────────────────────── -->
+    @if (selectedEmployee(); as emp) {
+      <aside class="detail-panel" [attr.aria-label]="'Submission details — ' + emp.employeeName">
+
+        <div class="detail-panel-head">
+          <h2 class="detail-heading">Submission Details</h2>
+          <button type="button" class="panel-close" (click)="closePanel()" aria-label="Close detail panel">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="detail-scroll">
+
+          <!-- Employee identity -->
+          <div class="detail-employee">
+            <div class="detail-avatar" aria-hidden="true">{{ getInitials(emp.employeeName) }}</div>
+            <div class="detail-meta">
+              <strong class="detail-name">{{ emp.employeeName }}</strong>
+              <small class="detail-email">{{ emp.employeeEmail }}</small>
+              @if (emp.department) {
+                <small class="detail-dept">{{ emp.department }}</small>
+              }
+            </div>
+            <span [class]="statusClass(emp.status)">{{ emp.status }}</span>
+          </div>
+
+          <!-- Hourly Summary -->
+          <div class="detail-section">
+            <span class="detail-section-label">Hourly Summary</span>
+            <div class="day-grid">
+              @for (day of weekDays(); track $index) {
+                <div class="day-cell">
+                  <span class="day-name">{{ dayLabel(day) }}</span>
+                  <strong class="day-hours">
+                    @if (employeeDayHours(emp, day) > 0) {
+                      {{ employeeDayHours(emp, day) | number: '1.0-1' }}h
+                    } @else {
+                      —
+                    }
+                  </strong>
+                </div>
+              }
+              <div class="day-cell day-cell--total">
+                <span class="day-name">Total</span>
+                <strong class="day-hours">{{ emp.totalHours | number: '1.0-1' }}h</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Entries -->
+          <div class="detail-section detail-section--entries">
+            <div class="detail-section-head">
+              <span class="detail-section-label">Daily Entries</span>
+              <span class="entry-count-badge">{{ emp.entries.length }}</span>
+            </div>
+            <div class="entries-scroll">
+              <table class="entries-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Project / Task</th>
+                    <th scope="col" class="col-num">Hrs</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (entry of emp.entries; track entry.id) {
+                    <tr [class.entry-row--approved]="entry.status === 'APPROVED'" [class.entry-row--rejected]="entry.status === 'REJECTED'">
+                      <td class="entry-date">{{ entry.workDate | date: 'MMM d' }}</td>
+                      <td class="entry-task">
+                        <span class="entry-project">{{ projectLabel(entry) }}</span>
+                        @if (entry.task) {
+                          <small class="entry-task-text">{{ entry.task }}</small>
+                        }
+                      </td>
+                      <td class="entry-hrs">{{ entry.hours | number: '1.1-1' }}</td>
+                      <td class="entry-status-cell">
+                        <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
+                        @if (entry.rejectionReason) {
+                          <small class="rejection-note">{{ entry.rejectionReason }}</small>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Panel Footer with Approve/Reject -->
+        <div class="panel-footer">
+          @if (isPeriodLocked()) {
+            <div class="footer-info footer-info--locked">
+              <i class="pi pi-lock" aria-hidden="true"></i>
+              <span>Period locked — unlock to make changes.</span>
+            </div>
+          } @else if (hasSubmittedEntries(emp)) {
+            <button
+              pButton
+              type="button"
+              class="btn-approve-panel"
+              icon="pi pi-check"
+              label="Approve Timesheet"
+              (click)="approveEmployee(emp)"
+              [loading]="isApproving()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              severity="danger"
+              [outlined]="true"
+              icon="pi pi-times"
+              label="Reject Timesheet"
+              (click)="rejectEmployee(emp)"
+              [disabled]="isApproving()"
+            ></button>
+          } @else {
+            <div class="footer-info">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <span>No pending entries to act on.</span>
+            </div>
+          }
+        </div>
+
+      </aside>
+    }
+  </div>
+
+  <!-- ─── Mobile Employee List ────────────────────────────────────────── -->
+  <div class="mobile-list" aria-label="Employee list">
+    @if (isLoading()) {
+      <div class="empty-state">
+        <div class="empty-icon"><i class="pi pi-spin pi-spinner" aria-hidden="true"></i></div>
+        <p class="empty-title">Loading approval summary…</p>
+      </div>
+    } @else {
+      @for (employee of filteredEmployees(); track employee.userId) {
+        <article
+          class="mobile-card"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="'View details for ' + employee.employeeName"
+          (click)="selectEmployee(employee)"
+          (keydown.enter)="selectEmployee(employee)"
+          (keydown.space)="selectEmployee(employee)"
+        >
+          <div class="mobile-card-top">
+            <div class="employee-cell">
+              <div class="employee-avatar" aria-hidden="true">{{ getInitials(employee.employeeName) }}</div>
+              <div class="employee-info">
+                <strong>{{ employee.employeeName }}</strong>
+                <small>{{ employee.employeeEmail }}</small>
+              </div>
+            </div>
+            <span [class]="statusClass(employee.status)">{{ employee.status }}</span>
+          </div>
+          <dl class="mobile-metrics">
+            <div><dt>Total</dt><dd>{{ employee.totalHours | number: '1.1-1' }}h</dd></div>
+            <div><dt>Regular</dt><dd>{{ employee.regularHours | number: '1.1-1' }}h</dd></div>
+            <div><dt>OT</dt><dd>{{ employee.overtimeHours | number: '1.1-1' }}h</dd></div>
+            <div><dt>Pending</dt><dd>{{ employeeSubmittedCount(employee) }}</dd></div>
+          </dl>
+        </article>
+      } @empty {
+        <div class="empty-state">
+          <div class="empty-icon"><i class="pi pi-inbox" aria-hidden="true"></i></div>
+          <p class="empty-title">No timesheets found</p>
+          <p class="empty-body">Try changing the week or adjusting your filters.</p>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ─── Mobile Overlay (detail sheet) ──────────────────────────────── -->
+  @if (selectedEmployee(); as emp) {
+    <div class="mobile-overlay" role="dialog" [attr.aria-label]="'Details — ' + emp.employeeName" aria-modal="true">
+      <button type="button" class="mobile-overlay-scrim" (click)="closePanel()" aria-label="Close"></button>
+      <div class="mobile-sheet">
+        <div class="mobile-sheet-handle" aria-hidden="true"></div>
+
+        <div class="detail-panel-head">
+          <h2 class="detail-heading">Submission Details</h2>
+          <button type="button" class="panel-close" (click)="closePanel()" aria-label="Close">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="detail-scroll">
+
+          <div class="detail-employee">
+            <div class="detail-avatar" aria-hidden="true">{{ getInitials(emp.employeeName) }}</div>
+            <div class="detail-meta">
+              <strong class="detail-name">{{ emp.employeeName }}</strong>
+              <small class="detail-email">{{ emp.employeeEmail }}</small>
+            </div>
+            <span [class]="statusClass(emp.status)">{{ emp.status }}</span>
+          </div>
+
+          <div class="detail-section">
+            <span class="detail-section-label">Hourly Summary</span>
+            <div class="day-grid">
+              @for (day of weekDays(); track $index) {
+                <div class="day-cell">
+                  <span class="day-name">{{ dayLabel(day) }}</span>
+                  <strong class="day-hours">
+                    @if (employeeDayHours(emp, day) > 0) {
+                      {{ employeeDayHours(emp, day) | number: '1.0-1' }}h
+                    } @else {
+                      —
+                    }
+                  </strong>
+                </div>
+              }
+              <div class="day-cell day-cell--total">
+                <span class="day-name">Total</span>
+                <strong class="day-hours">{{ emp.totalHours | number: '1.0-1' }}h</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section detail-section--entries">
+            <span class="detail-section-label">Daily Entries</span>
+            <div class="entries-scroll">
+              <table class="entries-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Project / Task</th>
+                    <th scope="col" class="col-num">Hrs</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (entry of emp.entries; track entry.id) {
+                    <tr>
+                      <td class="entry-date">{{ entry.workDate | date: 'MMM d' }}</td>
+                      <td class="entry-task">
+                        <span class="entry-project">{{ projectLabel(entry) }}</span>
+                        @if (entry.task) {
+                          <small class="entry-task-text">{{ entry.task }}</small>
+                        }
+                      </td>
+                      <td class="entry-hrs">{{ entry.hours | number: '1.1-1' }}</td>
+                      <td>
+                        <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
+                        @if (entry.rejectionReason) {
+                          <small class="rejection-note">{{ entry.rejectionReason }}</small>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="panel-footer">
+          @if (isPeriodLocked()) {
+            <div class="footer-info footer-info--locked">
+              <i class="pi pi-lock" aria-hidden="true"></i>
+              <span>Period locked.</span>
+            </div>
+          } @else if (hasSubmittedEntries(emp)) {
+            <button pButton type="button" class="btn-approve-panel" icon="pi pi-check" label="Approve Timesheet" (click)="approveEmployee(emp)" [loading]="isApproving()"></button>
+            <button pButton type="button" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject Timesheet" (click)="rejectEmployee(emp)" [disabled]="isApproving()"></button>
+          } @else {
+            <div class="footer-info">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <span>No pending entries.</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ─── Unlock Dialog ────────────────────────────────────────────────── -->
+  @if (showUnlockDialog()) {
+    <div class="dialog-backdrop" role="presentation">
+      <div class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="unlock-title">
+        <h3 id="unlock-title" class="dialog-title">Unlock {{ weekLabel() }}</h3>
+        <p class="dialog-body">Enter the reason for reopening this locked week. The reason is saved to the audit log.</p>
+        <textarea pTextarea rows="4" [ngModel]="unlockReason()" (ngModelChange)="unlockReason.set($event)" placeholder="Reason for unlocking…" class="dialog-textarea"></textarea>
+        <div class="dialog-actions">
+          <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="cancelUnlock()" [disabled]="isUnlocking()"></button>
+          <button pButton type="button" icon="pi pi-lock-open" label="Unlock week" (click)="unlockPeriod()" [loading]="isUnlocking()"></button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ─── Reject Dialog ────────────────────────────────────────────────── -->
+  @if (showRejectDialog()) {
+    <div class="dialog-backdrop" role="presentation">
+      <div class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="reject-title">
+        <h3 id="reject-title" class="dialog-title">Reject selected rows</h3>
+        <p class="dialog-body">Enter the reason employees will see for {{ selectedCount() }} rejected row(s).</p>
+        <textarea pTextarea rows="4" [ngModel]="rejectReason()" (ngModelChange)="rejectReason.set($event)" placeholder="Reason for rejection…" class="dialog-textarea"></textarea>
+        <div class="dialog-actions">
+          <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="cancelReject()" [disabled]="isRejecting()"></button>
+          <button pButton type="button" severity="danger" icon="pi pi-times" label="Reject rows" (click)="rejectSelected()" [loading]="isRejecting()"></button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

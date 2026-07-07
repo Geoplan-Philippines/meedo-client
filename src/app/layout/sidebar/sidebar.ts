@@ -22,7 +22,10 @@ interface NavSection {
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'md:w-64' },
+  host: {
+    class: 'sidebar-host',
+    '[class.sidebar-collapsed]': 'layoutService.sidebarCollapsed()',
+  },
 })
 export class Sidebar {
   layoutService = inject(LayoutService);
