@@ -25,11 +25,11 @@ export class TimesheetService {
 
   getEntries(periodStart: string, periodEnd: string) {
     return this.http
-      .get<ApiResponse<{ data: TimesheetEntry[] }>>(`${this.baseUrl}/entries`, {
+      .get<PaginatedApiResponse<TimesheetEntry>>(`${this.baseUrl}/entries`, {
         params: { periodStart, periodEnd },
         withCredentials: true,
       })
-      .pipe(map((response) => response.data));
+      .pipe(map((response) => ({ data: response.data })));
   }
 
   createEntry(payload: TimesheetEntryPayload) {
@@ -60,7 +60,7 @@ export class TimesheetService {
 
   getProjects() {
     return this.http
-      .get<ApiResponse<TimesheetProject[]>>(`${this.baseUrl}/projects`, {
+      .get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
         withCredentials: true,
       })
       .pipe(

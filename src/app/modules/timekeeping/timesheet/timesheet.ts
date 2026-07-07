@@ -532,7 +532,7 @@ export class Timesheet implements OnInit {
     const groups = new Map<string, TimesheetGridRow>();
 
     entries.forEach((entry) => {
-      const date = toDateInputValue(new Date(entry.workDate));
+      const date = entry.workDate.slice(0, 10);
       const key = [
         entry.projectId,
         entry.location,
