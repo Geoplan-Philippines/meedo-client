@@ -65,6 +65,7 @@
 
   <div class="grid-toolbar">
     <button pButton type="button" icon="pi pi-plus" label="Add Project" class="add-project-btn" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
+    <button pButton type="button" icon="pi pi-send" label="Submit for Approval" severity="secondary" (click)="submitWeek()" [loading]="isSubmittingWeek()" [disabled]="isLocked() || isLoading() || isSubmittingWeek() || !hasSubmittableEntries()"></button>
   </div>
 
   <div class="grid-card">
@@ -205,15 +206,15 @@
                 type="number"
                 class="cell-input"
                 [class.cell-input--invalid]="entryHoursInvalid()"
-                min="0"
-                max="24"
+                min="1"
+                max="9"
                 step="0.25"
                 [ngModel]="entry.hours"
                 (ngModelChange)="patchEntryModal({ hours: $event })"
                 [disabled]="entry.readonly"
               />
-              @if (entryHoursInvalid()) {
-                <small class="modal-field-error">Hours is required and must be greater than 0.</small>
+              @if (entryHoursError(); as hoursError) {
+                <small class="modal-field-error">{{ hoursError }}</small>
               }
             </label>
 

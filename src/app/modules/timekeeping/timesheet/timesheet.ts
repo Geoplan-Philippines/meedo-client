@@ -127,6 +127,7 @@ export class Timesheet implements OnInit {
   readonly isLoading = signal(false);
   readonly isRemovingProject = signal(false);
   readonly isSavingEntry = signal(false);
+  readonly isSubmittingWeek = signal(false);
   readonly isLocked = signal(false);
   readonly lockMessage = signal<string | null>(null);
   readonly showHistoryDialog = signal(false);
@@ -190,6 +191,8 @@ export class Timesheet implements OnInit {
     this.addedProjectIds().forEach((id) => ids.add(id));
     return [...ids];
   });
+
+  readonly hasSubmittableEntries = computed(() => this.entries().some((entry) => entry.status === 'DRAFT'));
 
   ngOnInit(): void {
     this.loadWeek();
@@ -258,7 +261,8 @@ export class Timesheet implements OnInit {
   }
 
   isEntryReadonly(entry: TimesheetDayEntry): boolean {
-    return this.isLocked() || (!!entry.entryId && entry.status !== 'DRAFT' && entry.status !== 'REJECTED');
+    // Draft, rejected, and submitted (pending) entries stay editable; approved or locked entries are read-only.
+    return this.isLocked() || entry.status === 'APPROVED';
   }
 
   statusBadgeClass(status: TimesheetEntryStatus): string {
@@ -382,9 +386,24 @@ export class Timesheet implements OnInit {
     this.entryModal.update((modal) => modal && { ...modal, ...patch });
   }
 
-  entryHoursInvalid(): boolean {
+  entryHoursError(): string | null {
     const modal = this.entryModal();
-    return !!modal && this.entrySaveAttempted() && !(Number(modal.hours) > 0);
+    if (!modal) return null;
+
+    const raw = modal.hours;
+    if (raw === null || raw === undefined || `${raw}`.trim() === '') {
+      return this.entrySaveAttempted() ? 'Hours is required.' : null;
+    }
+
+    const hours = Number(raw);
+    if (Number.isNaN(hours)) return 'Enter a valid number of hours.';
+    if (hours < 1) return 'Hours must be at least 1.';
+    if (hours > 9) return 'Hours cannot exceed 9.';
+    return null;
+  }
+
+  entryHoursInvalid(): boolean {
+    return !!this.entryHoursError();
   }
 
   entryTaskInvalid(): boolean {
@@ -401,7 +420,7 @@ export class Timesheet implements OnInit {
       return;
     }
 
-    if (!(Number(modal.hours) > 0) || !stripHtml(modal.task)) {
+    if (this.entryHoursError() || !stripHtml(modal.task)) {
       this.entrySaveAttempted.set(true);
       return;
     }
@@ -419,28 +438,35 @@ export class Timesheet implements OnInit {
 
     this.entryModal.set(null);
     this.isSavingEntry.set(true);
-    operation.subscribe({
+    operation.pipe(finalize(() => this.isSavingEntry.set(false))).subscribe({
       next: () => {
-        this.timesheetService.submitWeek(this.periodStart(), this.periodEnd())
-          .pipe(finalize(() => this.isSavingEntry.set(false)))
-          .subscribe({
-            next: () => {
-              this.messageService.add({ severity: 'success', summary: 'Submitted', detail: 'Entry submitted for approval' });
-              this.loadWeek();
-            },
-            error: (err: unknown) => {
-              console.error('Error submitting week:', err);
-              this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Entry saved, but failed to submit for approval.') });
-              this.loadWeek();
-            },
-          });
+        this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Entry saved. You can keep editing until the week is locked.' });
+        this.loadWeek();
       },
       error: (err: unknown) => {
-        this.isSavingEntry.set(false);
         console.error('Error saving entry:', err);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save entry') });
       },
     });
+  }
+
+  submitWeek(): void {
+    if (this.isLocked() || this.isSubmittingWeek()) return;
+
+    this.isSubmittingWeek.set(true);
+    this.timesheetService.submitWeek(this.periodStart(), this.periodEnd())
+      .pipe(finalize(() => this.isSubmittingWeek.set(false)))
+      .subscribe({
+        next: (result) => {
+          const count = result.submittedCount;
+          this.messageService.add({ severity: 'success', summary: 'Submitted', detail: `${count} ${count === 1 ? 'entry' : 'entries'} submitted for approval.` });
+          this.loadWeek();
+        },
+        error: (err: unknown) => {
+          console.error('Error submitting week:', err);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to submit week for approval.') });
+        },
+      });
   }
 
   hasUnsavedChanges(): boolean {
@@ -473,7 +499,7 @@ export class Timesheet implements OnInit {
 
   private validateModalEntry(modal: EntryModalState): string | null {
     const hours = Number(modal.hours) || 0;
-    if (hours > 24) return 'Hours must be between 0 and 24 per day.';
+    if (hours < 1 || hours > 9) return 'Hours must be between 1 and 9.';
 
     const otherTotal = this.entries()
       .filter((item) => item.localId !== modal.localId && item.date === modal.date)

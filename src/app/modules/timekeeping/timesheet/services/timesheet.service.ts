@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { map } from 'rxjs/operators';
+import { EMPTY } from 'rxjs';
+import { expand, map, reduce } from 'rxjs/operators';
 
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
@@ -59,18 +60,27 @@ export class TimesheetService {
   }
 
   getProjects() {
-    return this.http
-      .get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
-        withCredentials: true,
-      })
-      .pipe(
-        map((response) =>
-          response.data.map((project) => ({
-            ...project,
-            displayName: `${project.customerName} — ${project.workOrderNumber}`,
-          })),
-        ),
-      );
+    return this.fetchProjectsPage(1).pipe(
+      expand((response) =>
+        response.meta.page < response.meta.lastPage
+          ? this.fetchProjectsPage(response.meta.page + 1)
+          : EMPTY,
+      ),
+      reduce((all, response) => all.concat(response.data), [] as TimesheetProject[]),
+      map((projects) =>
+        projects.map((project) => ({
+          ...project,
+          displayName: `${project.customerName} — ${project.workOrderNumber}`,
+        })),
+      ),
+    );
+  }
+
+  private fetchProjectsPage(page: number) {
+    return this.http.get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
+      params: { page, limit: 50 },
+      withCredentials: true,
+    });
   }
 
   getSummary(filters: TimesheetSummaryFilters) {
