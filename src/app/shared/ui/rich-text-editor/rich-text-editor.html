@@ -1,0 +1,53 @@
+<div class="rte" [class.rte--readonly]="!editable()">
+  <div #editorHost class="rte-content" [attr.data-placeholder]="placeholder()"></div>
+
+  <div #bubbleMenuHost class="rte-bubble-menu">
+    <button
+      type="button"
+      class="rte-bubble-btn"
+      [class.rte-bubble-btn--active]="activeMarks().has('bold')"
+      aria-label="Bold"
+      (mousedown)="$event.preventDefault()"
+      (click)="toggleMark('bold')"
+    ><strong>B</strong></button>
+    <button
+      type="button"
+      class="rte-bubble-btn"
+      [class.rte-bubble-btn--active]="activeMarks().has('italic')"
+      aria-label="Italic"
+      (mousedown)="$event.preventDefault()"
+      (click)="toggleMark('italic')"
+    ><em>I</em></button>
+    <button
+      type="button"
+      class="rte-bubble-btn"
+      [class.rte-bubble-btn--active]="activeMarks().has('underline')"
+      aria-label="Underline"
+      (mousedown)="$event.preventDefault()"
+      (click)="toggleMark('underline')"
+    ><span class="rte-bubble-underline">U</span></button>
+  </div>
+
+  @if (menuOpen() && editable()) {
+    <div class="rte-slash-menu" [style.top.px]="menuPosition().top" [style.left.px]="menuPosition().left">
+      @for (item of filteredItems(); track item.label; let i = $index) {
+        <button
+          type="button"
+          class="rte-slash-item"
+          [class.rte-slash-item--active]="i === activeIndex()"
+          (mousedown)="$event.preventDefault()"
+          (click)="selectItem(item)"
+        >
+          <span class="rte-slash-item-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span class="rte-slash-item-text">
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.description }}</small>
+          </span>
+        </button>
+      }
+      @if (filteredItems().length === 0) {
+        <div class="rte-slash-empty">No matching blocks</div>
+      }
+    </div>
+  }
+</div>

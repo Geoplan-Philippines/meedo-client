@@ -49,6 +49,7 @@ export class TimesheetReview implements OnInit {
   readonly periodEnd = signal('');
 
   readonly expandedDates = signal<Set<string>>(new Set());
+  readonly taskPreviewContent = signal<string | null>(null);
 
   readonly isPeriodLocked = computed(() => this.periodLock()?.isLocked ?? false);
 
@@ -160,6 +161,14 @@ export class TimesheetReview implements OnInit {
 
   expandAll(): void {
     this.expandedDates.set(new Set(this.dayGroups().map(g => g.date)));
+  }
+
+  openTaskPreview(entry: TimesheetEntry): void {
+    this.taskPreviewContent.set(entry.task);
+  }
+
+  closeTaskPreview(): void {
+    this.taskPreviewContent.set(null);
   }
 
   collapseAll(): void {

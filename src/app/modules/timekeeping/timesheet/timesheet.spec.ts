@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
-import { TimesheetEntry, TimesheetPeriodLock, TimesheetProject } from './models/timesheet.model';
+import { TimesheetEntry, TimesheetEntryPayload, TimesheetPeriodLock, TimesheetProject } from './models/timesheet.model';
 import { Timesheet } from './timesheet';
 import { TimesheetService } from './services/timesheet.service';
 
@@ -14,7 +14,7 @@ const emptyEntries: PaginatedApiResponse<TimesheetEntry> = {
 };
 
 const projects: TimesheetProject[] = [
-  { id: 'project-1', customerName: 'Geoplan Internal Operations', workOrderNumber: 'WO-001', status: 'Open' },
+  { id: 'project-1', customerName: 'Geoplan Internal Operations', workOrderNumber: 'WO-001', status: 'Open', displayName: 'Geoplan Internal Operations — WO-001' },
 ];
 
 const unlocked: TimesheetPeriodLock = {
@@ -38,9 +38,11 @@ describe('Timesheet', () => {
   let fixture: ComponentFixture<Timesheet>;
   let component: Timesheet;
   let createCalls: number;
+  let entriesData: TimesheetEntry[];
 
   beforeEach(async () => {
     createCalls = 0;
+    entriesData = [];
 
     await TestBed.configureTestingModule({
       imports: [Timesheet],
@@ -48,27 +50,29 @@ describe('Timesheet', () => {
         {
           provide: TimesheetService,
           useValue: {
-            getEntries: () => of(emptyEntries),
+            getEntries: () => of({ ...emptyEntries, data: entriesData }),
             getProjects: () => of(projects),
             getPeriodLock: () => of(unlocked),
-            createEntry: () => {
+            createEntry: (payload: TimesheetEntryPayload) => {
               createCalls += 1;
-              return of({
+              const entry = {
                 id: 'entry-1',
                 organizationId: 'org-1',
                 userId: 'user-1',
-                projectId: 'project-1',
-                workDate: '2026-06-22',
-                hours: 8,
-                location: 'OFC - DW',
-                workType: 'OFFICE_DIRECT_WORK',
-                task: 'Inspection',
-                isOvertime: false,
-                isNightDifferential: false,
+                projectId: payload.projectId,
+                workDate: payload.workDate,
+                hours: payload.hours,
+                location: payload.location ?? 'OFC - DW',
+                workType: payload.workType ?? 'OFFICE_DIRECT_WORK',
+                task: payload.task,
+                isOvertime: payload.isOvertime ?? false,
+                isNightDifferential: payload.isNightDifferential ?? false,
                 status: 'DRAFT',
                 createdAt: '2026-06-22T00:00:00.000Z',
                 updatedAt: '2026-06-22T00:00:00.000Z',
-              } satisfies TimesheetEntry);
+              } satisfies TimesheetEntry;
+              entriesData = [...entriesData, entry];
+              return of(entry);
             },
             updateEntry: () => of({}),
             deleteEntry: () => of({}),
@@ -89,22 +93,48 @@ describe('Timesheet', () => {
     expect(component.projects()[0].workOrderNumber).toBe('WO-001');
   });
 
-  it('blocks adding rows when the period is locked', () => {
-    component.isLocked.set(true);
-    component.addRow();
+  it('adds a project row and a new entry from the entry modal', () => {
+    component.openAddProjectModal();
+    component.onAddProjectChange('project-1');
+    component.confirmAddProject();
 
-    expect(component.rows().length).toBe(0);
+    expect(component.tableProjectIds()).toEqual(['project-1']);
+
+    const day = component.weekDays()[0];
+    component.openEntryCellModal('project-1', day);
+    const modal = component.entryModal();
+    if (modal) {
+      modal.hours = 8;
+      modal.task = 'Inspection';
+    }
+    component.closeEntryModal(true);
+
+    expect(component.entries().length).toBe(1);
+    expect(component.entries()[0].projectId).toBe('project-1');
+  });
+
+  it('does not add a project row when the period is locked', () => {
+    component.isLocked.set(true);
+    component.openAddProjectModal();
+    component.onAddProjectChange('project-1');
+    component.confirmAddProject();
+
+    expect(component.tableProjectIds()).toEqual([]);
   });
 
   it('shows validation by not saving invalid hours', () => {
-    component.addRow();
-    const row = component.rows()[0];
-    row.projectId = 'project-1';
-    row.task = 'Inspection';
-    row.cells[0].hours = 25;
-    row.cells[0].dirty = true;
+    component.openAddProjectModal();
+    component.onAddProjectChange('project-1');
+    component.confirmAddProject();
 
-    component.saveRow(row);
+    const day = component.weekDays()[0];
+    component.openEntryCellModal('project-1', day);
+    const modal = component.entryModal();
+    if (modal) {
+      modal.hours = 25;
+      modal.task = 'Inspection';
+    }
+    component.closeEntryModal(true);
 
     expect(createCalls).toBe(0);
   });

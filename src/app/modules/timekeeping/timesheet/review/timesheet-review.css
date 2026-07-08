@@ -269,12 +269,9 @@
   border-radius: 2px;
 }
 
-.day-group {
+.day-group-row td {
+  padding: 0;
   border-bottom: 1px solid var(--color-border);
-}
-
-.day-group:last-child {
-  border-bottom: none;
 }
 
 .day-group-btn {
@@ -335,10 +332,19 @@
 
 .day-entries-table {
   width: 100%;
-  min-width: 640px;
+  min-width: 760px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
+
+.col-w-project { width: 14%; }
+.col-w-wo { width: 12%; }
+.col-w-task { width: 28%; }
+.col-w-loc { width: 10%; }
+.col-w-hours { width: 8%; }
+.col-w-flag { width: 6%; }
+.col-w-status { width: 16%; }
 
 .day-entries-table thead th {
   padding: 0.5rem 0.75rem;
@@ -379,10 +385,43 @@
 .col-num { text-align: right; white-space: nowrap; }
 .col-flag { text-align: center; }
 
-.td-project { font-weight: 600; color: var(--color-heading); white-space: nowrap; }
-.td-wo { color: var(--color-body); white-space: nowrap; }
-.td-task { min-width: 14rem; max-width: 22rem; white-space: normal; }
-.td-loc { white-space: nowrap; }
+.td-project { font-weight: 600; color: var(--color-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-wo { color: var(--color-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-task { white-space: normal; padding: 0; }
+
+.task-cell-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.task-cell-btn:hover .td-task-content {
+  color: var(--color-primary);
+}
+
+.task-cell-btn:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: -2px;
+}
+
+.td-task-content {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--color-heading);
+}
+
+.td-task-content :where(p, ul, ol) {
+  margin: 0;
+}
+.td-loc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .td-hrs { font-weight: 700; font-family: var(--font-heading); color: var(--color-heading); }
 .td-flag { font-size: 0.78rem; }
 
@@ -574,6 +613,26 @@
 
 .history-dialog {
   width: min(36rem, 100%);
+}
+
+.task-preview-dialog {
+  width: min(32rem, 100%);
+  max-height: 80vh;
+}
+
+.task-preview-content {
+  overflow-y: auto;
+  color: var(--color-heading);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.task-preview-content :where(p, ul, ol) {
+  margin: 0 0 0.5rem;
+}
+
+.task-preview-content :where(p, ul, ol):last-child {
+  margin-bottom: 0;
 }
 
 .dialog-header {

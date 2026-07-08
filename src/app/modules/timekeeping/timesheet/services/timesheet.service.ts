@@ -24,10 +24,12 @@ export class TimesheetService {
   private readonly baseUrl = `${environment.apiBaseUrl}/timekeeping/timesheet`;
 
   getEntries(periodStart: string, periodEnd: string) {
-    return this.http.get<PaginatedApiResponse<TimesheetEntry>>(`${this.baseUrl}/entries`, {
-      params: { periodStart, periodEnd, page: 1, limit: 50 },
-      withCredentials: true,
-    });
+    return this.http
+      .get<PaginatedApiResponse<TimesheetEntry>>(`${this.baseUrl}/entries`, {
+        params: { periodStart, periodEnd },
+        withCredentials: true,
+      })
+      .pipe(map((response) => ({ data: response.data })));
   }
 
   createEntry(payload: TimesheetEntryPayload) {
@@ -56,15 +58,9 @@ export class TimesheetService {
       .pipe(map((response) => response.data));
   }
 
-  getProjects(search?: string) {
-    let params = new HttpParams().set('page', 1).set('limit', 50);
-    if (search?.trim()) {
-      params = params.set('search', search.trim());
-    }
-
+  getProjects() {
     return this.http
       .get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
-        params,
         withCredentials: true,
       })
       .pipe(
