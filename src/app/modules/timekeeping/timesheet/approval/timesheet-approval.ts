@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
@@ -9,7 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -47,6 +47,8 @@ export class TimesheetApproval implements OnInit {
   private readonly timesheetService = inject(TimesheetService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+
+  private readonly approvalTable = viewChild<Table>('approvalTable');
 
   readonly selectedDate = signal<Date>(new Date());
   readonly selectedWeek = computed(() => startOfWeek(this.selectedDate()));
@@ -127,7 +129,7 @@ export class TimesheetApproval implements OnInit {
 
   readonly submittedEntryIds = computed(() =>
     this.employees().flatMap(e => e.entries)
-      .filter(e => e.status === 'SUBMITTED')
+      .filter(e => isActionable(e.status))
       .map(e => e.id),
   );
 
@@ -193,6 +195,18 @@ export class TimesheetApproval implements OnInit {
 
   setActiveTab(tab: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | null): void {
     this.activeTab.set(tab);
+    this.resetPage();
+  }
+
+  onEmployeeFilterChange(value: string): void {
+    this.employeeFilter.set(value);
+    this.resetPage();
+  }
+
+  /** Snap the client-side paginator back to the first page after the row set changes. */
+  private resetPage(): void {
+    const table = this.approvalTable();
+    if (table) table.first = 0;
   }
 
   selectEmployee(employee: TimesheetSummaryEmployee): void {
@@ -212,7 +226,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleEntry(entry: TimesheetEntry, checked: boolean): void {
-    if (this.isPeriodLocked() || entry.status !== 'SUBMITTED') return;
+    if (this.isPeriodLocked() || !isActionable(entry.status)) return;
     this.selectedEntryIds.update(ids => {
       const next = new Set(ids);
       checked ? next.add(entry.id) : next.delete(entry.id);
@@ -230,19 +244,19 @@ export class TimesheetApproval implements OnInit {
   }
 
   employeeAllSubmittedSelected(employee: TimesheetSummaryEmployee): boolean {
-    const ids = employee.entries.filter(e => e.status === 'SUBMITTED').map(e => e.id);
+    const ids = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     if (ids.length === 0) return false;
     return ids.every(id => this.selectedEntryIds().has(id));
   }
 
   employeeSomeSubmittedSelected(employee: TimesheetSummaryEmployee): boolean {
-    const ids = employee.entries.filter(e => e.status === 'SUBMITTED').map(e => e.id);
+    const ids = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     return ids.length > 0 && ids.some(id => this.selectedEntryIds().has(id)) && !this.employeeAllSubmittedSelected(employee);
   }
 
   toggleEmployeeSubmitted(employee: TimesheetSummaryEmployee, checked: boolean): void {
     if (this.isPeriodLocked()) return;
-    const ids = employee.entries.filter(e => e.status === 'SUBMITTED').map(e => e.id);
+    const ids = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     this.selectedEntryIds.update(set => {
       const next = new Set(set);
       ids.forEach(id => checked ? next.add(id) : next.delete(id));
@@ -271,21 +285,21 @@ export class TimesheetApproval implements OnInit {
   }
 
   approveEmployee(employee: TimesheetSummaryEmployee): void {
-    const entryIds = employee.entries.filter(e => e.status === 'SUBMITTED').map(e => e.id);
+    const entryIds = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     if (entryIds.length === 0) return;
     this.selectedEntryIds.set(new Set(entryIds));
     this.approveSelected();
   }
 
   rejectEmployee(employee: TimesheetSummaryEmployee): void {
-    const entryIds = employee.entries.filter(e => e.status === 'SUBMITTED').map(e => e.id);
+    const entryIds = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     if (entryIds.length === 0) return;
     this.selectedEntryIds.set(new Set(entryIds));
     this.openRejectDialog();
   }
 
   hasSubmittedEntries(employee: TimesheetSummaryEmployee): boolean {
-    return employee.entries.some(e => e.status === 'SUBMITTED');
+    return employee.entries.some(e => isActionable(e.status));
   }
 
   openRejectDialog(): void {
@@ -406,7 +420,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   employeeSubmittedCount(employee: TimesheetSummaryEmployee): number {
-    return employee.entries.filter(e => e.status === 'SUBMITTED').length;
+    return employee.entries.filter(e => isActionable(e.status)).length;
   }
 
   employeeLeaveAndNightHours(employee: TimesheetSummaryEmployee): number {
@@ -490,6 +504,11 @@ function toDateInputValue(date: Date): string {
 
 function formatShortDate(date: Date): string {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+}
+
+/** Entries a manager can act on: not-yet-decided drafts and submitted rows. */
+function isActionable(status: string): boolean {
+  return status === 'DRAFT' || status === 'SUBMITTED';
 }
 
 function apiErrorMessage(err: unknown, fallback: string): string {

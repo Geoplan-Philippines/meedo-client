@@ -82,13 +82,13 @@ export class TimesheetReview implements OnInit {
   });
 
   readonly submittedEntryIds = computed(() =>
-    this.employee()?.entries.filter(e => e.status === 'SUBMITTED').map(e => e.id) ?? [],
+    this.employee()?.entries.filter(e => isActionable(e.status)).map(e => e.id) ?? [],
   );
 
   readonly hasSubmittedEntries = computed(() => this.submittedEntryIds().length > 0);
 
   readonly pendingHours = computed(() =>
-    this.employee()?.entries.filter(e => e.status === 'SUBMITTED').reduce((s, e) => s + e.hours, 0) ?? 0,
+    this.employee()?.entries.filter(e => isActionable(e.status)).reduce((s, e) => s + e.hours, 0) ?? 0,
   );
 
   ngOnInit(): void {
@@ -288,6 +288,11 @@ export class TimesheetReview implements OnInit {
   dialogConfirmLabel(): string {
     return this.rejectMode() === 'changes' ? 'Send Request' : 'Reject Entries';
   }
+}
+
+/** Entries a manager can act on: not-yet-decided drafts and submitted rows. */
+function isActionable(status: string): boolean {
+  return status === 'DRAFT' || status === 'SUBMITTED';
 }
 
 function formatShortDate(date: Date): string {

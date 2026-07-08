@@ -55,7 +55,7 @@
   <section class="hours-strip" aria-label="Week statistics">
     <div class="hours-chip">
       <span class="hours-chip-label">Pending Approvals</span>
-      <strong class="hours-chip-value">{{ summary()?.totalsByStatus?.['SUBMITTED'] ?? 0 }}</strong>
+      <strong class="hours-chip-value">{{ (summary()?.totalsByStatus?.['SUBMITTED'] ?? 0) + (summary()?.totalsByStatus?.['DRAFT'] ?? 0) }}</strong>
     </div>
 
     <div class="hours-chip">
@@ -124,7 +124,7 @@
       <input
         pInputText
         [ngModel]="employeeFilter()"
-        (ngModelChange)="employeeFilter.set($event)"
+        (ngModelChange)="onEmployeeFilterChange($event)"
         placeholder="Search by name, email or department…"
         class="filter-search"
         aria-label="Search employees by name, email or department"
@@ -164,8 +164,15 @@
     <section class="table-panel" aria-label="Employee timesheet list">
       <div class="table-wrap">
         <p-table
+          #approvalTable
           [value]="filteredEmployees()"
           [loading]="isLoading()"
+          [paginator]="true"
+          [rows]="10"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
+          paginatorDropdownAppendTo="body"
           [rowHover]="true"
           class="approval-table"
           [tableStyle]="{ 'min-width': '920px' }"
@@ -269,12 +276,6 @@
           </ng-template>
         </p-table>
       </div>
-
-      @if (!isLoading() && filteredEmployees().length > 0) {
-        <div class="table-footer">
-          Showing {{ filteredEmployees().length }} of {{ employees().length }} employee(s)
-        </div>
-      }
     </section>
 
   </div>
