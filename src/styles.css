@@ -12,10 +12,15 @@
 /* Light theme (default). Dark mode redefines these same variables below,
    so any component using the theme tokens flips automatically. */
 :root {
-  --background: #F8FBFF;
+  /* Surface ramp: canvas -> surface -> popover. Depth comes from this ramp
+     plus 1px borders, never from resting shadows on content. */
+  --background: #F1F6FC;   /* canvas: app body — slightly deeper than surface so white cards/chrome lift */
+  --surface: #FFFFFF;      /* cards, panels, sidebar, table card, inputs */
+  --popover: #FFFFFF;      /* command palette, dropdowns, dialogs (lifted by shadow) */
   --foreground: #0B161F;
   --text-heading: #0B161F;
   --text-body: #365261;
+  --text-muted: #5E7180;   /* timestamps, placeholders, secondary labels (AA on canvas + surface) */
 
   --primary: #0B4EA2;
   --primary-hover: #03285A;
@@ -26,13 +31,23 @@
   --accent-foreground: #083344;
 
   --border: #DBE5F0;
+  --border-strong: #C7D6E6;  /* inputs, popover edges, emphasized dividers */
   --input: #DBE5F0;
   --ring: #22D3EE;
 
+  /* Status: solid + muted fill + muted-foreground (badge text, tuned to AA on its fill). */
   --destructive: #FF4B4B;
   --muted-destructive: #FFE1DE;
+  --muted-destructive-foreground: #C0322F;
   --success: #3DBE81;
   --muted-success: #D1EDE0;
+  --muted-success-foreground: #1B6B47;
+  --warning: #E8A317;
+  --muted-warning: #FEF3D6;
+  --muted-warning-foreground: #92580B;
+  --info: #2F6FE0;            /* status-only blue (in-progress states) — distinct from the action blue, never used for actions */
+  --muted-info: #DCE9FB;
+  --muted-info-foreground: #1A4F9C;
   --success-foreground: #FFFFFF;
 
   /* Attendance punch categories — fixed marker/legend hues, constant across themes. */
@@ -44,30 +59,44 @@
   --radius: 0.25rem;
 }
 
-/* Dark theme: a complementary inversion of the light palette. Surfaces go
-   dark, text goes light, and primary brightens for contrast on dark. */
+/* Dark theme: a separately tuned, near-neutral palette — NOT a mechanical
+   inversion. Surfaces step up through the ramp (canvas -> surface -> popover);
+   neutrals carry only a whisper of cool, so saturation belongs to primary +
+   status alone. Every text tone meets WCAG AA on every surface tier. */
 .app-dark {
-  --background: #0B161F;
-  --foreground: #F1F6FC;
-  --text-heading: #F1F6FC;
-  --text-body: #A9B8C4;
+  --background: #0B0F14;   /* canvas */
+  --surface: #10151C;      /* cards, panels, sidebar, table card, inputs */
+  --popover: #1A212B;      /* command palette, dropdowns, dialogs */
+  --foreground: #ECF1F8;
+  --text-heading: #ECF1F8;
+  --text-body: #AEBDCC;
+  --text-muted: #8A99A8;
 
   --primary: #7AA1FD;
   --primary-hover: #9EB7FD;
   --primary-foreground: #01183C;
-  --secondary: #16273A;
-  --secondary-foreground: #9EB7FD;
+  --secondary: #1B2942;
+  --secondary-foreground: #AFC8FF;
   --accent: #22D3EE;
   --accent-foreground: #062A38;
 
-  --border: #24344A;
-  --input: #24344A;
+  --border: #232C38;
+  --border-strong: #2E3A48;
+  --input: #2E3A48;
   --ring: #22D3EE;
 
-  --destructive: #FF5C5C;
-  --muted-destructive: #3A1D1D;
-  --success: #4ECB8E;
-  --muted-success: #173328;
+  --destructive: #FF6B6B;
+  --muted-destructive: #2E1A1C;
+  --muted-destructive-foreground: #FF6B6B;
+  --success: #45C98A;
+  --muted-success: #14271E;
+  --muted-success-foreground: #45C98A;
+  --warning: #F4B740;
+  --muted-warning: #2C2113;
+  --muted-warning-foreground: #FBC56B;
+  --info: #39A0E0;            /* azure — shifted from the periwinkle primary so the two blues stay distinct in dark */
+  --muted-info: #11283A;
+  --muted-info-foreground: #86C4EF;
   --success-foreground: #FFFFFF;
 }
 
@@ -76,9 +105,12 @@
    `.app-dark` overrides above at runtime. */
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-popover: var(--popover);
   --color-foreground: var(--foreground);
   --color-heading: var(--text-heading);
   --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
@@ -88,13 +120,22 @@
   --color-accent-foreground: var(--accent-foreground);
 
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
   --color-destructive: var(--destructive);
   --color-muted-destructive: var(--muted-destructive);
+  --color-muted-destructive-foreground: var(--muted-destructive-foreground);
   --color-success: var(--success);
   --color-muted-success: var(--muted-success);
+  --color-muted-success-foreground: var(--muted-success-foreground);
+  --color-warning: var(--warning);
+  --color-muted-warning: var(--muted-warning);
+  --color-muted-warning-foreground: var(--muted-warning-foreground);
+  --color-info: var(--info);
+  --color-muted-info: var(--muted-info);
+  --color-muted-info-foreground: var(--muted-info-foreground);
 
   --color-attendance-field: var(--attendance-field);
   --color-attendance-wfh: var(--attendance-wfh);
@@ -128,3 +169,14 @@ button, input, textarea, select {
 .main-container {
   @apply px-4 mx-auto max-w-7xl w-full;
 }
+
+/* Avatar identity palette — fixed decorative hues for user/entity avatars,
+   intentionally outside the status system and constant across light/dark.
+   Single source of truth; used by tickets, ticket detail, the tickets
+   dashboard, and CRM leads / newsletter subscribers. */
+.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
+.avatar-teal   { background: #CCFBF1; color: #0F766E; }
+.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
+.avatar-violet { background: #EDE9FE; color: #7C3AED; }
+.avatar-rose   { background: #FFE4E6; color: #BE123C; }
+.avatar-more   { background: var(--color-secondary); color: var(--color-secondary-foreground); }

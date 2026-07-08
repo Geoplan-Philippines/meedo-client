@@ -1,4 +1,4 @@
-<header class="app-header h-14 sm:h-16 px-3 sm:px-4 border-b border-border bg-background flex justify-between items-center relative gap-2">
+<header class="app-header h-14 sm:h-16 px-3 sm:px-4 border-b border-border bg-surface flex justify-between items-center relative gap-2">
   <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
     <p-button
       icon="pi pi-bars"
@@ -48,8 +48,29 @@
       [text]="true"
       severity="secondary"
       class="header-icon-btn"
-      (onClick)="logout()"
+      (onClick)="askLogout()"
       aria-label="Sign out"
     />
   </div>
 </header>
+
+<p-dialog
+  [visible]="isLogoutDialogOpen()"
+  (visibleChange)="$event ? null : cancelLogout()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!isLoggingOut()"
+  [style]="{ width: '420px' }"
+  header="Sign out"
+>
+  <div class="flex flex-col gap-3 text-sm text-body">
+    <p>
+      Sign out of <strong class="text-heading">Meedo</strong>? You'll need to sign in again to continue.
+    </p>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" text (onClick)="cancelLogout()" [disabled]="isLoggingOut()" />
+    <p-button label="Sign out" (onClick)="confirmLogout()" [loading]="isLoggingOut()" />
+  </ng-template>
+</p-dialog>

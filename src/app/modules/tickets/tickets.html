@@ -13,46 +13,54 @@
     </button>
   </header>
 
-  <div class="stats-grid" role="list" aria-label="Ticket statistics">
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--total" aria-hidden="true">
-        <i class="pi pi-ticket"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats().total }}</span>
-        <span class="stat-label">Total Tickets</span>
-      </div>
-    </div>
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--urgent" aria-hidden="true">
-        <i class="pi pi-bolt"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats().urgent }}</span>
-        <span class="stat-label">Urgent</span>
-      </div>
-    </div>
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--high" aria-hidden="true">
-        <i class="pi pi-arrow-up"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats().high }}</span>
-        <span class="stat-label">High Priority</span>
-      </div>
-    </div>
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--overdue" aria-hidden="true">
-        <i class="pi pi-clock"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats().overdue }}</span>
-        <span class="stat-label">Overdue</span>
-      </div>
-    </div>
-  </div>
-
   <div class="table-card">
+    <div class="view-tabs" role="tablist" aria-label="Ticket views">
+      <button
+        class="view-tab"
+        type="button"
+        role="tab"
+        [class.view-tab--active]="view() === 'all'"
+        [attr.aria-selected]="view() === 'all'"
+        (click)="setView('all')"
+      >
+        All Tickets
+        <span class="view-count">{{ viewCount('all') }}</span>
+      </button>
+      <button
+        class="view-tab"
+        type="button"
+        role="tab"
+        [class.view-tab--active]="view() === 'active'"
+        [attr.aria-selected]="view() === 'active'"
+        (click)="setView('active')"
+      >
+        Active
+        <span class="view-count">{{ viewCount('active') }}</span>
+      </button>
+      <button
+        class="view-tab"
+        type="button"
+        role="tab"
+        [class.view-tab--active]="view() === 'backlog'"
+        [attr.aria-selected]="view() === 'backlog'"
+        (click)="setView('backlog')"
+      >
+        Backlog
+        <span class="view-count">{{ viewCount('backlog') }}</span>
+      </button>
+      <button
+        class="view-tab"
+        type="button"
+        role="tab"
+        [class.view-tab--active]="view() === 'closed'"
+        [attr.aria-selected]="view() === 'closed'"
+        (click)="setView('closed')"
+      >
+        Closed
+        <span class="view-count">{{ viewCount('closed') }}</span>
+      </button>
+    </div>
+
     <div class="table-toolbar">
       <div class="search-box">
         <i class="pi pi-search search-icon" aria-hidden="true"></i>
@@ -64,29 +72,63 @@
           [formControl]="searchControl"
         />
       </div>
-      <div class="flex items-center gap-2">
-        <p-select
-          [formControl]="statusFilterControl"
-          [options]="statuses()"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="All statuses"
-          [showClear]="true"
-          aria-label="Filter by status"
-          appendTo="body"
-        />
-        <p-select
-          [formControl]="priorityFilterControl"
-          [options]="priorities"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="All priorities"
-          [showClear]="true"
-          aria-label="Filter by priority"
-          appendTo="body"
-        />
-      </div>
+      <button
+        class="filter-btn"
+        type="button"
+        [class.filter-btn--active]="activeFilterCount() > 0"
+        (click)="filterPopover.toggle($event)"
+        aria-haspopup="true"
+        aria-label="Add filter"
+      >
+        <i class="pi pi-filter" aria-hidden="true"></i>
+        <span>Filter</span>
+        @if (activeFilterCount() > 0) {
+          <span class="filter-btn-count">{{ activeFilterCount() }}</span>
+        }
+      </button>
     </div>
+
+    @if (activeFilterCount() > 0) {
+      <div class="active-filters" aria-label="Active filters">
+        @for (status of selectedStatusChips(); track status.id) {
+          <button
+            class="filter-chip"
+            type="button"
+            (click)="removeStatus(status.id)"
+            [attr.aria-label]="'Remove status filter: ' + status.name"
+          >
+            <span class="chip-dot" [style.background-color]="safeStatusColor(status.color)" aria-hidden="true"></span>
+            {{ status.name }}
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+        @for (priority of selectedPriorityChips(); track priority.value) {
+          <button
+            class="filter-chip"
+            type="button"
+            (click)="removePriority(priority.value)"
+            [attr.aria-label]="'Remove priority filter: ' + priority.label"
+          >
+            <span [class]="'chip-dot prio-dot-' + priority.value.toLowerCase()" aria-hidden="true"></span>
+            {{ priority.label }}
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+        @for (team of selectedTeamChips(); track team.id) {
+          <button
+            class="filter-chip"
+            type="button"
+            (click)="removeTeam(team.id)"
+            [attr.aria-label]="'Remove team filter: ' + team.name"
+          >
+            <i class="pi pi-users chip-icon" aria-hidden="true"></i>
+            {{ team.name }}
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+        <button class="clear-filters" type="button" (click)="clearFilters()">Clear all</button>
+      </div>
+    }
 
       <p-table
         #dt
@@ -94,7 +136,7 @@
         [lazy]="true"
         [loading]="isLoading()"
         [totalRecords]="totalRecords()"
-        [tableStyle]="{ 'width': '100%' }"
+        [tableStyle]="{ 'width': '100%', 'table-layout': 'fixed' }"
         class="tickets-table"
         [paginator]="true"
         [rows]="rows()"
@@ -105,24 +147,30 @@
       >
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="title" scope="col">
+            <th pSortableColumn="title" scope="col" style="width: 28%">
               <div class="th-content">Title <p-sortIcon field="title" /></div>
             </th>
-            <th pSortableColumn="priority" scope="col">
-              <div class="th-content">Priority <p-sortIcon field="priority" /></div>
-            </th>
-            <th scope="col">
+            <th scope="col" style="width: 14%">
               <div class="th-content">Status</div>
             </th>
-            <th pSortableColumn="dueDate" scope="col">
+            <th pSortableColumn="priority" scope="col" style="width: 14%">
+              <div class="th-content">Priority <p-sortIcon field="priority" /></div>
+            </th>
+            <th scope="col" class="hide-lg" style="width: 16%">
+              <div class="th-content">Project</div>
+            </th>
+            <th scope="col" class="hide-md" style="width: 14%">
+              <div class="th-content">Assignees</div>
+            </th>
+            <th pSortableColumn="dueDate" scope="col" style="width: 14%">
               <div class="th-content">Due Date <p-sortIcon field="dueDate" /></div>
             </th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-ticket>
-          <tr class="ticket-row" (click)="openDetailDialog(ticket)">
-            <td>
+          <tr class="ticket-row" (click)="openDetail(ticket)">
+            <td class="title-cell">
               <button
                 class="ticket-title-btn"
                 type="button"
@@ -133,33 +181,63 @@
               </button>
             </td>
             <td>
-              <span [class]="getPriorityClass(ticket.priority)">
-                <span class="priority-dot" aria-hidden="true"></span>
+              @if (ticket.ticketStatus) {
+                <span class="status-cell">
+                  <span
+                    class="status-dot"
+                    [style.background-color]="safeStatusColor(ticket.ticketStatus.color)"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="status-name">{{ ticket.ticketStatus.name }}</span>
+                </span>
+              } @else {
+                <span class="muted" aria-hidden="true">—</span>
+              }
+            </td>
+            <td>
+              <span [class]="priorityCellClass(ticket.priority)">
+                <span class="prio-dot" aria-hidden="true"></span>
                 {{ ticket.priority | titlecase }}
               </span>
             </td>
-            <td>
-              @if (ticket.ticketStatus) {
-                <span
-                  class="status-badge"
-                  [style.background-color]="'color-mix(in srgb, ' + safeStatusColor(ticket.ticketStatus.color) + ' 13%, transparent)'"
-                  [style.color]="safeStatusColor(ticket.ticketStatus.color)"
-                >
-                  {{ ticket.ticketStatus.name }}
+            <td class="hide-lg">
+              @if (ticket.project; as project) {
+                <span class="project-cell">
+                  <span class="project-customer" [title]="project.customerName">{{ project.customerName }}</span>
+                  <span class="project-wo">{{ project.workOrderNumber }}</span>
                 </span>
               } @else {
-                <span class="empty-cell">—</span>
+                <span class="muted" aria-hidden="true">—</span>
+              }
+            </td>
+            <td class="hide-md">
+              @let avatars = visibleAssignees(ticket);
+              @if (avatars.length) {
+                <div class="avatar-stack" [attr.aria-label]="'Assigned to ' + getMemberNames(ticket)">
+                  @for (assignee of avatars; track $index) {
+                    <span [class]="assignee.className" [title]="assignee.name" aria-hidden="true">{{ assignee.initials }}</span>
+                  }
+                  @if (extraAssigneeCount(ticket) > 0) {
+                    <span class="avatar avatar-more" aria-hidden="true">+{{ extraAssigneeCount(ticket) }}</span>
+                  }
+                </div>
+              } @else {
+                <span class="muted" aria-hidden="true">—</span>
               }
             </td>
             <td class="date-cell">
-              {{ ticket.dueDate ? (ticket.dueDate | date: 'MMM d, y') : '—' }}
+              @if (ticket.dueDate) {
+                <span [class.due-overdue]="isOverdue(ticket)">{{ ticket.dueDate | date: 'MMM d, y' }}</span>
+              } @else {
+                <span class="muted" aria-hidden="true">—</span>
+              }
             </td>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="4">
+            <td colspan="6">
               <div class="empty-state">
                 <div class="empty-icon" aria-hidden="true">
                   <i class="pi pi-ticket"></i>
@@ -181,185 +259,394 @@
 </div>
 
 <p-dialog
-  header="Create Ticket"
   [modal]="true"
   [visible]="createDialogVisible()"
   (onHide)="closeCreateDialog()"
-  [style]="{ width: '560px' }"
+  [style]="{ width: '640px', maxWidth: '94vw' }"
+  [maximizable]="true"
   [draggable]="false"
+  styleClass="ticket-compose"
 >
-  <form [formGroup]="ticketForm" class="dialog-form">
+  <ng-template pTemplate="header">
+    <span class="compose-chip">
+      <i class="pi pi-ticket" aria-hidden="true"></i>
+      New ticket
+    </span>
+  </ng-template>
 
-    <div class="form-field">
-      <label class="form-label" for="ticket-title">Title <span class="required" aria-hidden="true">*</span></label>
-      <input id="ticket-title" pInputText formControlName="title" placeholder="Enter ticket title" class="w-full" aria-required="true" />
-      @if (ticketForm.get('title')?.invalid && ticketForm.get('title')?.touched) {
-        <small class="form-error" role="alert">Title is required.</small>
-      }
+  <form [formGroup]="ticketForm" class="compose-form" (ngSubmit)="saveTicket()">
+    <!-- Plain-text title -->
+    <input
+      type="text"
+      class="compose-title"
+      formControlName="title"
+      placeholder="Ticket title"
+      aria-label="Ticket title"
+      aria-required="true"
+      autocomplete="off"
+      enterkeyhint="next"
+    />
+
+    <!-- Markdown body — WYSIWYG editor; type "/" for a block menu -->
+    <app-markdown-editor
+      class="compose-body"
+      [value]="composeDescription()"
+      placeholder="Add description…"
+      ariaLabel="Ticket description"
+      (contentSave)="onComposeDescription($event)"
+    />
+
+    <!-- Minimalist pill selectors -->
+    <div class="compose-pills">
+      <button
+        type="button"
+        class="compose-pill"
+        [class.compose-pill--set]="selectedStatus()"
+        (click)="statusPop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="'Status: ' + (selectedStatus()?.name ?? 'not set')"
+      >
+        @if (selectedStatus(); as status) {
+          <span class="pill-dot" [style.background-color]="safeStatusColor(status.color)" aria-hidden="true"></span>
+          <span class="pill-label">{{ status.name }}</span>
+        } @else {
+          <i class="pi pi-circle pill-icon" aria-hidden="true"></i>
+          <span class="pill-label">Status</span>
+        }
+      </button>
+
+      <button
+        type="button"
+        class="compose-pill compose-pill--set"
+        (click)="priorityPop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="'Priority: ' + selectedPriorityOption().label"
+      >
+        <span [class]="'pill-dot prio-dot-' + selectedPriorityOption().value.toLowerCase()" aria-hidden="true"></span>
+        <span class="pill-label">{{ selectedPriorityOption().label }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="compose-pill"
+        [class.compose-pill--set]="selectedTeam()"
+        (click)="teamPop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="'Team: ' + (selectedTeam()?.name ?? 'not set')"
+      >
+        <i class="pi pi-users pill-icon" aria-hidden="true"></i>
+        <span class="pill-label">{{ selectedTeam()?.name ?? 'Team' }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="compose-pill"
+        [class.compose-pill--set]="selectedAssignees().length"
+        (click)="assigneePop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="selectedAssignees().length + ' assignee(s)'"
+      >
+        @if (selectedAssignees().length) {
+          <span class="pill-avatars" aria-hidden="true">
+            @for (avatar of composeAssigneeAvatars(); track $index) {
+              <span [class]="avatar.className" [title]="avatar.name">{{ avatar.initials }}</span>
+            }
+          </span>
+          @if (selectedAssignees().length === 1) {
+            <span class="pill-label">{{ selectedAssignees()[0].displayName }}</span>
+          } @else {
+            <span class="pill-label">{{ selectedAssignees().length }} assignees</span>
+          }
+        } @else {
+          <i class="pi pi-user pill-icon" aria-hidden="true"></i>
+          <span class="pill-label">Assignee</span>
+        }
+      </button>
+
+      <button
+        type="button"
+        class="compose-pill"
+        [class.compose-pill--set]="selectedProject()"
+        (click)="projectPop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="'Project: ' + (selectedProject()?.displayName ?? 'not set')"
+      >
+        <i class="pi pi-box pill-icon" aria-hidden="true"></i>
+        <span class="pill-label">{{ selectedProject()?.customerName ?? 'Project' }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="compose-pill"
+        [class.compose-pill--set]="selectedCategory()"
+        (click)="categoryPop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="'Category: ' + (selectedCategory()?.name ?? 'not set')"
+      >
+        <i class="pi pi-tag pill-icon" aria-hidden="true"></i>
+        <span class="pill-label">{{ selectedCategory()?.name ?? 'Category' }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="compose-pill"
+        [class.compose-pill--set]="composeDueDate()"
+        (click)="dueDatePop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="'Due date: ' + (composeDueDate() ? (composeDueDate() | date: 'MMM d, y') : 'not set')"
+      >
+        <i class="pi pi-calendar pill-icon" aria-hidden="true"></i>
+        <span class="pill-label">{{ composeDueDate() ? (composeDueDate() | date: 'MMM d') : 'Due date' }}</span>
+      </button>
     </div>
-
-    <div class="form-field">
-      <label class="form-label" for="ticket-description">Description</label>
-      <textarea id="ticket-description" pTextarea formControlName="description" placeholder="Enter ticket description" rows="3" class="w-full"></textarea>
-    </div>
-
-    <div class="form-row">
-      <div class="form-field">
-        <label class="form-label" for="ticket-priority">Priority</label>
-        <p-select inputId="ticket-priority" formControlName="priority" [options]="priorities" optionLabel="label" optionValue="value" placeholder="Select priority" class="w-full" appendTo="body" />
-      </div>
-      <div class="form-field">
-        <label class="form-label" for="ticket-due-date">Due Date</label>
-        <p-datepicker inputId="ticket-due-date" formControlName="dueDate" placeholder="Select due date" [showIcon]="true" [minDate]="minDueDate" class="w-full" appendTo="body" />
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-field">
-        <label class="form-label" for="ticket-status">Status</label>
-        <p-select inputId="ticket-status" formControlName="ticketStatusId" [options]="statuses()" optionLabel="name" optionValue="id" placeholder="Select status" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
-      </div>
-      <div class="form-field">
-        <label class="form-label" for="ticket-category">Category</label>
-        <p-select inputId="ticket-category" formControlName="categoryId" [options]="categories()" optionLabel="name" optionValue="id" placeholder="Select category" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-field form-field--flex">
-        <label class="form-label" for="ticket-project">Project</label>
-        <p-select inputId="ticket-project" formControlName="projectId" [options]="projects()" optionLabel="displayName" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
-      </div>
-      <div class="form-field form-field--flex">
-        <label class="form-label" for="ticket-team">Team</label>
-        <p-select inputId="ticket-team" formControlName="teamId" [options]="teams()" optionLabel="name" optionValue="id" placeholder="Select team" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
-      </div>
-    </div>
-
-    <div class="form-field">
-      <label class="form-label" for="ticket-assignee">Assigned To</label>
-      <p-multiSelect inputId="ticket-assignee" formControlName="assigneeIds" [options]="members()" optionLabel="displayName" optionValue="id" placeholder="Select members" display="chip" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
-    </div>
-
   </form>
 
   <ng-template pTemplate="footer">
-    <p-button
-      label="Cancel"
-      severity="secondary"
-      [outlined]="true"
-      (onClick)="closeCreateDialog()"
-      [disabled]="isSaving()"
-    />
-    <p-button
-      label="Create Ticket"
-      icon="pi pi-check"
-      (onClick)="saveTicket()"
-      [loading]="isSaving()"
-    />
-  </ng-template>
-</p-dialog>
-
-<p-dialog
-  [header]="'Ticket #' + (selectedTicket()?.ticketNumber ?? '')"
-  [modal]="true"
-  [visible]="detailDialogVisible()"
-  (onHide)="closeDetailDialog()"
-  [style]="{ width: '580px' }"
-  [contentStyle]="{ maxHeight: '70vh', overflow: 'auto' }"
-  [draggable]="false"
->
-  @if (selectedTicket(); as ticket) {
-<div class="detail-grid">
-
-      <div class="detail-field detail-field--full">
-        <span class="detail-label">Title</span>
-        <span class="detail-value detail-title">{{ ticket.title }}</span>
-      </div>
-
-      @if (ticket.description) {
-        <div class="detail-field detail-field--full">
-          <span class="detail-label">Description</span>
-          <span class="detail-value">{{ ticket.description }}</span>
-        </div>
-      }
-
-      <div class="detail-field">
-        <span class="detail-label">Priority</span>
-        <span [class]="getPriorityClass(ticket.priority)">
-          <span class="priority-dot"></span>
-          {{ ticket.priority | titlecase }}
-        </span>
-      </div>
-
-      <div class="detail-field">
-        <span class="detail-label">Status</span>
-        @if (ticket.ticketStatus) {
-          <span
-            class="status-badge"
-            [style.background-color]="'color-mix(in srgb, ' + safeStatusColor(ticket.ticketStatus.color) + ' 13%, transparent)'"
-            [style.color]="safeStatusColor(ticket.ticketStatus.color)"
-          >
-            {{ ticket.ticketStatus.name }}
-          </span>
-        } @else {
-          <span class="empty-cell">—</span>
-        }
-      </div>
-
-      <div class="detail-field">
-        <span class="detail-label">Project</span>
-        @if (ticket.project) {
-          <span class="detail-value">
-            <div>{{ ticket.project.customerName }}</div>
-            <div class="detail-subvalue">{{ ticket.project.workOrderNumber }}</div>
-          </span>
-        } @else {
-          <span class="empty-cell">—</span>
-        }
-      </div>
-
-      <div class="detail-field">
-        <span class="detail-label">Ticket Number</span>
-        <span class="detail-value">#{{ ticket.ticketNumber }}</span>
-      </div>
-
-      <div class="detail-field">
-        <span class="detail-label">Due Date</span>
-        <span class="detail-value">
-          {{ ticket.dueDate ? (ticket.dueDate | date: 'MMM d, y') : '—' }}
-        </span>
-      </div>
-
-      <div class="detail-field">
-        <span class="detail-label">Created</span>
-        <span class="detail-value">{{ ticket.createdAt | date: 'MMM d, y' }}</span>
-      </div>
-
-      <div class="detail-field detail-field--full">
-        <span class="detail-label">Assigned</span>
-        <span class="detail-value">{{ getMemberNames(ticket) }}</span>
-      </div>
-
+    <div class="compose-actions">
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        [text]="true"
+        (onClick)="closeCreateDialog()"
+        [disabled]="isSaving()"
+      />
+      <p-button
+        label="Create ticket"
+        (onClick)="saveTicket()"
+        [loading]="isSaving()"
+        [disabled]="!canCreate()"
+      />
     </div>
-
-    <app-ticket-thread [ticketId]="ticket.id" />
-  }
-
-  <ng-template pTemplate="footer">
-    <p-button
-      label="Close"
-      severity="secondary"
-      [outlined]="true"
-      (onClick)="closeDetailDialog()"
-    />
-    <p-button
-      label="Edit"
-      icon="pi pi-pencil"
-      (onClick)="closeDetailDialog(); openEditDialog(selectedTicket()!)"
-    />
   </ng-template>
 </p-dialog>
+
+<!-- ─── Compose pill pickers ───────────────────────────── -->
+<p-popover #statusPop styleClass="filter-popover">
+  <div class="filter-menu">
+    <div class="filter-menu-header"><span class="filter-menu-title">Status</span></div>
+    <ul class="filter-list" role="menu">
+      @for (status of filterableStatuses(); track status.id) {
+        <li>
+          <button
+            class="filter-option"
+            type="button"
+            role="menuitemradio"
+            [attr.aria-checked]="selectedStatus()?.id === status.id"
+            (click)="setStatusValue(status.id); statusPop.hide()"
+          >
+            <span class="status-dot" [style.background-color]="safeStatusColor(status.color)" aria-hidden="true"></span>
+            <span class="option-label">{{ status.name }}</span>
+            @if (selectedStatus()?.id === status.id) {
+              <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="filter-empty">No statuses configured</li>
+      }
+    </ul>
+  </div>
+</p-popover>
+
+<p-popover #priorityPop styleClass="filter-popover">
+  <div class="filter-menu">
+    <div class="filter-menu-header"><span class="filter-menu-title">Priority</span></div>
+    <ul class="filter-list" role="menu">
+      @for (priority of priorities; track priority.value) {
+        <li>
+          <button
+            class="filter-option"
+            type="button"
+            role="menuitemradio"
+            [attr.aria-checked]="selectedPriorityOption().value === priority.value"
+            (click)="setPriorityValue(priority.value); priorityPop.hide()"
+          >
+            <span [class]="'prio-dot prio-dot-' + priority.value.toLowerCase()" aria-hidden="true"></span>
+            <span class="option-label">{{ priority.label }}</span>
+            @if (selectedPriorityOption().value === priority.value) {
+              <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+</p-popover>
+
+<p-popover #assigneePop styleClass="filter-popover" (onHide)="assigneeSearch.set('')">
+  <div class="filter-menu">
+    <div class="picker-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        type="text"
+        placeholder="Search members…"
+        aria-label="Search members"
+        [value]="assigneeSearch()"
+        (input)="assigneeSearch.set($any($event.target).value)"
+      />
+      @if (filteredMembers().length > 0) {
+        <button
+          type="button"
+          class="picker-selectall"
+          (click)="toggleAllAssignees()"
+          [attr.aria-pressed]="allFilteredAssigneesSelected()"
+          [attr.aria-label]="allFilteredAssigneesSelected() ? 'Deselect all' : 'Select all'"
+          title="Select all"
+        >
+          <span
+            class="selectall-box"
+            [class.selectall-box--checked]="allFilteredAssigneesSelected()"
+            [class.selectall-box--partial]="someFilteredAssigneesSelected()"
+            aria-hidden="true"
+          >
+            @if (allFilteredAssigneesSelected()) {
+              <svg viewBox="0 0 16 16" fill="none"><path d="M4 8.5 6.8 11.2 12 5.2" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            } @else if (someFilteredAssigneesSelected()) {
+              <svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            }
+          </span>
+        </button>
+      }
+    </div>
+    @if (selectedTeam()) {
+      <div class="picker-team-ctx">
+        <i class="pi pi-users" aria-hidden="true"></i>
+        <span>{{ selectedTeam()!.name }}</span>
+      </div>
+    }
+    <ul class="filter-list filter-list--scroll" role="menu">
+      @for (member of filteredMembers(); track member.id) {
+        <li>
+          <button
+            class="filter-option"
+            type="button"
+            role="menuitemcheckbox"
+            [attr.aria-checked]="isAssigneeChosen(member.id)"
+            (click)="toggleAssigneeValue(member.id)"
+          >
+            <span [class]="memberAvatarClass(member)" aria-hidden="true">{{ memberInitials(member) }}</span>
+            <span class="option-label">{{ member.displayName }}</span>
+            @if (isAssigneeChosen(member.id)) {
+              <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="filter-empty">
+          {{ selectedTeam() ? 'No members in this team' : 'No members found' }}
+        </li>
+      }
+    </ul>
+  </div>
+</p-popover>
+
+<p-popover #projectPop styleClass="filter-popover" (onHide)="projectSearch.set('')">
+  <div class="filter-menu">
+    <div class="picker-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        type="text"
+        placeholder="Search projects…"
+        aria-label="Search projects"
+        [value]="projectSearch()"
+        (input)="projectSearch.set($any($event.target).value)"
+      />
+    </div>
+    <ul class="filter-list filter-list--scroll" role="menu">
+      @for (project of filteredProjects(); track project.id) {
+        <li>
+          <button
+            class="filter-option"
+            type="button"
+            role="menuitemradio"
+            [attr.aria-checked]="selectedProject()?.id === project.id"
+            (click)="setProjectValue(project.id); projectPop.hide()"
+          >
+            <span class="option-stack">
+              <span class="option-label">{{ project.customerName }}</span>
+              <span class="option-sub">{{ project.workOrderNumber }}</span>
+            </span>
+            @if (selectedProject()?.id === project.id) {
+              <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="filter-empty">No projects found</li>
+      }
+    </ul>
+  </div>
+</p-popover>
+
+<p-popover #categoryPop styleClass="filter-popover">
+  <div class="filter-menu">
+    <div class="filter-menu-header"><span class="filter-menu-title">Category</span></div>
+    <ul class="filter-list filter-list--scroll" role="menu">
+      @for (category of categories(); track category.id) {
+        <li>
+          <button
+            class="filter-option"
+            type="button"
+            role="menuitemradio"
+            [attr.aria-checked]="selectedCategory()?.id === category.id"
+            (click)="setCategoryValue(category.id); categoryPop.hide()"
+          >
+            <span class="option-label">{{ category.name }}</span>
+            @if (selectedCategory()?.id === category.id) {
+              <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="filter-empty">No categories configured</li>
+      }
+    </ul>
+  </div>
+</p-popover>
+
+<p-popover #teamPop styleClass="filter-popover">
+  <div class="filter-menu">
+    <div class="filter-menu-header"><span class="filter-menu-title">Team</span></div>
+    <ul class="filter-list filter-list--scroll" role="menu">
+      @for (team of teams(); track team.id) {
+        <li>
+          <button
+            class="filter-option"
+            type="button"
+            role="menuitemradio"
+            [attr.aria-checked]="selectedTeam()?.id === team.id"
+            (click)="setTeamValue(team.id); teamPop.hide()"
+          >
+            <span class="option-label">{{ team.name }}</span>
+            @if (selectedTeam()?.id === team.id) {
+              <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="filter-empty">No teams available</li>
+      }
+    </ul>
+  </div>
+</p-popover>
+
+<p-popover #dueDatePop styleClass="filter-popover">
+  <div class="filter-menu filter-menu--date">
+    <p-datepicker
+      [ngModel]="composeDueDate()"
+      (ngModelChange)="ticketForm.controls.dueDate.setValue($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [inline]="true"
+      [minDate]="minDueDate"
+      (onSelect)="dueDatePop.hide()"
+    />
+    @if (composeDueDate()) {
+      <button class="picker-clear" type="button" (click)="clearDueDate(); dueDatePop.hide()">
+        <i class="pi pi-times" aria-hidden="true"></i> Clear due date
+      </button>
+    }
+  </div>
+</p-popover>
 
 <p-dialog
   header="Edit Ticket"
@@ -440,3 +727,140 @@
     />
   </ng-template>
 </p-dialog>
+
+<p-popover #filterPopover styleClass="filter-popover" (onHide)="onFilterPopoverHide()">
+  <div class="filter-menu">
+    @switch (filterPanel()) {
+      @case ('status') {
+        <div class="filter-menu-header">
+          <button class="filter-back" type="button" (click)="backToFilterRoot()" aria-label="Back to filters">
+            <i class="pi pi-angle-left" aria-hidden="true"></i>
+          </button>
+          <span class="filter-menu-title">Status</span>
+        </div>
+        <ul class="filter-list" role="menu">
+          @for (status of filterableStatuses(); track status.id) {
+            <li>
+              <button
+                class="filter-option"
+                type="button"
+                role="menuitemcheckbox"
+                [attr.aria-checked]="isStatusSelected(status.id)"
+                (click)="toggleStatus(status.id)"
+              >
+                <span class="option-check" [class.option-check--on]="isStatusSelected(status.id)" aria-hidden="true">
+                  <svg class="option-check-icon" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 8.5 6.8 11.2 12 5.2" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="status-dot" [style.background-color]="safeStatusColor(status.color)" aria-hidden="true"></span>
+                <span class="option-label">{{ status.name }}</span>
+                <span class="option-count">{{ statusCount(status.id) }}</span>
+              </button>
+            </li>
+          } @empty {
+            <li class="filter-empty">No statuses configured</li>
+          }
+        </ul>
+      }
+      @case ('priority') {
+        <div class="filter-menu-header">
+          <button class="filter-back" type="button" (click)="backToFilterRoot()" aria-label="Back to filters">
+            <i class="pi pi-angle-left" aria-hidden="true"></i>
+          </button>
+          <span class="filter-menu-title">Priority</span>
+        </div>
+        <ul class="filter-list" role="menu">
+          @for (priority of priorities; track priority.value) {
+            <li>
+              <button
+                class="filter-option"
+                type="button"
+                role="menuitemcheckbox"
+                [attr.aria-checked]="isPrioritySelected(priority.value)"
+                (click)="togglePriority(priority.value)"
+              >
+                <span class="option-check" [class.option-check--on]="isPrioritySelected(priority.value)" aria-hidden="true">
+                  <svg class="option-check-icon" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 8.5 6.8 11.2 12 5.2" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span [class]="'prio-dot prio-dot-' + priority.value.toLowerCase()" aria-hidden="true"></span>
+                <span class="option-label">{{ priority.label }}</span>
+                <span class="option-count">{{ priorityCount(priority.value) }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+      @case ('team') {
+        <div class="filter-menu-header">
+          <button class="filter-back" type="button" (click)="backToFilterRoot()" aria-label="Back to filters">
+            <i class="pi pi-angle-left" aria-hidden="true"></i>
+          </button>
+          <span class="filter-menu-title">Team</span>
+        </div>
+        <ul class="filter-list" role="menu">
+          @for (team of teams(); track team.id) {
+            <li>
+              <button
+                class="filter-option"
+                type="button"
+                role="menuitemcheckbox"
+                [attr.aria-checked]="isTeamSelected(team.id)"
+                (click)="toggleTeam(team.id)"
+              >
+                <span class="option-check" [class.option-check--on]="isTeamSelected(team.id)" aria-hidden="true">
+                  <svg class="option-check-icon" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 8.5 6.8 11.2 12 5.2" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <i class="pi pi-users facet-icon facet-icon--sm" aria-hidden="true"></i>
+                <span class="option-label">{{ team.name }}</span>
+              </button>
+            </li>
+          } @empty {
+            <li class="filter-empty">No teams configured</li>
+          }
+        </ul>
+      }
+      @default {
+        <div class="filter-menu-header">
+          <span class="filter-menu-title">Filter</span>
+        </div>
+        <ul class="filter-list" role="menu">
+          <li>
+            <button class="filter-facet" type="button" role="menuitem" (click)="openFilterPanel('status')">
+              <i class="pi pi-circle facet-icon" aria-hidden="true"></i>
+              <span class="facet-label">Status</span>
+              @if (selectedStatusIds().length) {
+                <span class="facet-count">{{ selectedStatusIds().length }}</span>
+              }
+              <i class="pi pi-angle-right facet-chevron" aria-hidden="true"></i>
+            </button>
+          </li>
+          <li>
+            <button class="filter-facet" type="button" role="menuitem" (click)="openFilterPanel('priority')">
+              <i class="pi pi-flag facet-icon" aria-hidden="true"></i>
+              <span class="facet-label">Priority</span>
+              @if (selectedPriorities().length) {
+                <span class="facet-count">{{ selectedPriorities().length }}</span>
+              }
+              <i class="pi pi-angle-right facet-chevron" aria-hidden="true"></i>
+            </button>
+          </li>
+          <li>
+            <button class="filter-facet" type="button" role="menuitem" (click)="openFilterPanel('team')">
+              <i class="pi pi-users facet-icon" aria-hidden="true"></i>
+              <span class="facet-label">Team</span>
+              @if (selectedTeamIds().length) {
+                <span class="facet-count">{{ selectedTeamIds().length }}</span>
+              }
+              <i class="pi pi-angle-right facet-chevron" aria-hidden="true"></i>
+            </button>
+          </li>
+        </ul>
+      }
+    }
+  </div>
+</p-popover>

@@ -13,11 +13,12 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT, Location } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { auditTime, finalize, fromEvent } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
+import { DatePickerModule } from 'primeng/datepicker';
 
 import {
   LngLatBounds,
@@ -33,6 +34,7 @@ import {
   AttendanceEvent,
   AttendanceEventType,
   DailyAttendanceSummary,
+  RosterEntry,
 } from '../models/attendance.model';
 
 /**
@@ -77,9 +79,11 @@ const GROUP_PRECISION = 3;
 /** Horizontal spacing between fanned-out pills sharing a location. */
 const FAN_SPACING = 46;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 @Component({
   selector: 'app-attendance-employee-detail',
-  imports: [ButtonModule, TagModule, DatePipe],
+  imports: [ButtonModule, DatePickerModule, ReactiveFormsModule, DatePipe],
   templateUrl: './employee-detail.html',
   styleUrl: './employee-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,6 +91,7 @@ const FAN_SPACING = 46;
 export class EmployeeDetail implements OnInit, AfterViewInit {
   private readonly attendanceService = inject(AttendanceService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
@@ -106,6 +111,28 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
   // Selected day timeline.
   readonly summary = signal<DailyAttendanceSummary | null>(null);
   readonly isLoading = signal(false);
+
+  /** Who this page is about — handed over by the roster row via navigation state
+   *  (survives refresh through history.state; absent on a cold deep link). */
+  readonly employee = signal<RosterEntry | null>(null);
+  readonly employeeName = computed(() => {
+    const employee = this.employee();
+    return employee ? (employee.name ?? employee.email) : null;
+  });
+  readonly employeeMeta = computed(() => {
+    const employee = this.employee();
+    if (!employee) return null;
+    return [employee.employeeCode, employee.department].filter(Boolean).join(' · ') || null;
+  });
+
+  /** Day picker — same control vocabulary as the roster toolbar. */
+  readonly dateControl = new FormControl<Date>(this.startOfToday(), { nonNullable: true });
+  readonly maxDate = this.startOfToday();
+  readonly isToday = signal(true);
+  /** Mirrors dateControl for the template (a FormControl isn't reactive in OnPush). */
+  readonly selectedDay = signal<Date>(this.startOfToday());
+
+  readonly skeletonRows = [0, 1, 2, 3];
 
   readonly firstIn = computed(() => this.summary()?.firstIn ?? null);
   readonly lastOut = computed(() => this.summary()?.lastOut ?? null);
@@ -209,6 +236,23 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
         this.map.setStyle(url);
       }
     });
+
+    // User picked another day: sync the URL (replaced, so Back still exits to the
+    // roster in one step) and reload that day's timeline.
+    this.dateControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      const param = this.toDateParam(value);
+      this.selectedDay.set(value);
+      this.isToday.set(param === this.todayLabel());
+      if (param === (this.selectedDate ?? this.todayLabel())) return;
+      this.selectedDate = param;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { date: param },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+      this.loadDay(param);
+    });
   }
 
   ngOnInit(): void {
@@ -217,6 +261,18 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
     if (!employeeId) return;
     this.employeeId = employeeId;
     this.selectedDate = date;
+
+    const navState = this.document.defaultView?.history.state as
+      | { employee?: RosterEntry }
+      | undefined;
+    if (navState?.employee?.employeeId === employeeId) {
+      this.employee.set(navState.employee);
+    }
+
+    const initialDay = date ? this.parseDateParam(date) : this.startOfToday();
+    this.dateControl.setValue(initialDay, { emitEvent: false });
+    this.selectedDay.set(initialDay);
+    this.isToday.set(this.isSelectedDateToday());
 
     this.loadDay(date);
     fromEvent(this.document, 'visibilitychange')
@@ -271,6 +327,47 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
 
   goBack(): void {
     this.location.back();
+  }
+
+  previousDay(): void {
+    this.shiftDay(-1);
+  }
+
+  nextDay(): void {
+    if (this.isToday()) return;
+    this.shiftDay(1);
+  }
+
+  /** Work-type color for a timeline dot — same vocabulary as the map markers. */
+  eventColor(event: AttendanceEvent): string {
+    return this.markerColor(event);
+  }
+
+  private shiftDay(deltaDays: number): void {
+    const next = new Date(this.dateControl.value.getTime() + deltaDays * DAY_MS);
+    next.setHours(0, 0, 0, 0);
+    this.dateControl.setValue(next);
+  }
+
+  /** Local YYYY-MM-DD so the day matches the company-timezone day on the server. */
+  private toDateParam(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private parseDateParam(param: string): Date {
+    const [year, month, day] = param.split('-').map(Number);
+    const parsed = new Date(year, (month || 1) - 1, day || 1);
+    parsed.setHours(0, 0, 0, 0);
+    return Number.isNaN(parsed.getTime()) ? this.startOfToday() : parsed;
+  }
+
+  private startOfToday(): Date {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
   }
 
   private loadDay(date: string | undefined, silent = false): void {
@@ -432,14 +529,5 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
       WFH_OUT: 'WFH Out',
     };
     return labels[eventType] ?? eventType;
-  }
-
-  sourceSeverity(source: string): 'info' | 'success' | 'warn' {
-    const map: Record<string, 'info' | 'success' | 'warn'> = {
-      OFFICE: 'info',
-      FIELD: 'warn',
-      WFH: 'success',
-    };
-    return map[source] ?? 'info';
   }
 }

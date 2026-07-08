@@ -15,7 +15,6 @@ import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } fr
 
 import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 
 import { AttendanceService } from '../services/attendance.service';
@@ -28,7 +27,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
   imports: [
     TableModule,
     ButtonModule,
-    InputTextModule,
     DatePickerModule,
     ReactiveFormsModule,
     DatePipe,
@@ -50,7 +48,9 @@ export class Roster implements OnInit {
   readonly rows = signal(10);
   readonly isLoading = signal(false);
 
-  /** Only org managers see the whole roster, so only they get the employee search. */
+  /** Admins/superadmins see the whole roster, so only they get the employee
+   *  search; a plain "user" gets just their own row and no search box. The
+   *  backend resolves the role and returns it as `meta.viewerIsManager`. */
   readonly canSearch = signal(false);
 
   readonly searchControl = new FormControl('', { nonNullable: true });
@@ -128,6 +128,8 @@ export class Roster implements OnInit {
   openEmployee(entry: RosterEntry): void {
     this.router.navigate(['/timekeeping/attendance', entry.employeeId], {
       queryParams: { date: this.toDateParam(this.dateControl.value) },
+      // Identity for the detail header; the day-summary endpoint only returns times.
+      state: { employee: entry },
     });
   }
 

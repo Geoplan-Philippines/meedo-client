@@ -29,7 +29,7 @@
     @if (comments().length) {
       <ul class="flex flex-col gap-3 mb-2" aria-label="Comments">
         @for (comment of comments(); track comment.id) {
-          <li class="rounded-base border border-border bg-background p-3">
+          <li class="rounded-base border border-border bg-surface p-3">
             <div class="flex items-center justify-between mb-1 gap-2">
               <span class="text-heading text-sm font-medium">{{ authorName(comment) }}</span>
               <div class="flex items-center gap-2">
@@ -45,7 +45,7 @@
               </div>
             </div>
             @if (editingCommentId() === comment.id) {
-              <textarea pTextarea [formControl]="editCommentControl" rows="2" class="w-full" aria-label="Edit comment"></textarea>
+              <textarea pTextarea [formControl]="editCommentControl" rows="2" class="w-full" aria-label="Edit comment" (keydown)="onEditCommentKeydown($event, comment)"></textarea>
               @if (editCommentControl.invalid && editCommentControl.touched) {
                 <small class="form-error" role="alert">Comment cannot be empty.</small>
               }
@@ -72,11 +72,12 @@
 
     <div class="flex flex-col gap-2 mt-2">
       <label class="form-label" for="ticket-comment">Add a comment</label>
-      <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Write a comment…" rows="2" class="w-full" aria-label="Add a comment"></textarea>
+      <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Write a comment…" rows="2" class="w-full" aria-label="Add a comment" (keydown)="onCommentKeydown($event)"></textarea>
       @if (commentControl.invalid && commentControl.touched) {
         <small class="form-error" role="alert">Comment cannot be empty.</small>
       }
-      <div class="flex justify-end">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-muted text-xs">Enter to send · Shift+Enter for a new line</span>
         <p-button label="Comment" icon="pi pi-send" size="small" (onClick)="postComment()" [loading]="isPostingComment()" [disabled]="isPostingComment()" />
       </div>
     </div>
