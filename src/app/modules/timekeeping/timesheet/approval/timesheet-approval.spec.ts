@@ -37,7 +37,7 @@ const summary: TimesheetSummary = {
           workDate: '2026-06-22',
           hours: 8,
           location: 'OFC - DW',
-          workType: 'OFFICE_DIRECT_WORK',
+          workType: 'REGULAR',
           task: 'Inspection',
           isOvertime: false,
           isNightDifferential: false,

@@ -12,13 +12,10 @@ export type TimesheetAuditAction =
   | 'EXPORTED';
 
 export type TimesheetWorkType =
-  | 'OFFICE'
-  | 'OFFICE_DIRECT_WORK'
-  | 'FIELD'
-  | 'WFH'
+  | 'REGULAR'
+  | 'REST_DAY'
   | 'LEAVE'
-  | 'OFFSET'
-  | 'HOLIDAY';
+  | 'OFFSET';
 
 export interface TimesheetProject {
   id: string;

@@ -66,23 +66,17 @@ interface AddProjectModalState {
 }
 
 const WORK_TYPE_OPTIONS: { label: string; value: TimesheetWorkType }[] = [
-  { label: 'Office', value: 'OFFICE' },
-  { label: 'Office - Direct Work', value: 'OFFICE_DIRECT_WORK' },
-  { label: 'Field', value: 'FIELD' },
-  { label: 'Work From Home', value: 'WFH' },
-  { label: 'Leave', value: 'LEAVE' },
+  { label: 'RG - Regular', value: 'REGULAR' },
+  { label: 'RD - Rest Day', value: 'REST_DAY' },
+  { label: 'LVE - Leave', value: 'LEAVE' },
   { label: 'Offset', value: 'OFFSET' },
-  { label: 'Holiday', value: 'HOLIDAY' },
 ];
 
 const LOCATION_BY_WORK_TYPE: Record<TimesheetWorkType, string> = {
-  OFFICE: 'OFC - DW',
-  OFFICE_DIRECT_WORK: 'OFC - DW',
-  FIELD: 'FLD',
-  WFH: 'WFH',
+  REGULAR: 'OFC - DW',
+  REST_DAY: 'RD',
   LEAVE: 'LVE',
   OFFSET: 'OFC - DW',
-  HOLIDAY: 'OFC - DW',
 };
 
 function locationForWorkType(workType: TimesheetWorkType): string {
@@ -153,9 +147,9 @@ export class Timesheet implements OnInit {
   });
 
   readonly totalHours = computed(() => this.sumAllHours(() => true));
-  readonly regularHours = computed(() => this.sumAllHours((entry) => !entry.isOvertime && !entry.isNightDifferential && !['LEAVE', 'HOLIDAY', 'OFFSET'].includes(entry.workType)));
+  readonly regularHours = computed(() => this.sumAllHours((entry) => !entry.isOvertime && !entry.isNightDifferential && !['LEAVE', 'OFFSET'].includes(entry.workType)));
   readonly overtimeHours = computed(() => this.sumAllHours((entry) => entry.isOvertime));
-  readonly leaveNightHours = computed(() => this.sumAllHours((entry) => entry.isNightDifferential || ['LEAVE', 'HOLIDAY'].includes(entry.workType)));
+  readonly leaveNightHours = computed(() => this.sumAllHours((entry) => entry.isNightDifferential || entry.workType === 'LEAVE'));
   readonly offsetHours = computed(() => this.sumAllHours((entry) => entry.workType === 'OFFSET'));
 
   readonly dailyTotals = computed(() => {
@@ -348,7 +342,7 @@ export class Timesheet implements OnInit {
       date: toDateInputValue(day),
       projectId,
       hours: null,
-      workType: 'OFFICE',
+      workType: 'REGULAR',
       task: '',
       isOvertime: false,
       isNightDifferential: false,

@@ -63,7 +63,7 @@ describe('Timesheet', () => {
                 workDate: payload.workDate,
                 hours: payload.hours,
                 location: payload.location ?? 'OFC - DW',
-                workType: payload.workType ?? 'OFFICE_DIRECT_WORK',
+                workType: payload.workType ?? 'REGULAR',
                 task: payload.task,
                 isOvertime: payload.isOvertime ?? false,
                 isNightDifferential: payload.isNightDifferential ?? false,
