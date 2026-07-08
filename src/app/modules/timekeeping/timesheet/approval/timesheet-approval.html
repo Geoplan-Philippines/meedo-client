@@ -197,7 +197,12 @@
           <ng-template pTemplate="body" let-employee>
             <tr
               [class.row--active]="selectedEmployee()?.userId === employee.userId"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'View details for ' + employee.employeeName"
               (click)="selectEmployee(employee)"
+              (keydown.enter)="selectEmployee(employee)"
+              (keydown.space)="selectEmployee(employee)"
               style="cursor: pointer"
             >
               <td class="col-check" (click)="$event.stopPropagation()">

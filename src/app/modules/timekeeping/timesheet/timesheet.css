@@ -398,31 +398,8 @@ button.grid-cell--value:hover {
 }
 
 /* The entry modal always uses the app's light theme tokens, regardless of
-   the global dark-mode toggle (`.app-dark` on <html>). */
-.entry-modal-dialog {
-  --background: #F8FBFF;
-  --foreground: #0B161F;
-  --text-heading: #0B161F;
-  --text-body: #365261;
-
-  --primary: #0B4EA2;
-  --primary-hover: #03285A;
-  --primary-foreground: #FFFFFF;
-  --secondary: #E8F1FF;
-  --secondary-foreground: #0B4EA2;
-  --accent: #22D3EE;
-  --accent-foreground: #083344;
-
-  --border: #DBE5F0;
-  --input: #DBE5F0;
-  --ring: #22D3EE;
-
-  --destructive: #FF4B4B;
-  --muted-destructive: #FFE1DE;
-  --success: #3DBE81;
-  --muted-success: #D1EDE0;
-  --success-foreground: #FFFFFF;
-}
+   the global dark-mode toggle (`.app-dark` on <html>) — see `.light-scope`
+   in src/styles.css. */
 
 .add-project-dialog {
   width: min(30rem, 100%);

@@ -100,6 +100,46 @@
   --success-foreground: #FFFFFF;
 }
 
+/* Forces the light-theme token values on an element (and its descendants)
+   regardless of the ancestor `.app-dark` toggle. Use sparingly — only for
+   surfaces that must always render light (e.g. a print-style modal). */
+.light-scope {
+  --background: #F1F6FC;
+  --surface: #FFFFFF;
+  --popover: #FFFFFF;
+  --foreground: #0B161F;
+  --text-heading: #0B161F;
+  --text-body: #365261;
+  --text-muted: #5E7180;
+
+  --primary: #0B4EA2;
+  --primary-hover: #03285A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8F1FF;
+  --secondary-foreground: #0B4EA2;
+  --accent: #22D3EE;
+  --accent-foreground: #083344;
+
+  --border: #DBE5F0;
+  --border-strong: #C7D6E6;
+  --input: #DBE5F0;
+  --ring: #22D3EE;
+
+  --destructive: #FF4B4B;
+  --muted-destructive: #FFE1DE;
+  --muted-destructive-foreground: #C0322F;
+  --success: #3DBE81;
+  --muted-success: #D1EDE0;
+  --muted-success-foreground: #1B6B47;
+  --warning: #E8A317;
+  --muted-warning: #FEF3D6;
+  --muted-warning-foreground: #92580B;
+  --info: #2F6FE0;
+  --muted-info: #DCE9FB;
+  --muted-info-foreground: #1A4F9C;
+  --success-foreground: #FFFFFF;
+}
+
 /* `inline` makes utilities reference the source variable directly
    (e.g. bg-background -> var(--background)) so they respond to the
    `.app-dark` overrides above at runtime. */
