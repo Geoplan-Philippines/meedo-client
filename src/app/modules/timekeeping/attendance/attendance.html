@@ -1,39 +1,75 @@
-<main class="p-4 md:p-8">
-  <h1>Welcome back</h1>
+<main class="recognition-page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Face Recognition</h1>
+      <p class="page-subtitle">Clock in by verifying your identity with the camera.</p>
+    </div>
+  </header>
 
-  <div class="mt-2">
-    <div class="flex gap-4 items-start">
-      <webcam
-        [trigger]="trigger$"
-        (imageCapture)="handleImage($event)"
-      ></webcam>
+  <section class="recognition-panel">
+    <div class="camera-row">
+      <div class="camera-frame">
+        <webcam
+          [trigger]="trigger$"
+          (imageCapture)="handleImage($event)"
+        ></webcam>
+      </div>
 
-      @if (previewImage(); as image) {
-        <img [src]="image" alt="Preview" height="250" width="250" />
+      <div class="capture-frame">
+        @if (previewImage(); as image) {
+          <img class="capture-image" [src]="image" alt="Captured frame for verification" />
+        } @else {
+          <div class="capture-placeholder">
+            <i class="pi pi-camera" aria-hidden="true"></i>
+            <span>Your captured frame appears here</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="recognition-actions">
+      <p-button
+        label="Capture"
+        icon="pi pi-camera"
+        [loading]="recognizing()"
+        (onClick)="capture()"
+      />
+
+      @if (recognizing()) {
+        <span class="recognition-hint" role="status" aria-live="polite">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Recognizing…
+        </span>
       }
     </div>
 
-    <p-button
-      label="Capture"
-      class="mt-2"
-      [loading]="recognizing()"
-      (onClick)="capture()"
-    />
-
-    @if (recognizing()) {
-      <p class="mt-2">Recognizing...</p>
-    }
-
     @if (result(); as result) {
-      <div class="mt-2" role="status" aria-live="polite">
-        <p>Matched: {{ result.matched ? 'Yes' : 'No' }}</p>
-        <p>Similarity: {{ result.similarity }}</p>
-        <p>Threshold: {{ result.threshold }}</p>
+      <div class="result-card" role="status" aria-live="polite">
+        <span
+          class="status-badge"
+          [class.status-badge--matched]="result.matched"
+          [class.status-badge--unmatched]="!result.matched"
+        >
+          <span class="status-dot" aria-hidden="true"></span>
+          {{ result.matched ? 'Match found' : 'No match' }}
+        </span>
+
+        <dl class="result-metrics">
+          <div class="result-metric">
+            <dt>Similarity</dt>
+            <dd>{{ result.similarity }}</dd>
+          </div>
+          <div class="result-metric">
+            <dt>Threshold</dt>
+            <dd>{{ result.threshold }}</dd>
+          </div>
+        </dl>
       </div>
     }
 
     @if (error(); as e) {
-      <p class="mt-2 text-destructive" role="alert">{{ e }}</p>
+      <p class="recognition-error" role="alert">
+        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i> {{ e }}
+      </p>
     }
-  </div>
+  </section>
 </main>

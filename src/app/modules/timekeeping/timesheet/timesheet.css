@@ -81,8 +81,6 @@
 }
 
 :host ::ng-deep .week-nav-btn.p-button  { width: 2rem; padding-inline: 0; }
-:host ::ng-deep .submit-btn.p-button    { min-width: 5.75rem; }
-:host ::ng-deep .save-btn.p-button,
 :host ::ng-deep .history-btn.p-button   { background: var(--color-background); }
 
 .lock-banner {
@@ -144,37 +142,9 @@
 .grid-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.75rem;
   flex-wrap: wrap;
-}
-
-.grid-search {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 16rem;
-  flex: 1;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: var(--color-background);
-  color: var(--color-body);
-}
-
-.grid-search i {
-  font-size: 0.85rem;
-  flex-shrink: 0;
-}
-
-.grid-search input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font: inherit;
-  font-size: 0.85rem;
-  color: var(--color-heading);
 }
 
 .grid-card {
@@ -670,13 +640,8 @@ button.grid-cell--value:hover {
   :host ::ng-deep .week-nav-btn.p-button            { flex: 0 0 2.5rem; }
 
   .action-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: 0.4rem;
-  }
-
-  :host ::ng-deep .action-buttons .submit-btn.p-button {
-    grid-column: 1 / -1;
   }
 
   .hours-strip {

@@ -1,12 +1,11 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject } from 'rxjs';
 import { catchError, exhaustMap, filter, finalize, tap } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
-import { ColorPickerModule } from 'primeng/colorpicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
@@ -15,11 +14,36 @@ import { TooltipModule } from 'primeng/tooltip';
 import {
   StatusesService,
 } from './services/statuses.service';
-import { CreateStatusPayload, Status, UpdateStatusPayload } from './models/status.model';
+import {
+  CreateStatusPayload,
+  Status,
+  UpdateStatusPayload,
+} from './models/status.model';
 
 type DialogMode = 'create' | 'edit';
 
-const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+/**
+ * Curated swatch palette for custom (editable) statuses. Deliberately distinct
+ * from the built-in Standard status hues (slate / blue / amber / violet / green /
+ * red) so custom statuses read as their own family. No free-form picker — this
+ * keeps every status color uniform and on-brand. Mirrors CUSTOM_STATUS_COLORS
+ * on the server, which rejects anything outside this set.
+ */
+const STATUS_COLORS = [
+  { name: 'Orange', value: '#F97316' },
+  { name: 'Lime', value: '#84CC16' },
+  { name: 'Teal', value: '#14B8A6' },
+  { name: 'Cyan', value: '#06B6D4' },
+  { name: 'Fuchsia', value: '#D946EF' },
+  { name: 'Pink', value: '#EC4899' },
+] as const;
+
+const STATUS_COLOR_VALUES: readonly string[] = STATUS_COLORS.map((c) => c.value);
+
+/** Custom statuses may only use a color from the curated palette. */
+function colorInPalette(control: AbstractControl): ValidationErrors | null {
+  return STATUS_COLOR_VALUES.includes(control.value) ? null : { colorInvalid: true };
+}
 
 @Component({
   selector: 'app-settings-statuses',
@@ -31,7 +55,6 @@ const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
     ButtonModule,
     DialogModule,
     InputTextModule,
-    ColorPickerModule,
     ToggleSwitchModule,
     TooltipModule,
   ],
@@ -49,9 +72,15 @@ export class Statuses implements OnInit {
   readonly showArchivedControl = new FormControl(false, { nonNullable: true });
   readonly showArchived = toSignal(this.showArchivedControl.valueChanges, { initialValue: false });
 
+  /** Built-in, locked statuses — the fixed baseline (sourced from the API now). */
+  readonly systemStatuses = computed(() => this.statuses().filter((s) => s.isSystem));
+
+  /** Team-defined statuses that can be edited, archived, or deleted. */
+  readonly customStatuses = computed(() => this.statuses().filter((s) => !s.isSystem));
+
   readonly visibleStatuses = computed(() => {
-    const all = this.statuses();
-    return this.showArchived() ? all : all.filter((s) => !s.isArchived);
+    const custom = this.customStatuses();
+    return this.showArchived() ? custom : custom.filter((s) => !s.isArchived);
   });
 
   readonly isDialogOpen = signal(false);
@@ -71,11 +100,14 @@ export class Statuses implements OnInit {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(100)],
     }),
-    color: new FormControl('', {
+    color: new FormControl(STATUS_COLOR_VALUES[0], {
       nonNullable: true,
-      validators: [Validators.required, Validators.pattern(HEX_COLOR_PATTERN)],
+      validators: [Validators.required, colorInPalette],
     }),
   });
+
+  /** Fixed swatch options shown in the create/edit dialog. */
+  readonly colorOptions = STATUS_COLORS;
 
   readonly formValue = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
@@ -86,12 +118,14 @@ export class Statuses implements OnInit {
     return name && name.length > 0 ? name : 'Status preview';
   });
 
-  readonly previewColor = computed(() => {
-    const color = this.formValue()?.color ?? '';
-    return HEX_COLOR_PATTERN.test(color) ? color : '#94a3b8';
-  });
+  readonly previewColor = computed(() => this.normalizeColor(this.formValue()?.color));
 
   readonly nameLength = computed(() => this.formValue()?.name?.length ?? 0);
+
+  /** Snap any stored color (including legacy free-form hex) to a valid palette value. */
+  private normalizeColor(color: string | null | undefined): string {
+    return color && STATUS_COLOR_VALUES.includes(color) ? color : STATUS_COLOR_VALUES[0];
+  }
 
   constructor() {
     this.toggleArchive$
@@ -147,7 +181,7 @@ export class Statuses implements OnInit {
   openCreate(): void {
     this.dialogMode.set('create');
     this.editingStatus.set(null);
-    this.form.reset({ name: '', color: '#3B82F6' }); // blue-500 default
+    this.form.reset({ name: '', color: STATUS_COLOR_VALUES[0] });
     this.isDialogOpen.set(true);
   }
 
@@ -156,7 +190,7 @@ export class Statuses implements OnInit {
     this.editingStatus.set(status);
     this.form.reset({
       name: status.name,
-      color: status.color,
+      color: this.normalizeColor(status.color),
     });
     this.isDialogOpen.set(true);
   }

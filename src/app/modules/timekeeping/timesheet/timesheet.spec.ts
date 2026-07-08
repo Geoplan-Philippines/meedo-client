@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
-import { TimesheetEntry, TimesheetPeriodLock, TimesheetProject } from './models/timesheet.model';
+import { TimesheetEntry, TimesheetEntryPayload, TimesheetPeriodLock, TimesheetProject } from './models/timesheet.model';
 import { Timesheet } from './timesheet';
 import { TimesheetService } from './services/timesheet.service';
 
@@ -38,9 +38,11 @@ describe('Timesheet', () => {
   let fixture: ComponentFixture<Timesheet>;
   let component: Timesheet;
   let createCalls: number;
+  let entriesData: TimesheetEntry[];
 
   beforeEach(async () => {
     createCalls = 0;
+    entriesData = [];
 
     await TestBed.configureTestingModule({
       imports: [Timesheet],
@@ -48,27 +50,29 @@ describe('Timesheet', () => {
         {
           provide: TimesheetService,
           useValue: {
-            getEntries: () => of(emptyEntries),
+            getEntries: () => of({ ...emptyEntries, data: entriesData }),
             getProjects: () => of(projects),
             getPeriodLock: () => of(unlocked),
-            createEntry: () => {
+            createEntry: (payload: TimesheetEntryPayload) => {
               createCalls += 1;
-              return of({
+              const entry = {
                 id: 'entry-1',
                 organizationId: 'org-1',
                 userId: 'user-1',
-                projectId: 'project-1',
-                workDate: '2026-06-22',
-                hours: 8,
-                location: 'OFC - DW',
-                workType: 'OFFICE_DIRECT_WORK',
-                task: 'Inspection',
-                isOvertime: false,
-                isNightDifferential: false,
+                projectId: payload.projectId,
+                workDate: payload.workDate,
+                hours: payload.hours,
+                location: payload.location ?? 'OFC - DW',
+                workType: payload.workType ?? 'OFFICE_DIRECT_WORK',
+                task: payload.task,
+                isOvertime: payload.isOvertime ?? false,
+                isNightDifferential: payload.isNightDifferential ?? false,
                 status: 'DRAFT',
                 createdAt: '2026-06-22T00:00:00.000Z',
                 updatedAt: '2026-06-22T00:00:00.000Z',
-              } satisfies TimesheetEntry);
+              } satisfies TimesheetEntry;
+              entriesData = [...entriesData, entry];
+              return of(entry);
             },
             updateEntry: () => of({}),
             deleteEntry: () => of({}),
@@ -131,10 +135,6 @@ describe('Timesheet', () => {
       modal.task = 'Inspection';
     }
     component.closeEntryModal(true);
-
-    const entry = component.entries()[0];
-    entry.dirty = true;
-    component.saveDrafts();
 
     expect(createCalls).toBe(0);
   });

@@ -58,6 +58,7 @@ export class TimesheetApproval implements OnInit {
   readonly selectedEntryIds = signal<Set<string>>(new Set());
   readonly selectedEmployee = signal<TimesheetSummaryEmployee | null>(null);
   readonly activeTab = signal<'SUBMITTED' | 'APPROVED' | 'REJECTED' | null>(null);
+  readonly taskPreviewContent = signal<string | null>(null);
 
   readonly isLoading = signal(false);
   readonly isApproving = signal(false);
@@ -93,7 +94,8 @@ export class TimesheetApproval implements OnInit {
     if (search) {
       list = list.filter(e =>
         e.employeeName.toLowerCase().includes(search) ||
-        e.employeeEmail.toLowerCase().includes(search),
+        e.employeeEmail.toLowerCase().includes(search) ||
+        (e.department ?? '').toLowerCase().includes(search),
       );
     }
 
@@ -137,6 +139,14 @@ export class TimesheetApproval implements OnInit {
     const selected = Array.isArray(date) ? date[0] : date;
     if (!selected) return;
     this.selectedDate.set(selected);
+    this.loadData();
+  }
+
+  previousWeek(): void { this.changeWeekBy(-7); }
+  nextWeek(): void     { this.changeWeekBy(7); }
+
+  private changeWeekBy(days: number): void {
+    this.selectedDate.set(addDays(this.selectedDate(), days));
     this.loadData();
   }
 
@@ -191,6 +201,14 @@ export class TimesheetApproval implements OnInit {
 
   closePanel(): void {
     this.selectedEmployee.set(null);
+  }
+
+  openTaskPreview(entry: TimesheetEntry): void {
+    this.taskPreviewContent.set(entry.task);
+  }
+
+  closeTaskPreview(): void {
+    this.taskPreviewContent.set(null);
   }
 
   toggleEntry(entry: TimesheetEntry, checked: boolean): void {
@@ -391,6 +409,13 @@ export class TimesheetApproval implements OnInit {
     return employee.entries.filter(e => e.status === 'SUBMITTED').length;
   }
 
+  employeeLeaveAndNightHours(employee: TimesheetSummaryEmployee): number {
+    const nightDifferentialHours = employee.entries
+      .filter(e => e.isNightDifferential)
+      .reduce((sum, e) => sum + e.hours, 0);
+    return employee.leaveHours + nightDifferentialHours;
+  }
+
   projectLabel(entry: TimesheetEntry): string {
     if (!entry.project) return '—';
     return `${entry.project.customerName} — ${entry.project.workOrderNumber}`;
@@ -436,7 +461,6 @@ export class TimesheetApproval implements OnInit {
     return {
       periodStart: this.periodStart(),
       periodEnd: this.periodEnd(),
-      employee: this.employeeFilter() || undefined,
       projectId: this.projectFilter() ?? undefined,
     };
   }

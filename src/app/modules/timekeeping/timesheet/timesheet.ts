@@ -2,7 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CanDeactivateFn } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, Observable } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -47,6 +47,7 @@ interface TimesheetActivityItem {
 
 interface EntryModalState {
   localId: string;
+  entryId?: string;
   date: string;
   projectId: string;
   hours: number | null;
@@ -124,12 +125,11 @@ export class Timesheet implements OnInit {
   readonly entries = signal<TimesheetDayEntry[]>([]);
   readonly projects = signal<TimesheetProject[]>([]);
   readonly isLoading = signal(false);
-  readonly isSavingDrafts = signal(false);
-  readonly isSubmitting = signal(false);
+  readonly isRemovingProject = signal(false);
+  readonly isSavingEntry = signal(false);
   readonly isLocked = signal(false);
   readonly lockMessage = signal<string | null>(null);
   readonly showHistoryDialog = signal(false);
-  readonly searchText = signal('');
   readonly addedProjectIds = signal<Set<string>>(new Set());
   readonly entryModal = signal<EntryModalState | null>(null);
   readonly entrySaveAttempted = signal(false);
@@ -180,10 +180,6 @@ export class Timesheet implements OnInit {
       : [{ title: 'No activity yet', time: 'Draft entries will appear here after saving.', tone: 'info' }];
   });
 
-  readonly hasDraftRows = computed(() =>
-    this.entries().some((entry) => entry.entryId && entry.status === 'DRAFT'),
-  );
-
   readonly projectOptions = computed(() =>
     this.projects().map((project) => ({ label: formatProjectLabel(project), value: project.id })),
   );
@@ -193,12 +189,6 @@ export class Timesheet implements OnInit {
     this.entries().forEach((entry) => { if (entry.projectId) ids.add(entry.projectId); });
     this.addedProjectIds().forEach((id) => ids.add(id));
     return [...ids];
-  });
-
-  readonly filteredProjectIds = computed(() => {
-    const query = this.searchText().trim().toLowerCase();
-    if (!query) return this.tableProjectIds();
-    return this.tableProjectIds().filter((id) => this.projectName(id).toLowerCase().includes(query));
   });
 
   ngOnInit(): void {
@@ -325,9 +315,9 @@ export class Timesheet implements OnInit {
       return;
     }
 
-    this.isSavingDrafts.set(true);
+    this.isRemovingProject.set(true);
     forkJoin(entryIds.map((id) => this.timesheetService.deleteEntry(id)))
-      .pipe(finalize(() => this.isSavingDrafts.set(false)))
+      .pipe(finalize(() => this.isRemovingProject.set(false)))
       .subscribe({
         next: () => {
           this.messageService.add({ severity: 'success', summary: 'Removed', detail: 'Project removed from timesheet' });
@@ -369,6 +359,7 @@ export class Timesheet implements OnInit {
     this.entrySaveAttempted.set(false);
     this.entryModal.set({
       localId: entry.localId,
+      entryId: entry.entryId,
       date: entry.date,
       projectId: entry.projectId,
       hours: entry.hours,
@@ -405,101 +396,51 @@ export class Timesheet implements OnInit {
     const modal = this.entryModal();
     if (!modal) return;
 
-    if (save && !modal.readonly) {
-      if (!(Number(modal.hours) > 0) || !stripHtml(modal.task)) {
-        this.entrySaveAttempted.set(true);
-        return;
-      }
-
-      if (modal.isNew) {
-        this.entries.update((entries) => [...entries, {
-          localId: modal.localId,
-          date: modal.date,
-          projectId: modal.projectId,
-          hours: modal.hours,
-          workType: modal.workType,
-          location: locationForWorkType(modal.workType),
-          task: modal.task,
-          isOvertime: modal.isOvertime,
-          isNightDifferential: modal.isNightDifferential,
-          status: 'DRAFT',
-          dirty: true,
-          saving: false,
-        }]);
-      } else {
-        const entry = this.entries().find((item) => item.localId === modal.localId);
-        if (entry && !this.isEntryReadonly(entry)) {
-          entry.hours = modal.hours;
-          entry.task = modal.task;
-          entry.location = locationForWorkType(modal.workType);
-          entry.isOvertime = modal.isOvertime;
-          entry.isNightDifferential = modal.isNightDifferential;
-          entry.workType = modal.workType;
-          entry.dirty = true;
-          this.entries.update((entries) => [...entries]);
-        }
-      }
+    if (!save || modal.readonly) {
+      this.entryModal.set(null);
+      return;
     }
+
+    if (!(Number(modal.hours) > 0) || !stripHtml(modal.task)) {
+      this.entrySaveAttempted.set(true);
+      return;
+    }
+
+    const validationError = this.validateModalEntry(modal);
+    if (validationError) {
+      this.messageService.add({ severity: 'warn', summary: 'Check entry', detail: validationError });
+      return;
+    }
+
+    const payload = this.modalToPayload(modal);
+    const operation = modal.entryId
+      ? this.timesheetService.updateEntry(modal.entryId, payload)
+      : this.timesheetService.createEntry(payload);
 
     this.entryModal.set(null);
-  }
-
-  saveDrafts(): void {
-    const targets = this.entries().filter((entry) => entry.dirty && !this.isEntryReadonly(entry));
-    if (targets.length === 0) return;
-
-    for (const entry of targets) {
-      const error = this.validateEntry(entry);
-      if (error) {
-        this.messageService.add({ severity: 'warn', summary: 'Check entry', detail: error });
-        return;
-      }
-    }
-
-    const operations = targets
-      .map((entry) => this.buildEntryOperation(entry))
-      .filter((op): op is Observable<unknown> => !!op);
-
-    if (operations.length === 0) return;
-
-    this.isSavingDrafts.set(true);
-    forkJoin(operations)
-      .pipe(finalize(() => this.isSavingDrafts.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Draft entries saved' });
-          this.loadWeek();
-        },
-        error: (err: unknown) => {
-          console.error('Error saving drafts:', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save drafts') });
-        },
-      });
-  }
-
-  submitWeek(): void {
-    if (this.hasUnsavedChanges()) {
-      this.messageService.add({ severity: 'warn', summary: 'Save drafts first', detail: 'Please save all draft changes before submitting.' });
-      return;
-    }
-    if (!this.hasDraftRows()) {
-      this.messageService.add({ severity: 'info', summary: 'Nothing to submit', detail: 'There are no draft rows for this week.' });
-      return;
-    }
-
-    this.isSubmitting.set(true);
-    this.timesheetService.submitWeek(this.periodStart(), this.periodEnd())
-      .pipe(finalize(() => this.isSubmitting.set(false)))
-      .subscribe({
-        next: (result) => {
-          this.messageService.add({ severity: 'success', summary: 'Submitted', detail: `${result.submittedCount} row(s) submitted for approval` });
-          this.loadWeek();
-        },
-        error: (err: unknown) => {
-          console.error('Error submitting week:', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to submit week') });
-        },
-      });
+    this.isSavingEntry.set(true);
+    operation.subscribe({
+      next: () => {
+        this.timesheetService.submitWeek(this.periodStart(), this.periodEnd())
+          .pipe(finalize(() => this.isSavingEntry.set(false)))
+          .subscribe({
+            next: () => {
+              this.messageService.add({ severity: 'success', summary: 'Submitted', detail: 'Entry submitted for approval' });
+              this.loadWeek();
+            },
+            error: (err: unknown) => {
+              console.error('Error submitting week:', err);
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Entry saved, but failed to submit for approval.') });
+              this.loadWeek();
+            },
+          });
+      },
+      error: (err: unknown) => {
+        this.isSavingEntry.set(false);
+        console.error('Error saving entry:', err);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save entry') });
+      },
+    });
   }
 
   hasUnsavedChanges(): boolean {
@@ -530,24 +471,12 @@ export class Timesheet implements OnInit {
     return this.entries().reduce((total, entry) => (predicate(entry) ? total + (Number(entry.hours) || 0) : total), 0);
   }
 
-  private buildEntryOperation(entry: TimesheetDayEntry): Observable<unknown> | null {
-    if (!entry.projectId) return null;
-    const hours = Number(entry.hours) || 0;
-    if (entry.entryId && hours <= 0) return this.timesheetService.deleteEntry(entry.entryId);
-    if (entry.entryId && hours > 0) return this.timesheetService.updateEntry(entry.entryId, this.entryToPayload(entry));
-    if (!entry.entryId && hours > 0) return this.timesheetService.createEntry(this.entryToPayload(entry));
-    return null;
-  }
-
-  private validateEntry(entry: TimesheetDayEntry): string | null {
-    const hours = Number(entry.hours) || 0;
-    if (hours <= 0) return null;
-    if (!entry.projectId) return 'Please select a project for this entry.';
-    if (!stripHtml(entry.task)) return 'Task description is required.';
+  private validateModalEntry(modal: EntryModalState): string | null {
+    const hours = Number(modal.hours) || 0;
     if (hours > 24) return 'Hours must be between 0 and 24 per day.';
 
     const otherTotal = this.entries()
-      .filter((item) => item !== entry && item.date === entry.date)
+      .filter((item) => item.localId !== modal.localId && item.date === modal.date)
       .reduce((total, item) => total + (Number(item.hours) || 0), 0);
     if (otherTotal + hours > 24) return 'Total hours for one day cannot exceed 24.';
     return null;
@@ -574,16 +503,16 @@ export class Timesheet implements OnInit {
     }));
   }
 
-  private entryToPayload(entry: TimesheetDayEntry): TimesheetEntryPayload {
+  private modalToPayload(modal: EntryModalState): TimesheetEntryPayload {
     return {
-      projectId: entry.projectId!,
-      workDate: entry.date,
-      hours: Number(entry.hours),
-      workType: entry.workType,
-      location: entry.location,
-      task: entry.task.trim(),
-      isOvertime: entry.isOvertime,
-      isNightDifferential: entry.isNightDifferential,
+      projectId: modal.projectId,
+      workDate: modal.date,
+      hours: Number(modal.hours),
+      workType: modal.workType,
+      location: locationForWorkType(modal.workType),
+      task: modal.task.trim(),
+      isOvertime: modal.isOvertime,
+      isNightDifferential: modal.isNightDifferential,
     };
   }
 }

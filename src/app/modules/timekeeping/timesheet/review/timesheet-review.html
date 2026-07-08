@@ -146,46 +146,64 @@
           </button>
         </div>
 
-        @for (group of dayGroups(); track group.date) {
-          <div class="day-group">
-            <button
-              type="button"
-              class="day-group-btn"
-              (click)="toggleDate(group.date)"
-              [attr.aria-expanded]="isDateExpanded(group.date)"
-            >
-              <i
-                class="pi day-group-chevron"
-                [class.pi-chevron-down]="isDateExpanded(group.date)"
-                [class.pi-chevron-right]="!isDateExpanded(group.date)"
-                aria-hidden="true"
-              ></i>
-              <strong class="day-date-label">{{ formatDayHeader(group.date) }}</strong>
-              <span class="day-total-badge">{{ groupTotal(group.entries) | number: '1.1-1' }}h</span>
-              <span class="day-entry-count">{{ group.entries.length }} entry/entries</span>
-            </button>
+        @if (dayGroups().length > 0) {
+          <div class="day-entries-wrap">
+            <table class="day-entries-table">
+              <colgroup>
+                <col class="col-w-project" />
+                <col class="col-w-wo" />
+                <col class="col-w-task" />
+                <col class="col-w-loc" />
+                <col class="col-w-hours" />
+                <col class="col-w-flag" />
+                <col class="col-w-flag" />
+                <col class="col-w-status" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Project</th>
+                  <th scope="col">Work Order</th>
+                  <th scope="col">Task / Description</th>
+                  <th scope="col">Location</th>
+                  <th scope="col" class="col-num">Hours</th>
+                  <th scope="col" class="col-flag">OT</th>
+                  <th scope="col" class="col-flag">ND</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (group of dayGroups(); track group.date) {
+                  <tr class="day-group-row">
+                    <td colspan="8">
+                      <button
+                        type="button"
+                        class="day-group-btn"
+                        (click)="toggleDate(group.date)"
+                        [attr.aria-expanded]="isDateExpanded(group.date)"
+                      >
+                        <i
+                          class="pi day-group-chevron"
+                          [class.pi-chevron-down]="isDateExpanded(group.date)"
+                          [class.pi-chevron-right]="!isDateExpanded(group.date)"
+                          aria-hidden="true"
+                        ></i>
+                        <strong class="day-date-label">{{ formatDayHeader(group.date) }}</strong>
+                        <span class="day-total-badge">{{ groupTotal(group.entries) | number: '1.1-1' }}h</span>
+                        <span class="day-entry-count">{{ group.entries.length }} entry/entries</span>
+                      </button>
+                    </td>
+                  </tr>
 
-            @if (isDateExpanded(group.date)) {
-              <div class="day-entries-wrap">
-                <table class="day-entries-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Project</th>
-                      <th scope="col">Work Order</th>
-                      <th scope="col">Task / Description</th>
-                      <th scope="col">Location</th>
-                      <th scope="col" class="col-num">Hours</th>
-                      <th scope="col" class="col-flag">OT</th>
-                      <th scope="col" class="col-flag">ND</th>
-                      <th scope="col">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                  @if (isDateExpanded(group.date)) {
                     @for (entry of group.entries; track entry.id) {
                       <tr [class.entry--approved]="entry.status === 'APPROVED'" [class.entry--rejected]="entry.status === 'REJECTED'">
                         <td class="td-project">{{ projectLabel(entry) }}</td>
                         <td class="td-wo">{{ workOrderLabel(entry) }}</td>
-                        <td class="td-task">{{ entry.task }}</td>
+                        <td class="td-task">
+                          <button type="button" class="task-cell-btn" (click)="openTaskPreview(entry)" aria-label="View full task description">
+                            <div class="td-task-content" [innerHTML]="entry.task"></div>
+                          </button>
+                        </td>
                         <td class="td-loc">{{ entry.location }}</td>
                         <td class="col-num td-hrs">{{ entry.hours | number: '1.1-1' }}</td>
                         <td class="col-flag td-flag">
@@ -210,12 +228,12 @@
                         </td>
                       </tr>
                     }
-                  </tbody>
-                </table>
-              </div>
-            }
+                  }
+                }
+              </tbody>
+            </table>
           </div>
-        } @empty {
+        } @else {
           <div class="empty-state">
             <div class="empty-icon"><i class="pi pi-inbox" aria-hidden="true"></i></div>
             <p class="empty-title">No entries found</p>
@@ -233,6 +251,21 @@
     }
 
   </div>
+
+  <!-- ─── Task Description Preview Dialog ─────────────────────────────────── -->
+  @if (taskPreviewContent(); as content) {
+    <div class="dialog-backdrop" role="presentation" (click)="closeTaskPreview()">
+      <div class="app-dialog task-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="task-preview-title" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h3 id="task-preview-title" class="dialog-title">Task Description</h3>
+          <button type="button" class="dialog-close-btn" (click)="closeTaskPreview()" aria-label="Close">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="task-preview-content" [innerHTML]="content"></div>
+      </div>
+    </div>
+  }
 
   <!-- ─── Reject / Request Changes Dialog ─────────────────────────────────── -->
   @if (showRejectDialog()) {

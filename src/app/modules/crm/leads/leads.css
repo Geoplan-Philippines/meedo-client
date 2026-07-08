@@ -90,9 +90,9 @@
 }
 
 .stat-icon--total    { background: var(--color-secondary);      color: var(--color-primary); }
-.stat-icon--pending  { background: #FEF3C7;                     color: #92400E; }
-.stat-icon--qualified { background: var(--color-muted-success); color: #155E4D; }
-.stat-icon--converted { background: #DBEAFE;                    color: #1D4ED8; }
+.stat-icon--pending  { background: var(--color-muted-warning);  color: var(--color-muted-warning-foreground); }
+.stat-icon--qualified { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
+.stat-icon--converted { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
 
 .stat-body {
   display: flex;
@@ -294,11 +294,7 @@
   letter-spacing: 0.02em;
 }
 
-.avatar-blue   { background: #DBEAFE; color: #1D4ED8; }
-.avatar-teal   { background: #CCFBF1; color: #0F766E; }
-.avatar-indigo { background: var(--color-secondary); color: var(--color-primary); }
-.avatar-violet { background: #EDE9FE; color: #7C3AED; }
-.avatar-rose   { background: #FFE4E6; color: #BE123C; }
+/* Avatar identity palette (.avatar-*) is defined globally in src/styles.css. */
 
 .lead-name {
   font-weight: 600;
@@ -369,17 +365,17 @@
   flex-shrink: 0;
 }
 
-.status-pending   { background: #FEF3C7; color: #92400E; }
-.status-pending .status-dot   { background: #F59E0B; }
+.status-pending   { background: var(--color-muted-warning); color: var(--color-muted-warning-foreground); }
+.status-pending .status-dot   { background: var(--color-warning); }
 
-.status-qualified { background: var(--color-muted-success); color: #155E4D; }
+.status-qualified { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
 .status-qualified .status-dot { background: var(--color-success); }
 
-.status-contacted { background: #DBEAFE; color: #0C4A6E; }
-.status-contacted .status-dot { background: #3B82F6; }
+.status-contacted { background: var(--color-muted-info); color: var(--color-muted-info-foreground); }
+.status-contacted .status-dot { background: var(--color-info); }
 
-.status-converted { background: #D1FAE5; color: #065F46; }
-.status-converted .status-dot { background: #10B981; }
+.status-converted { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
+.status-converted .status-dot { background: var(--color-success); }
 
 .status-lost { background: var(--color-muted-destructive); color: #7F1D1D; }
 .status-lost .status-dot { background: var(--color-destructive); }

@@ -61,7 +61,7 @@ export class RichTextEditor implements AfterViewInit, OnDestroy {
   readonly menuPosition = signal({ top: 0, left: 0 });
   readonly activeIndex = signal(0);
   readonly activeMarks = signal<Set<BubbleMark>>(new Set());
-
+  
   readonly filteredItems = computed(() => {
     const query = this.menuQuery().trim().toLowerCase();
     const items = SLASH_MENU_ITEMS;

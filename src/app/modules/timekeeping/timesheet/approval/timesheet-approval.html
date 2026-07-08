@@ -10,7 +10,8 @@
     </div>
 
     <div class="header-right">
-      <div class="week-picker-group">
+      <div class="week-picker-group" aria-label="Selected approval week">
+        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
         <p-datepicker
           inputId="approval-week"
           [ngModel]="selectedDate()"
@@ -18,7 +19,9 @@
           [showIcon]="true"
           dateFormat="M d, yy"
           appendTo="body"
+          ariaLabel="Select a date in the approval week"
         />
+        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-right" (click)="nextWeek()" [disabled]="isLoading()" aria-label="Next week"></button>
         <span class="week-range-label">{{ weekLabel() }}</span>
         @if (isPeriodLocked()) {
           <span class="lock-badge" aria-label="Period is locked">
@@ -50,7 +53,7 @@
 
   <!-- ─── Stats Strip ──────────────────────────────────────────────────── -->
   <section class="hours-strip" aria-label="Week statistics">
-    <div class="hours-chip hours-chip--total">
+    <div class="hours-chip">
       <span class="hours-chip-label">Pending Approvals</span>
       <strong class="hours-chip-value">{{ summary()?.totalsByStatus?.['SUBMITTED'] ?? 0 }}</strong>
     </div>
@@ -60,7 +63,7 @@
       <strong class="hours-chip-value">{{ summary()?.totalsByStatus?.['APPROVED'] ?? 0 }}</strong>
     </div>
 
-    <div class="hours-chip hours-chip--rejected">
+    <div class="hours-chip">
       <span class="hours-chip-label">Rejected</span>
       <strong class="hours-chip-value">{{ summary()?.totalsByStatus?.['REJECTED'] ?? 0 }}</strong>
     </div>
@@ -70,7 +73,7 @@
       <strong class="hours-chip-value">{{ (summary()?.totalHours ?? 0) | number: '1.0-0' }}h</strong>
     </div>
 
-    <div class="hours-chip hours-chip--ot">
+    <div class="hours-chip">
       <span class="hours-chip-label">Overtime Hours</span>
       <strong class="hours-chip-value">{{ totalOvertimeHours() | number: '1.0-0' }}h</strong>
     </div>
@@ -86,8 +89,7 @@
         [attr.aria-selected]="activeTab() === null"
         (click)="setActiveTab(null)"
       >
-        All
-        <span class="tab-count">{{ tabCounts().all }}</span>
+        All <span class="tab-count">({{ tabCounts().all }})</span>
       </button>
       <button
         role="tab"
@@ -96,8 +98,7 @@
         [attr.aria-selected]="activeTab() === 'SUBMITTED'"
         (click)="setActiveTab('SUBMITTED')"
       >
-        Submitted
-        <span class="tab-count tab-count--pending">{{ tabCounts().submitted }}</span>
+        Submitted <span class="tab-count">({{ tabCounts().submitted }})</span>
       </button>
       <button
         role="tab"
@@ -106,8 +107,7 @@
         [attr.aria-selected]="activeTab() === 'APPROVED'"
         (click)="setActiveTab('APPROVED')"
       >
-        Approved
-        <span class="tab-count tab-count--approved">{{ tabCounts().approved }}</span>
+        Approved <span class="tab-count">({{ tabCounts().approved }})</span>
       </button>
       <button
         role="tab"
@@ -116,8 +116,7 @@
         [attr.aria-selected]="activeTab() === 'REJECTED'"
         (click)="setActiveTab('REJECTED')"
       >
-        Rejected
-        <span class="tab-count tab-count--rejected">{{ tabCounts().rejected }}</span>
+        Rejected <span class="tab-count">({{ tabCounts().rejected }})</span>
       </button>
     </div>
 
@@ -126,9 +125,9 @@
         pInputText
         [ngModel]="employeeFilter()"
         (ngModelChange)="employeeFilter.set($event)"
-        placeholder="Search employee…"
+        placeholder="Search by name, email or department…"
         class="filter-search"
-        aria-label="Search employees by name or email"
+        aria-label="Search employees by name, email or department"
       />
       <p-select
         [ngModel]="projectFilter()"
@@ -159,7 +158,7 @@
   }
 
   <!-- ─── Desktop Split Layout ──────────────────────────────────────────── -->
-  <div class="main-split" [class.main-split--panel]="selectedEmployee()">
+  <div class="main-split">
 
     <!-- Employee Table -->
     <section class="table-panel" aria-label="Employee timesheet list">
@@ -169,7 +168,7 @@
           [loading]="isLoading()"
           [rowHover]="true"
           class="approval-table"
-          [tableStyle]="{ 'min-width': '600px' }"
+          [tableStyle]="{ 'min-width': '920px' }"
         >
           <ng-template pTemplate="header">
             <tr>
@@ -183,12 +182,14 @@
                 />
               </th>
               <th scope="col">Employee</th>
-              <th scope="col">Status</th>
+              <th scope="col">Department</th>
+              <th scope="col" class="col-status">Status</th>
               <th scope="col" class="col-num">Total</th>
               <th scope="col" class="col-num">Regular</th>
               <th scope="col" class="col-num">OT</th>
+              <th scope="col" class="col-num">Leave/ND</th>
+              <th scope="col" class="col-num">Offset</th>
               <th scope="col" class="col-num">Pending</th>
-              <th scope="col" class="col-chevron"></th>
               <th scope="col" class="col-action"></th>
             </tr>
           </ng-template>
@@ -218,39 +219,41 @@
                   </div>
                 </div>
               </td>
-              <td><span [class]="statusClass(employee.status)">{{ employee.status }}</span></td>
+              <td>{{ employee.department || '—' }}</td>
+              <td class="col-status"><span [class]="statusClass(employee.status)">{{ employee.status }}</span></td>
               <td class="col-num">{{ employee.totalHours | number: '1.1-1' }}h</td>
               <td class="col-num">{{ employee.regularHours | number: '1.1-1' }}h</td>
               <td class="col-num">{{ employee.overtimeHours | number: '1.1-1' }}h</td>
+              <td class="col-num">{{ employeeLeaveAndNightHours(employee) | number: '1.1-1' }}h</td>
+              <td class="col-num">{{ employee.offsetHours | number: '1.1-1' }}h</td>
               <td class="col-num">
-                @if (employeeSubmittedCount(employee) > 0) {
-                  <span class="pending-pill">{{ employeeSubmittedCount(employee) }}</span>
-                } @else {
-                  <span class="no-value">—</span>
-                }
-              </td>
-              <td class="col-chevron">
-                <i class="pi pi-chevron-right row-chevron" aria-hidden="true"></i>
+                <div class="pending-cell">
+                  @if (employeeSubmittedCount(employee) > 0) {
+                    <span class="pending-pill">{{ employeeSubmittedCount(employee) }}</span>
+                  } @else {
+                    <span class="no-value">—</span>
+                  }
+                </div>
               </td>
               <td class="col-action" (click)="$event.stopPropagation()">
-                <button
-                  pButton
-                  type="button"
-                  [text]="true"
-                  size="small"
-                  icon="pi pi-eye"
-                  (click)="navigateToReview($event, employee)"
-                  [attr.aria-label]="'Review timesheet for ' + employee.employeeName"
-                  pTooltip="Review full timesheet"
-                  tooltipPosition="left"
-                ></button>
+                <div class="action-cell">
+                  <button
+                    pButton
+                    type="button"
+                    [outlined]="true"
+                    size="small"
+                    label="Review"
+                    (click)="navigateToReview($event, employee)"
+                    [attr.aria-label]="'Review timesheet for ' + employee.employeeName"
+                  ></button>
+                </div>
               </td>
             </tr>
           </ng-template>
 
           <ng-template pTemplate="emptymessage">
-            <tr>
-              <td colspan="9">
+            <tr class="empty-row">
+              <td colspan="11">
                 <div class="empty-state">
                   <div class="empty-icon"><i class="pi pi-inbox" aria-hidden="true"></i></div>
                   <p class="empty-title">No timesheets found</p>
@@ -269,134 +272,6 @@
       }
     </section>
 
-    <!-- ─── Submission Detail Panel ──────────────────────────────────── -->
-    @if (selectedEmployee(); as emp) {
-      <aside class="detail-panel" [attr.aria-label]="'Submission details — ' + emp.employeeName">
-
-        <div class="detail-panel-head">
-          <h2 class="detail-heading">Submission Details</h2>
-          <button type="button" class="panel-close" (click)="closePanel()" aria-label="Close detail panel">
-            <i class="pi pi-times" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div class="detail-scroll">
-
-          <!-- Employee identity -->
-          <div class="detail-employee">
-            <div class="detail-avatar" aria-hidden="true">{{ getInitials(emp.employeeName) }}</div>
-            <div class="detail-meta">
-              <strong class="detail-name">{{ emp.employeeName }}</strong>
-              <small class="detail-email">{{ emp.employeeEmail }}</small>
-              @if (emp.department) {
-                <small class="detail-dept">{{ emp.department }}</small>
-              }
-            </div>
-            <span [class]="statusClass(emp.status)">{{ emp.status }}</span>
-          </div>
-
-          <!-- Hourly Summary -->
-          <div class="detail-section">
-            <span class="detail-section-label">Hourly Summary</span>
-            <div class="day-grid">
-              @for (day of weekDays(); track $index) {
-                <div class="day-cell">
-                  <span class="day-name">{{ dayLabel(day) }}</span>
-                  <strong class="day-hours">
-                    @if (employeeDayHours(emp, day) > 0) {
-                      {{ employeeDayHours(emp, day) | number: '1.0-1' }}h
-                    } @else {
-                      —
-                    }
-                  </strong>
-                </div>
-              }
-              <div class="day-cell day-cell--total">
-                <span class="day-name">Total</span>
-                <strong class="day-hours">{{ emp.totalHours | number: '1.0-1' }}h</strong>
-              </div>
-            </div>
-          </div>
-
-          <!-- Daily Entries -->
-          <div class="detail-section detail-section--entries">
-            <div class="detail-section-head">
-              <span class="detail-section-label">Daily Entries</span>
-              <span class="entry-count-badge">{{ emp.entries.length }}</span>
-            </div>
-            <div class="entries-scroll">
-              <table class="entries-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Project / Task</th>
-                    <th scope="col" class="col-num">Hrs</th>
-                    <th scope="col">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (entry of emp.entries; track entry.id) {
-                    <tr [class.entry-row--approved]="entry.status === 'APPROVED'" [class.entry-row--rejected]="entry.status === 'REJECTED'">
-                      <td class="entry-date">{{ entry.workDate | date: 'MMM d' }}</td>
-                      <td class="entry-task">
-                        <span class="entry-project">{{ projectLabel(entry) }}</span>
-                        @if (entry.task) {
-                          <small class="entry-task-text">{{ entry.task }}</small>
-                        }
-                      </td>
-                      <td class="entry-hrs">{{ entry.hours | number: '1.1-1' }}</td>
-                      <td class="entry-status-cell">
-                        <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
-                        @if (entry.rejectionReason) {
-                          <small class="rejection-note">{{ entry.rejectionReason }}</small>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Panel Footer with Approve/Reject -->
-        <div class="panel-footer">
-          @if (isPeriodLocked()) {
-            <div class="footer-info footer-info--locked">
-              <i class="pi pi-lock" aria-hidden="true"></i>
-              <span>Period locked — unlock to make changes.</span>
-            </div>
-          } @else if (hasSubmittedEntries(emp)) {
-            <button
-              pButton
-              type="button"
-              class="btn-approve-panel"
-              icon="pi pi-check"
-              label="Approve Timesheet"
-              (click)="approveEmployee(emp)"
-              [loading]="isApproving()"
-            ></button>
-            <button
-              pButton
-              type="button"
-              severity="danger"
-              [outlined]="true"
-              icon="pi pi-times"
-              label="Reject Timesheet"
-              (click)="rejectEmployee(emp)"
-              [disabled]="isApproving()"
-            ></button>
-          } @else {
-            <div class="footer-info">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <span>No pending entries to act on.</span>
-            </div>
-          }
-        </div>
-
-      </aside>
-    }
   </div>
 
   <!-- ─── Mobile Employee List ────────────────────────────────────────── -->
@@ -444,13 +319,16 @@
     }
   </div>
 
-  <!-- ─── Mobile Overlay (detail sheet) ──────────────────────────────── -->
+  <!-- ─── Submission Details Dialog ──────────────────────────────────── -->
   @if (selectedEmployee(); as emp) {
-    <div class="mobile-overlay" role="dialog" [attr.aria-label]="'Details — ' + emp.employeeName" aria-modal="true">
-      <button type="button" class="mobile-overlay-scrim" (click)="closePanel()" aria-label="Close"></button>
-      <div class="mobile-sheet">
-        <div class="mobile-sheet-handle" aria-hidden="true"></div>
-
+    <div class="dialog-backdrop" role="presentation" (click)="closePanel()">
+      <div
+        class="app-dialog submission-dialog"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="'Submission details — ' + emp.employeeName"
+        (click)="$event.stopPropagation()"
+      >
         <div class="detail-panel-head">
           <h2 class="detail-heading">Submission Details</h2>
           <button type="button" class="panel-close" (click)="closePanel()" aria-label="Close">
@@ -465,6 +343,9 @@
             <div class="detail-meta">
               <strong class="detail-name">{{ emp.employeeName }}</strong>
               <small class="detail-email">{{ emp.employeeEmail }}</small>
+              @if (emp.department) {
+                <small class="detail-dept">{{ emp.department }}</small>
+              }
             </div>
             <span [class]="statusClass(emp.status)">{{ emp.status }}</span>
           </div>
@@ -492,7 +373,10 @@
           </div>
 
           <div class="detail-section detail-section--entries">
-            <span class="detail-section-label">Daily Entries</span>
+            <div class="detail-section-head">
+              <span class="detail-section-label">Daily Entries</span>
+              <span class="entry-count-badge">{{ emp.entries.length }}</span>
+            </div>
             <div class="entries-scroll">
               <table class="entries-table">
                 <thead>
@@ -505,16 +389,18 @@
                 </thead>
                 <tbody>
                   @for (entry of emp.entries; track entry.id) {
-                    <tr>
+                    <tr [class.entry-row--approved]="entry.status === 'APPROVED'" [class.entry-row--rejected]="entry.status === 'REJECTED'">
                       <td class="entry-date">{{ entry.workDate | date: 'MMM d' }}</td>
                       <td class="entry-task">
                         <span class="entry-project">{{ projectLabel(entry) }}</span>
                         @if (entry.task) {
-                          <small class="entry-task-text">{{ entry.task }}</small>
+                          <button type="button" class="task-cell-btn" (click)="openTaskPreview(entry)" aria-label="View full task description">
+                            <div class="entry-task-text" [innerHTML]="entry.task"></div>
+                          </button>
                         }
                       </td>
                       <td class="entry-hrs">{{ entry.hours | number: '1.1-1' }}</td>
-                      <td>
+                      <td class="entry-status-cell">
                         <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
                         @if (entry.rejectionReason) {
                           <small class="rejection-note">{{ entry.rejectionReason }}</small>
@@ -533,18 +419,50 @@
           @if (isPeriodLocked()) {
             <div class="footer-info footer-info--locked">
               <i class="pi pi-lock" aria-hidden="true"></i>
-              <span>Period locked.</span>
+              <span>Period locked — unlock to make changes.</span>
             </div>
           } @else if (hasSubmittedEntries(emp)) {
-            <button pButton type="button" class="btn-approve-panel" icon="pi pi-check" label="Approve Timesheet" (click)="approveEmployee(emp)" [loading]="isApproving()"></button>
-            <button pButton type="button" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject Timesheet" (click)="rejectEmployee(emp)" [disabled]="isApproving()"></button>
+            <button
+              pButton
+              type="button"
+              class="btn-approve-panel"
+              icon="pi pi-check"
+              label="Approve Timesheet"
+              (click)="approveEmployee(emp)"
+              [loading]="isApproving()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              severity="danger"
+              [outlined]="true"
+              icon="pi pi-times"
+              label="Reject Timesheet"
+              (click)="rejectEmployee(emp)"
+              [disabled]="isApproving()"
+            ></button>
           } @else {
             <div class="footer-info">
               <i class="pi pi-info-circle" aria-hidden="true"></i>
-              <span>No pending entries.</span>
+              <span>No pending entries to act on.</span>
             </div>
           }
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- ─── Task Description Preview Dialog ────────────────────────────── -->
+  @if (taskPreviewContent(); as content) {
+    <div class="dialog-backdrop" role="presentation" (click)="closeTaskPreview()">
+      <div class="app-dialog task-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="task-preview-title" (click)="$event.stopPropagation()">
+        <div class="detail-panel-head">
+          <h2 id="task-preview-title" class="detail-heading">Task Description</h2>
+          <button type="button" class="panel-close" (click)="closeTaskPreview()" aria-label="Close">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="task-preview-content" [innerHTML]="content"></div>
       </div>
     </div>
   }

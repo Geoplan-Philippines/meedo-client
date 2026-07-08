@@ -1,0 +1,51 @@
+import { Ticket, TicketAssignee } from '../models/ticket.model';
+import { getAvatarClass } from '../../../shared/utils/avatar.utils';
+
+/** View-model for a rendered assignee avatar (initials + colour class + name). */
+export interface AssigneeAvatar {
+  initials: string;
+  className: string;
+  name: string;
+}
+
+/** Two-letter initials from a display name or email; '?' when empty. */
+export function initialsFrom(value: string): string {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Map one ticket assignee to its avatar view-model. */
+export function toAssigneeAvatar(assignee: TicketAssignee): AssigneeAvatar {
+  const name = assignee.member?.user?.name ?? assignee.member?.user?.email ?? '';
+  return {
+    initials: initialsFrom(name),
+    className: getAvatarClass(name || assignee.memberId),
+    name: name || 'Unknown',
+  };
+}
+
+/** First `limit` assignee avatars for a row; the rest collapse into a +N chip. */
+export function visibleAssignees(ticket: Ticket, limit = 3): AssigneeAvatar[] {
+  return (ticket.assignees ?? []).slice(0, limit).map(toAssigneeAvatar);
+}
+
+/** How many assignees overflow past `limit` (drives the +N chip). */
+export function extraAssigneeCount(ticket: Ticket, limit = 3): number {
+  return Math.max(0, (ticket.assignees?.length ?? 0) - limit);
+}
+
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/** Only let validated hex colours from the API into inline styles; otherwise fall back to a theme token. */
+export function safeStatusColor(color?: string | null, fallback = 'var(--text-body)'): string {
+  return color && HEX_COLOR_PATTERN.test(color) ? color : fallback;
+}
+
+/** A fresh Date at local midnight — used to flag overdue due dates. */
+export function startOfToday(): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}

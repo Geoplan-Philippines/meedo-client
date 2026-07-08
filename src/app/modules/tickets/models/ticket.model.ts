@@ -12,6 +12,20 @@ export interface TicketAssignee {
   };
 }
 
+/** A lightweight reference to another ticket this one is linked to. The server
+ *  returns these (like `assignees`) so the sidebar can render a row without a
+ *  second fetch; writes go through `relatedTicketIds` on the update payload. */
+export interface TicketRelation {
+  id: string;
+  ticketNumber: number;
+  title: string;
+  ticketStatus?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
+}
+
 export interface Ticket {
   id: string;
   title: string;
@@ -37,16 +51,35 @@ export interface Ticket {
   customerName: string;
   workOrderNumber: string;
 } | null;
+  /** Other tickets this one is linked to (symmetric — the server keeps both sides in sync). */
+  relatedTickets?: TicketRelation[];
 }
+
+/** Board views, separated as tabs. `all` applies no status-category filter. */
+export type TicketView = 'backlog' | 'active' | 'closed' | 'all';
 
 export interface TicketListParams {
   page: number;
   limit: number;
   search?: string;
-  ticketStatusId?: string;
-  priority?: string;
+  view?: TicketView;
+  ticketStatusId?: string[];
+  priority?: string[];
+  teamId?: string[];
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+export interface TicketFacetsParams {
+  view?: TicketView;
+  search?: string;
+}
+
+/** Counts powering the view tabs and the filter-menu badges. */
+export interface TicketFacets {
+  views: Record<TicketView, number>;
+  statuses: { ticketStatusId: string; count: number }[];
+  priorities: { priority: string; count: number }[];
 }
 
 export interface CreateTicketPayload {
@@ -72,4 +105,6 @@ export interface UpdateTicketPayload {
   projectId?: string | null;
   teamId?: string | null;
   assigneeIds?: string[];
+  /** Full replacement set of linked ticket IDs (like `assigneeIds`). */
+  relatedTicketIds?: string[];
 }

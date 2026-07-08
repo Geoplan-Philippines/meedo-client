@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { LayoutService } from '../layout.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 interface NavItem {
   label: string;
@@ -30,6 +31,7 @@ interface NavSection {
 export class Sidebar {
   layoutService = inject(LayoutService);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   // Tracks the active URL; updated on every successful navigation.
   // Used by isActive() to drive longest-prefix-wins highlight logic.
@@ -41,7 +43,9 @@ export class Sidebar {
     { initialValue: this.router.url },
   );
 
-  sections = signal<NavSection[]>([
+  readonly isAdmin = this.authService.isAdmin;
+
+  sections = computed<NavSection[]>(() => [
     {
       title: 'Tickets',
       items: [
@@ -55,6 +59,9 @@ export class Sidebar {
         { label: 'Dashboard', route: '/timekeeping/dashboard', icon: 'pi-chart-line' },
         { label: 'Attendance', route: '/timekeeping/attendance', icon: 'pi-clock' },
         { label: 'Timesheet', route: '/timekeeping/timesheet', icon: 'pi-calendar' },
+        ...(this.isAdmin()
+          ? [{ label: 'Approvals', route: '/timekeeping/timesheet/approval', icon: 'pi-check-circle' }]
+          : []),
       ],
     },
     {

@@ -1,0 +1,422 @@
+<p-toast />
+
+@if (loadState() === 'loading') {
+  <div class="detail-page">
+    <div class="detail-topbar">
+      <p-skeleton width="14rem" height="1rem" />
+    </div>
+    <div class="detail-body">
+      <div class="detail-main">
+        <p-skeleton width="60%" height="2rem" styleClass="mb-4" />
+        <p-skeleton width="100%" height="1rem" styleClass="mb-2" />
+        <p-skeleton width="92%" height="1rem" styleClass="mb-2" />
+        <p-skeleton width="80%" height="1rem" />
+      </div>
+      <aside class="detail-aside">
+        <p-skeleton width="100%" height="9rem" />
+      </aside>
+    </div>
+  </div>
+} @else if (loadState() === 'error') {
+  <div class="detail-missing" role="alert">
+    <div class="missing-icon missing-icon--error" aria-hidden="true"><i class="pi pi-exclamation-triangle"></i></div>
+    <p class="missing-title">Couldn't load this ticket</p>
+    <p class="missing-body">
+      Something went wrong while loading it{{ loadErrorStatus() ? ' (error ' + loadErrorStatus() + ')' : '' }}. Check your connection and try again.
+    </p>
+    <div class="missing-actions">
+      <button type="button" class="missing-retry" (click)="retry()">
+        <i class="pi pi-refresh" aria-hidden="true"></i> Try again
+      </button>
+      <a routerLink="/tickets" class="missing-link">
+        <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
+      </a>
+    </div>
+  </div>
+} @else if (ticket(); as t) {
+  <div class="detail-page">
+    <header class="detail-topbar">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a routerLink="/tickets" class="crumb-link">Tickets</a>
+        <i class="pi pi-angle-right crumb-sep" aria-hidden="true"></i>
+        <span class="crumb-num">#{{ t.ticketNumber }}</span>
+        <span class="crumb-title" [title]="t.title">{{ t.title }}</span>
+      </nav>
+    </header>
+
+    <div class="detail-body">
+      <main class="detail-main">
+        <!-- Editable in place; commits on blur / Enter, reverts on Escape (stays an <h1> for a11y). -->
+        <h1
+          #titleEl
+          class="detail-title"
+          contenteditable="plaintext-only"
+          [textContent]="t.title"
+          spellcheck="false"
+          enterkeyhint="done"
+          (keydown.enter)="onTitleEnter($event, titleEl)"
+          (keydown.escape)="onTitleEscape(titleEl)"
+          (blur)="commitTitle(titleEl)"
+        ></h1>
+
+        <!-- Linear-style: always-on WYSIWYG markdown, autosaves on pause/blur. -->
+        <app-markdown-editor
+          class="detail-desc"
+          [value]="t.description ?? ''"
+          placeholder="Add description…"
+          ariaLabel="Ticket description"
+          (contentSave)="onDescriptionSave($event)"
+        />
+
+        <div class="detail-thread">
+          <app-ticket-thread [ticketId]="t.id" />
+        </div>
+      </main>
+
+      <aside class="detail-aside">
+        <section class="aside-group">
+          <h2 class="aside-label">Properties</h2>
+
+          <div class="aside-row">
+            <span class="aside-key">Status</span>
+            <button class="aside-edit" type="button" (click)="statusPop.toggle($event)" aria-haspopup="true">
+              @if (t.ticketStatus) {
+                <span class="status-dot" [style.background-color]="safeStatusColor(t.ticketStatus.color)" aria-hidden="true"></span>
+                <span class="edit-val">{{ t.ticketStatus.name }}</span>
+              } @else {
+                <span class="edit-val muted">Set status</span>
+              }
+              <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="aside-row">
+            <span class="aside-key">Priority</span>
+            <button class="aside-edit" type="button" (click)="priorityPop.toggle($event)" aria-haspopup="true">
+              <span [class]="priorityDotClass(t.priority)" aria-hidden="true"></span>
+              <span class="edit-val">{{ t.priority | titlecase }}</span>
+              <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="aside-row">
+            <span class="aside-key">Team</span>
+            <button class="aside-edit" type="button" (click)="teamPop.toggle($event)" aria-haspopup="true">
+              <span class="edit-val" [class.muted]="!teamName()">{{ teamName() ?? 'Set team' }}</span>
+              <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="aside-row aside-row--top">
+            <span class="aside-key">Assignees</span>
+            <button class="aside-edit aside-edit--wrap" type="button" (click)="assigneePop.toggle($event)" aria-haspopup="true">
+              @if (assigneeAvatars().length) {
+                <span class="assignee-list">
+                  @for (a of assigneeAvatars(); track $index) {
+                    <span class="assignee">
+                      <span [class]="a.className" aria-hidden="true">{{ a.initials }}</span>
+                      <span class="assignee-name">{{ a.name }}</span>
+                    </span>
+                  }
+                </span>
+              } @else {
+                <span class="edit-val muted">Unassigned</span>
+              }
+            </button>
+          </div>
+        </section>
+
+        <section class="aside-group">
+          <h2 class="aside-label">Details</h2>
+
+          <div class="aside-row aside-row--top">
+            <span class="aside-key">Project</span>
+            <button class="aside-edit aside-edit--wrap" type="button" (click)="projectPop.toggle($event)" aria-haspopup="true">
+              @if (t.project) {
+                <span class="project-val">
+                  <span class="project-name">{{ t.project.customerName }}</span>
+                  <span class="project-wo">{{ t.project.workOrderNumber }}</span>
+                </span>
+              } @else {
+                <span class="edit-val muted">Set project</span>
+              }
+            </button>
+          </div>
+
+          <div class="aside-row">
+            <span class="aside-key">Category</span>
+            <button class="aside-edit" type="button" (click)="categoryPop.toggle($event)" aria-haspopup="true">
+              <span class="edit-val" [class.muted]="!categoryName()">{{ categoryName() ?? 'Set category' }}</span>
+              <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
+            </button>
+          </div>
+        </section>
+
+        <section class="aside-group">
+          <h2 class="aside-label">Dates</h2>
+
+          <div class="aside-row">
+            <span class="aside-key">Due date</span>
+            <button
+              class="aside-edit"
+              type="button"
+              (click)="duePop.toggle($event)"
+              aria-haspopup="true"
+              [attr.aria-label]="isOverdue() ? 'Due date, overdue' : 'Due date'"
+            >
+              @if (isOverdue()) {
+                <i class="pi pi-exclamation-triangle overdue-warn" aria-hidden="true"></i>
+              }
+              <span class="edit-val" [class.edit-val--overdue]="isOverdue()" [class.muted]="!t.dueDate">
+                {{ t.dueDate ? (t.dueDate | date: 'MMM d, y') : 'Set due date' }}
+              </span>
+              <i class="pi pi-calendar edit-caret" aria-hidden="true"></i>
+            </button>
+          </div>
+          @if (isOverdue()) {
+            <p class="aside-overdue-note" role="status">
+              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+              This ticket is overdue.
+            </p>
+          }
+
+          <div class="aside-row">
+            <span class="aside-key">Created</span>
+            <span class="aside-val aside-static">{{ t.createdAt | date: 'MMM d, y' }}</span>
+          </div>
+        </section>
+
+        <section class="aside-group">
+          <h2 class="aside-label">Related</h2>
+
+          @if (linkedTickets().length) {
+            <ul class="link-list">
+              @for (lt of linkedTickets(); track lt.id) {
+                <li class="link-item">
+                  <a
+                    class="link-row"
+                    [routerLink]="['/tickets', lt.id]"
+                    [title]="'#' + lt.ticketNumber + ' · ' + lt.title"
+                  >
+                    <span
+                      class="status-dot"
+                      [style.background-color]="safeStatusColor(lt.ticketStatus?.color)"
+                      aria-hidden="true"
+                    ></span>
+                    <span class="link-num">#{{ lt.ticketNumber }}</span>
+                    <span class="link-title">{{ lt.title }}</span>
+                  </a>
+                  <button
+                    class="link-remove"
+                    type="button"
+                    (click)="unlink(lt)"
+                    [attr.aria-label]="'Remove relation to ticket #' + lt.ticketNumber"
+                  >
+                    <i class="pi pi-times" aria-hidden="true"></i>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          <button class="aside-add" type="button" (click)="linkPop.toggle($event)" aria-haspopup="true">
+            <i class="pi pi-plus" aria-hidden="true"></i>
+            <span>{{ linkedTickets().length ? 'Add another' : 'Add a relation' }}</span>
+          </button>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ─── Inline editors (popovers) ─────────────────────── -->
+  <p-popover #statusPop styleClass="detail-pop">
+    <ul class="pick-list" role="menu">
+      @for (s of activeStatuses(); track s.id) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.ticketStatusId === s.id" (click)="setStatus(s); statusPop.hide()">
+            <span class="status-dot" [style.background-color]="safeStatusColor(s.color)" aria-hidden="true"></span>
+            <span class="pick-label">{{ s.name }}</span>
+            @if (ticket()?.ticketStatusId === s.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+          </button>
+        </li>
+      } @empty {
+        <li class="pick-empty">No statuses</li>
+      }
+    </ul>
+  </p-popover>
+
+  <p-popover #priorityPop styleClass="detail-pop">
+    <ul class="pick-list" role="menu">
+      @for (p of priorities; track p.value) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.priority === p.value" (click)="setPriority(p.value); priorityPop.hide()">
+            <span [class]="priorityDotClass(p.value)" aria-hidden="true"></span>
+            <span class="pick-label">{{ p.label }}</span>
+            @if (ticket()?.priority === p.value) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+          </button>
+        </li>
+      }
+    </ul>
+  </p-popover>
+
+  <p-popover #assigneePop styleClass="detail-pop" (onHide)="assigneeSearch.set('')">
+    <div class="pick-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input type="text" placeholder="Search members…" aria-label="Search members" [value]="assigneeSearch()" (input)="assigneeSearch.set($any($event.target).value)" />
+      @if (filteredMembers().length > 0) {
+        <button
+          type="button"
+          class="pick-selectall"
+          (click)="toggleAllAssignees()"
+          [attr.aria-pressed]="allFilteredAssigneesSelected()"
+          [attr.aria-label]="allFilteredAssigneesSelected() ? 'Deselect all' : 'Select all'"
+          title="Select all"
+        >
+          <span
+            class="selectall-box"
+            [class.selectall-box--checked]="allFilteredAssigneesSelected()"
+            [class.selectall-box--partial]="someFilteredAssigneesSelected()"
+            aria-hidden="true"
+          >
+            @if (allFilteredAssigneesSelected()) {
+              <svg viewBox="0 0 16 16" fill="none"><path d="M4 8.5 6.8 11.2 12 5.2" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            } @else if (someFilteredAssigneesSelected()) {
+              <svg viewBox="0 0 16 16" fill="none"><path d="M4 8h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            }
+          </span>
+        </button>
+      }
+    </div>
+    @if (teamName()) {
+      <div class="pick-team-ctx">
+        <i class="pi pi-users" aria-hidden="true"></i>
+        <span>{{ teamName() }}</span>
+      </div>
+    }
+    <ul class="pick-list pick-list--scroll" role="menu">
+      @for (m of filteredMembers(); track m.id) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitemcheckbox" [attr.aria-checked]="isAssigneeSelected(m.id)" (click)="toggleAssignee(m)">
+            <span [class]="memberAvatarClass(m)" aria-hidden="true">{{ memberInitials(m) }}</span>
+            <span class="pick-label">{{ m.displayName }}</span>
+            @if (isAssigneeSelected(m.id)) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+          </button>
+        </li>
+      } @empty {
+        <li class="pick-empty">{{ teamName() ? 'No members in this team' : 'No members' }}</li>
+      }
+    </ul>
+  </p-popover>
+
+  <p-popover #projectPop styleClass="detail-pop" (onHide)="projectSearch.set('')">
+    <div class="pick-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input type="text" placeholder="Search projects…" aria-label="Search projects" [value]="projectSearch()" (input)="projectSearch.set($any($event.target).value)" />
+    </div>
+    <ul class="pick-list pick-list--scroll" role="menu">
+      @if (ticket()?.projectId) {
+        <li>
+          <button class="pick-opt pick-clear" type="button" (click)="clearProject(); projectPop.hide()">
+            <i class="pi pi-times" aria-hidden="true"></i>
+            <span class="pick-label">Clear project</span>
+          </button>
+        </li>
+      }
+      @for (p of filteredProjects(); track p.id) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.projectId === p.id" (click)="setProject(p); projectPop.hide()">
+            <span class="pick-stack">
+              <span class="pick-label">{{ p.customerName }}</span>
+              <span class="pick-sub">{{ p.workOrderNumber }}</span>
+            </span>
+            @if (ticket()?.projectId === p.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+          </button>
+        </li>
+      } @empty {
+        <li class="pick-empty">No projects</li>
+      }
+    </ul>
+  </p-popover>
+
+  <p-popover #categoryPop styleClass="detail-pop">
+    <ul class="pick-list pick-list--scroll" role="menu">
+      @for (c of categories(); track c.id) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.categoryId === c.id" (click)="setCategory(c); categoryPop.hide()">
+            <span class="pick-label">{{ c.name }}</span>
+            @if (ticket()?.categoryId === c.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+          </button>
+        </li>
+      } @empty {
+        <li class="pick-empty">No categories</li>
+      }
+    </ul>
+  </p-popover>
+
+  <p-popover #teamPop styleClass="detail-pop">
+    <ul class="pick-list pick-list--scroll" role="menu">
+      @for (team of teams(); track team.id) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.teamId === team.id" (click)="setTeam(team); teamPop.hide()">
+            <span class="pick-label">{{ team.name }}</span>
+            @if (ticket()?.teamId === team.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+          </button>
+        </li>
+      } @empty {
+        <li class="pick-empty">No teams</li>
+      }
+    </ul>
+  </p-popover>
+
+  <p-popover #duePop styleClass="detail-pop detail-pop--date">
+    <p-datepicker
+      [ngModel]="dueDateValue()"
+      (onSelect)="setDueDate($event); duePop.hide()"
+      [ngModelOptions]="{ standalone: true }"
+      [inline]="true"
+    />
+    @if (ticket()?.dueDate) {
+      <button class="pick-clear-btn" type="button" (click)="setDueDate(null); duePop.hide()">
+        <i class="pi pi-times" aria-hidden="true"></i> Clear due date
+      </button>
+    }
+  </p-popover>
+
+  <p-popover #linkPop styleClass="detail-pop" (onHide)="linkSearch.set('')">
+    <div class="pick-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        type="text"
+        placeholder="Search tickets…"
+        aria-label="Search tickets to relate"
+        [value]="linkSearch()"
+        (input)="linkSearch.set($any($event.target).value)"
+      />
+    </div>
+    <ul class="pick-list pick-list--scroll" role="menu">
+      @for (t of linkCandidates(); track t.id) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitem" (click)="link(t); linkPop.hide()">
+            <span class="status-dot" [style.background-color]="safeStatusColor(t.ticketStatus?.color)" aria-hidden="true"></span>
+            <span class="pick-stack">
+              <span class="pick-label">{{ t.title }}</span>
+              <span class="pick-sub">#{{ t.ticketNumber }}</span>
+            </span>
+          </button>
+        </li>
+      } @empty {
+        
+        <li class="pick-empty">{{ linkSearch().trim() ? 'No tickets found' : 'Search to add a relation' }}</li>
+      }
+    </ul>
+  </p-popover>
+} @else {
+  <div class="detail-missing">
+    <div class="missing-icon" aria-hidden="true"><i class="pi pi-inbox"></i></div>
+    <p class="missing-title">Ticket not found</p>
+    <p class="missing-body">It may have been removed, or the link is out of date.</p>
+    <a routerLink="/tickets" class="missing-link">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
+    </a>
+  </div>
+}

@@ -25,8 +25,6 @@
 
       <div class="action-buttons" aria-label="Timesheet actions">
         <button class="history-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-history" label="History" (click)="showHistoryDialog.set(true)"></button>
-        <button class="save-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-save" label="Save Draft" (click)="saveDrafts()" [loading]="isSavingDrafts()" [disabled]="isLocked() || isLoading() || !hasUnsavedChanges()"></button>
-        <button class="submit-btn" pButton type="button" icon="pi pi-send" label="Submit" (click)="submitWeek()" [loading]="isSubmitting()" [disabled]="isLocked() || isLoading() || isSubmitting()"></button>
       </div>
     </div>
   </header>
@@ -66,10 +64,6 @@
   </section>
 
   <div class="grid-toolbar">
-    <label class="grid-search" aria-label="Search projects">
-      <i class="pi pi-search" aria-hidden="true"></i>
-      <input type="text" placeholder="Search projects…" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" />
-    </label>
     <button pButton type="button" icon="pi pi-plus" label="Add Project" class="add-project-btn" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
   </div>
 
@@ -87,7 +81,7 @@
           <span class="grid-cell grid-cell--actions" role="columnheader" aria-label="Actions"></span>
         </div>
 
-        @for (projectId of filteredProjectIds(); track projectId) {
+        @for (projectId of tableProjectIds(); track projectId) {
           <div class="grid-row" role="row">
             <span class="grid-cell grid-cell--label" role="rowheader">
               <span class="grid-cell-project-name">{{ projectName(projectId) }}</span>
@@ -109,12 +103,12 @@
               </button>
             }
             <span class="grid-cell grid-cell--actions">
-              <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Remove project" (click)="removeProjectRow(projectId)" [disabled]="isLocked() || isSavingDrafts()"></button>
+              <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Remove project" (click)="removeProjectRow(projectId)" [disabled]="isLocked() || isRemovingProject()"></button>
             </span>
           </div>
         }
 
-        @if (filteredProjectIds().length === 0) {
+        @if (tableProjectIds().length === 0) {
           <div class="grid-empty">
             <i class="pi pi-briefcase" aria-hidden="true"></i>
             <span>No projects added yet. Click "+ Add Project" to get started.</span>
@@ -281,7 +275,7 @@
             <button pButton type="button" label="Close" (click)="closeEntryModal(false)"></button>
           } @else {
             <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="closeEntryModal(false)"></button>
-            <button pButton type="button" icon="pi pi-check" label="Save" (click)="closeEntryModal(true)"></button>
+            <button pButton type="button" icon="pi pi-check" label="Save" (click)="closeEntryModal(true)" [loading]="isSavingEntry()" [disabled]="isSavingEntry()"></button>
           }
         </div>
       </div>
