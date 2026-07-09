@@ -43,6 +43,7 @@ import {
   toAssigneeAvatar,
   safeStatusColor as safeStatusColorUtil,
   startOfToday,
+  serializeDueDate,
 } from '../utils/ticket.utils';
 
 type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -341,8 +342,8 @@ export class TicketDetail {
 
   setDueDate(date: Date | null): void {
     this.applyPatch(
-      { dueDate: date ? date.toISOString() : null },
-      { dueDate: date ? date.toISOString() : undefined },
+      { dueDate: date ? serializeDueDate(date) : null },
+      { dueDate: date ? serializeDueDate(date) : undefined },
     );
   }
 

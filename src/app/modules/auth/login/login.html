@@ -72,6 +72,7 @@
               class="w-full pr-10"
               [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
               aria-describedby="password-error"
+              (input)="onPasswordInput()"
             />
             <button
               type="button"

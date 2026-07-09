@@ -55,6 +55,7 @@ import {
   extraAssigneeCount as extraAssigneeCountUtil,
   safeStatusColor as safeStatusColorUtil,
   startOfToday,
+  serializeDueDate,
 } from './utils/ticket.utils';
 
 @Component({
@@ -707,7 +708,7 @@ export class Tickets implements OnInit {
       title: formValue.title.trim(),
       description: formValue.description.trim() || null,
       priority: formValue.priority,
-      dueDate: formValue.dueDate ? formValue.dueDate.toISOString() : null,
+      dueDate: formValue.dueDate ? serializeDueDate(formValue.dueDate) : null,
       ticketStatusId: formValue.ticketStatusId || null,
       categoryId: formValue.categoryId || null,
       projectId: formValue.projectId || null,
@@ -745,7 +746,7 @@ export class Tickets implements OnInit {
       title: formValue.title.trim(),
       description: formValue.description.trim() || undefined,
       priority: formValue.priority,
-      dueDate: formValue.dueDate ? formValue.dueDate.toISOString() : undefined,
+      dueDate: formValue.dueDate ? serializeDueDate(formValue.dueDate) : undefined,
       ticketStatusId: formValue.ticketStatusId || undefined,
       categoryId: formValue.categoryId || undefined,
       projectId: formValue.projectId || undefined,
