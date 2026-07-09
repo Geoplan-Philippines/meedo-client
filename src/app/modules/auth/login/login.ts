@@ -44,6 +44,11 @@ export class Login {
     this.passwordVisible.update((visible) => !visible);
   }
 
+  onPasswordInput(): void {
+    this.errorMessage.set('');
+    this.loginForm.get('password')?.markAsUntouched();
+  }
+
   async onSubmit(): Promise<void> {
     if (this.isSubmitting()) return;
 

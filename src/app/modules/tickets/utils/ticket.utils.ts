@@ -49,3 +49,9 @@ export function startOfToday(): Date {
   date.setHours(0, 0, 0, 0);
   return date;
 }
+
+/** Serialize a due date for the API as UTC midnight of the user's local date.
+ *  Avoids the UTC shift from toISOString() (e.g. UTC+8 midnight → yesterday UTC). */
+export function serializeDueDate(date: Date): string {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
+}
