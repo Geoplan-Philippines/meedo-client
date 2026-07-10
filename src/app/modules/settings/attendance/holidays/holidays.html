@@ -1,0 +1,248 @@
+<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
+  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+    <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
+    <span class="mx-2 opacity-60">/</span>
+    <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
+    <span class="mx-2 opacity-60">/</span>
+    <span class="text-heading">Holidays</span>
+  </nav>
+
+  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+    <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
+    Back to Attendance settings
+  </a>
+
+  <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-semibold text-heading">Holidays</h1>
+      <p class="text-sm text-body/70 max-w-2xl">
+        The company holiday calendar. Recurring holidays repeat every year; the rest apply to their year only.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <p-button label="Import" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="openImport()" />
+      <p-button label="New holiday" icon="pi pi-plus" (onClick)="openCreate()" />
+    </div>
+  </header>
+
+  <!-- Year navigator -->
+  <div class="flex items-center gap-2">
+    <p-button icon="pi pi-chevron-left" severity="secondary" text rounded ariaLabel="Previous year" (onClick)="changeYear(-1)" [disabled]="isLoading()" />
+    <span class="text-lg font-semibold text-heading tabular-nums min-w-[4ch] text-center">{{ year() }}</span>
+    <p-button icon="pi pi-chevron-right" severity="secondary" text rounded ariaLabel="Next year" (onClick)="changeYear(1)" [disabled]="isLoading()" />
+    @if (!isLoading()) {
+      <span class="ml-2 text-sm text-body/60">{{ holidays().length }} {{ holidays().length === 1 ? 'holiday' : 'holidays' }}</span>
+      @if (holidays().length > 0) {
+        <p-button
+          label="Clear year"
+          icon="pi pi-trash"
+          severity="danger"
+          text size="small"
+          class="ml-auto"
+          (onClick)="openClearYear()"
+        />
+      }
+    }
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+      <span>{{ error() }}</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-12 text-body/70">
+      <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
+      Loading holidays…
+    </div>
+  } @else if (holidays().length === 0) {
+    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
+      <i class="pi pi-flag text-3xl text-body/40" aria-hidden="true"></i>
+      <p class="text-body font-medium">No holidays for {{ year() }}</p>
+      <p class="text-sm text-body/70 max-w-sm">
+        Add holidays one at a time, or import a country’s public holidays for the year and adjust from there.
+      </p>
+      <div class="flex items-center gap-2 mt-2">
+        <p-button label="Import {{ year() }}" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="openImport()" />
+        <p-button label="New holiday" icon="pi pi-plus" (onClick)="openCreate()" />
+      </div>
+    </div>
+  } @else {
+    <div class="rounded-base border border-border overflow-hidden">
+      <p-table [value]="holidays()" dataKey="id" styleClass="text-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th scope="col" class="w-px whitespace-nowrap">Date</th>
+            <th scope="col">Holiday</th>
+            <th scope="col" class="hidden sm:table-cell">Type</th>
+            <th scope="col" class="hidden md:table-cell">Repeats</th>
+            <th scope="col" class="text-right">Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-holiday>
+          <tr>
+            <td class="whitespace-nowrap">
+              <div class="flex flex-col leading-tight">
+                <span class="font-medium text-heading tabular-nums">{{ localDate(holiday.date) | date: 'MMM d' }}</span>
+                <span class="text-xs text-body/60">{{ localDate(holiday.date) | date: 'EEEE' }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="flex items-center gap-2">
+                <span class="text-heading">{{ holiday.name }}</span>
+                @if (holiday.isRecurring) {
+                  <i class="pi pi-refresh text-[11px] text-body/50 sm:hidden" pTooltip="Repeats yearly" aria-label="Repeats yearly"></i>
+                }
+              </div>
+            </td>
+            <td class="hidden sm:table-cell">
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" [class]="typeBadgeClass(holiday.type)">
+                {{ typeLabel(holiday.type) }}
+              </span>
+            </td>
+            <td class="hidden md:table-cell">
+              @if (holiday.isRecurring) {
+                <span class="inline-flex items-center gap-1 text-sm text-body/80">
+                  <i class="pi pi-refresh text-[11px]" aria-hidden="true"></i> Every year
+                </span>
+              } @else {
+                <span class="text-sm text-body/50">Once</span>
+              }
+            </td>
+            <td class="text-right whitespace-nowrap">
+              <div class="inline-flex items-center gap-0.5">
+                <p-button icon="pi pi-pencil" severity="secondary" text rounded size="small" [ariaLabel]="'Edit ' + holiday.name" pTooltip="Edit" tooltipPosition="top" (onClick)="openEdit(holiday)" />
+                <p-button icon="pi pi-trash" severity="danger" text rounded size="small" [ariaLabel]="'Delete ' + holiday.name" pTooltip="Delete" tooltipPosition="top" (onClick)="askDelete(holiday)" />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  }
+</main>
+
+<!-- Create / edit -->
+<p-dialog
+  [visible]="isDialogOpen()"
+  (visibleChange)="$event ? null : closeDialog()"
+  [modal]="true" [draggable]="false" [resizable]="false"
+  [closable]="!isSaving()"
+  [style]="{ width: '460px', maxWidth: '95vw', maxHeight: '90vh' }"
+  [header]="dialogMode() === 'create' ? 'New holiday' : 'Edit holiday'"
+>
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label for="holiday-name" class="text-sm font-medium text-heading">Name</label>
+        <span class="text-xs text-body/60" aria-live="polite">{{ nameLength() }} / 150</span>
+      </div>
+      <input id="holiday-name" pInputText formControlName="name" autocomplete="off" maxlength="150" placeholder="e.g. Independence Day" />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <small class="text-destructive">Name is required.</small>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label for="holiday-date" class="text-sm font-medium text-heading">Date</label>
+      <p-datepicker inputId="holiday-date" formControlName="date" dateFormat="D, M d, yy" [showIcon]="true" appendTo="body" styleClass="w-full" />
+      @if (form.controls.date.invalid && form.controls.date.touched) {
+        <small class="text-destructive">Pick a date.</small>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label for="holiday-type" class="text-sm font-medium text-heading">Type</label>
+      <p-select inputId="holiday-type" formControlName="type" [options]="typeOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+    </div>
+
+    <label for="holiday-recurring" class="flex items-center justify-between gap-3 cursor-pointer">
+      <span class="flex flex-col">
+        <span class="text-sm font-medium text-heading">Repeats every year</span>
+        <span class="text-xs text-body/70">On the same month and day, regardless of year.</span>
+      </span>
+      <p-toggleSwitch inputId="holiday-recurring" formControlName="isRecurring" />
+    </label>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" text (onClick)="closeDialog()" [disabled]="isSaving()" />
+    <p-button [label]="dialogMode() === 'create' ? 'Add holiday' : 'Save changes'" (onClick)="save()" [loading]="isSaving()" [disabled]="form.invalid" />
+  </ng-template>
+</p-dialog>
+
+<!-- Import -->
+<p-dialog
+  [visible]="isImportOpen()"
+  (visibleChange)="$event ? null : closeImport()"
+  [modal]="true" [draggable]="false" [resizable]="false"
+  [closable]="!isImporting()"
+  [style]="{ width: '440px', maxWidth: '95vw', maxHeight: '90vh' }"
+  header="Import public holidays"
+>
+  <form [formGroup]="importForm" (ngSubmit)="runImport()" class="flex flex-col gap-4">
+    <p class="text-sm text-body/70">
+      Fetches the year’s public holidays for a country and adds any that are new. Existing dates are left untouched, and every imported holiday comes in as “Regular” so you can adjust the type after.
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label for="import-year" class="text-sm font-medium text-heading">Year</label>
+        <p-select inputId="import-year" formControlName="year" [options]="yearOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="import-country" class="text-sm font-medium text-heading">Country</label>
+        <p-select inputId="import-country" formControlName="countryCode" [options]="countryOptions" optionLabel="label" optionValue="value" [filter]="true" filterBy="label" appendTo="body" styleClass="w-full" />
+      </div>
+    </div>
+    @if (importResult(); as result) {
+      <div class="rounded-base border border-border bg-muted-success/40 p-3 text-sm text-muted-success-foreground flex items-center gap-2">
+        <i class="pi pi-check-circle" aria-hidden="true"></i>
+        Imported {{ result.imported }} new, skipped {{ result.skipped }} already on file.
+      </div>
+    }
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Close" severity="secondary" text (onClick)="closeImport()" [disabled]="isImporting()" />
+    <p-button label="Import" icon="pi pi-download" (onClick)="runImport()" [loading]="isImporting()" [disabled]="importForm.invalid" />
+  </ng-template>
+</p-dialog>
+
+<!-- Clear whole year -->
+<p-dialog
+  [visible]="isClearOpen()"
+  (visibleChange)="$event ? null : cancelClearYear()"
+  [modal]="true" [draggable]="false" [resizable]="false"
+  [closable]="!isClearing()"
+  [style]="{ width: '440px', maxWidth: '95vw' }"
+  [header]="'Clear ' + year() + ' holidays'"
+>
+  <p class="text-sm text-body">
+    Delete all <strong class="text-heading">{{ holidays().length }}</strong> {{ holidays().length === 1 ? 'holiday' : 'holidays' }} in
+    <strong class="text-heading">{{ year() }}</strong>? Other years are not affected. This can’t be undone.
+  </p>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" text (onClick)="cancelClearYear()" [disabled]="isClearing()" />
+    <p-button [label]="'Delete ' + year() + ' holidays'" severity="danger" (onClick)="confirmClearYear()" [loading]="isClearing()" />
+  </ng-template>
+</p-dialog>
+
+<!-- Delete -->
+<p-dialog
+  [visible]="!!holidayToDelete()"
+  (visibleChange)="$event ? null : cancelDelete()"
+  [modal]="true" [draggable]="false" [resizable]="false"
+  [closable]="!isDeleting()"
+  [style]="{ width: '420px', maxWidth: '95vw' }"
+  header="Delete holiday"
+>
+  <p class="text-sm text-body">
+    Delete <strong class="text-heading">{{ holidayToDelete()?.name }}</strong>? This can’t be undone.
+  </p>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" text (onClick)="cancelDelete()" [disabled]="isDeleting()" />
+    <p-button label="Delete" severity="danger" (onClick)="confirmDelete()" [loading]="isDeleting()" />
+  </ng-template>
+</p-dialog>

@@ -1,0 +1,8 @@
+:host {
+  display: block;
+}
+
+/* Flag an invalid shift select the same way PrimeNG marks invalid fields. */
+.ng-invalid-select ::ng-deep .p-select {
+  border-color: var(--destructive);
+}

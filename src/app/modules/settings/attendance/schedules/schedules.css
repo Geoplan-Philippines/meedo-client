@@ -1,0 +1,4 @@
+/* List-of-cards layout; all visuals come from theme tokens in the template. */
+:host {
+  display: block;
+}

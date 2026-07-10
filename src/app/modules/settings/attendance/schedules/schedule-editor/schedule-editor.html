@@ -1,0 +1,150 @@
+<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
+  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+    <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
+    <span class="mx-2 opacity-60">/</span>
+    <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
+    <span class="mx-2 opacity-60">/</span>
+    <a routerLink="/settings/attendance/schedules" class="hover:text-primary transition-colors">Weekly schedules</a>
+    <span class="mx-2 opacity-60">/</span>
+    <span class="text-heading">{{ schedule()?.name ?? 'Schedule' }}</span>
+  </nav>
+
+  <a routerLink="/settings/attendance/schedules" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+    <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
+    Back to Weekly schedules
+  </a>
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-12 text-body/70">
+      <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
+      Loading schedule…
+    </div>
+  } @else if (loadError()) {
+    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-3">
+      <i class="pi pi-exclamation-circle text-3xl text-body/40" aria-hidden="true"></i>
+      <p class="text-body font-medium">{{ loadError() }}</p>
+      <a routerLink="/settings/attendance/schedules" class="text-primary hover:underline text-sm font-medium">Back to schedules</a>
+    </div>
+  } @else if (schedule(); as sched) {
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="text-2xl font-semibold text-heading">{{ sched.name }}</h1>
+          @if (sched.isDefault) {
+            <span class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+              <i class="pi pi-star-fill text-[10px]" aria-hidden="true"></i> Default
+            </span>
+          }
+        </div>
+        <p class="text-sm text-body/70">
+          {{ workingDayCount() }} working days per week. Turn a day on to give it a shift and an expected work mode.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 shrink-0">
+        @if (saved()) {
+          <span class="inline-flex items-center gap-1.5 text-sm text-muted-success-foreground" aria-live="polite">
+            <i class="pi pi-check-circle" aria-hidden="true"></i> Saved
+          </span>
+        } @else if (days.dirty) {
+          <span class="text-sm text-body/60" aria-live="polite">Unsaved changes</span>
+        }
+        <p-button
+          label="Save week"
+          icon="pi pi-check"
+          (onClick)="save()"
+          [loading]="isSaving()"
+          [disabled]="days.invalid || !days.dirty"
+        />
+      </div>
+    </header>
+
+    @if (saveError()) {
+      <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm">
+        {{ saveError() }}
+      </div>
+    }
+
+    @if (shiftOptions().length === 0) {
+      <div class="rounded-base border border-muted-warning-foreground/30 bg-muted-warning text-muted-warning-foreground p-3 text-sm flex items-center gap-2">
+        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+        <span>No active shifts exist yet. <a routerLink="/settings/attendance/shifts" class="underline font-medium">Create a shift</a> before setting working days.</span>
+      </div>
+    }
+
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <p class="text-xs uppercase tracking-wide font-semibold text-body/60">The week</p>
+      <p-button
+        label="Copy Monday to Tue–Fri"
+        icon="pi pi-copy"
+        severity="secondary"
+        text size="small"
+        pTooltip="Apply Monday’s shift and mode to the other weekdays"
+        tooltipPosition="left"
+        (onClick)="applyToWeekdays()"
+      />
+    </div>
+
+    <div class="rounded-base border border-border bg-surface overflow-hidden divide-y divide-border">
+      @for (group of days.controls; track group.controls.dayOfWeek.value) {
+        <fieldset class="flex flex-col gap-3 p-4 m-0 border-0" [formGroup]="group">
+          <legend class="sr-only">{{ dayLabel(group.controls.dayOfWeek.value) }}</legend>
+
+          <div class="flex items-center gap-3">
+            <span class="w-24 sm:w-28 shrink-0 font-medium text-heading">{{ dayLabel(group.controls.dayOfWeek.value) }}</span>
+            <p-toggleSwitch formControlName="isWorkingDay" [ariaLabel]="dayLabel(group.controls.dayOfWeek.value) + ' is a working day'" />
+            <span
+              [class]="group.controls.isWorkingDay.value
+                ? 'text-xs font-medium text-primary'
+                : 'text-xs font-medium text-body/60'"
+            >
+              {{ group.controls.isWorkingDay.value ? 'Working day' : 'Rest day' }}
+            </span>
+          </div>
+
+          @if (group.controls.isWorkingDay.value) {
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:pl-[6.75rem]">
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-body/70" [for]="'shift-' + group.controls.dayOfWeek.value">Shift</label>
+                <p-select
+                  [inputId]="'shift-' + group.controls.dayOfWeek.value"
+                  formControlName="shiftId"
+                  [options]="shiftOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select a shift"
+                  appendTo="body"
+                  styleClass="w-full"
+                  [class.ng-invalid-select]="group.hasError('shiftRequired') && group.controls.shiftId.touched"
+                />
+                @if (group.hasError('shiftRequired') && group.controls.shiftId.touched) {
+                  <small class="text-destructive">Pick a shift for this working day.</small>
+                }
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-body/70" [for]="'mode-' + group.controls.dayOfWeek.value">Expected mode</label>
+                <p-select
+                  [inputId]="'mode-' + group.controls.dayOfWeek.value"
+                  formControlName="expectedSource"
+                  [options]="sourceOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Any mode"
+                  [showClear]="true"
+                  appendTo="body"
+                  styleClass="w-full"
+                />
+                <small class="text-body/60 text-xs">Leave as “Any” when it varies (office, field, or home).</small>
+              </div>
+            </div>
+          } @else {
+            <div class="flex items-center gap-2 text-sm text-body/50 sm:pl-[6.75rem]">
+              <i class="pi pi-moon text-xs" aria-hidden="true"></i>
+              No shift on rest days.
+            </div>
+          }
+        </fieldset>
+      }
+    </div>
+  }
+</main>

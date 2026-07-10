@@ -24,6 +24,11 @@ export const settingsRoutes: Routes = [
     component: Statuses,
   },
   {
+    path: 'attendance',
+    loadChildren: () =>
+      import('./attendance/attendance.routes').then((m) => m.attendanceRoutes),
+  },
+  {
     path: 'users',
     component: Users,
     canActivate: [orgAdminGuard],
