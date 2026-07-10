@@ -1,0 +1,300 @@
+<main class="board">
+  <header class="board-head">
+    <div class="board-heading">
+      <h1 class="board-title">Attendance board</h1>
+      <p class="board-subtitle">Who's in, who's late, who's out, graded against each schedule.</p>
+    </div>
+
+    <div class="day-nav">
+      @if (summary(); as s) {
+        <span class="as-of" [class.as-of--live]="isToday()">
+          @if (isToday()) {
+            <span class="live-dot" aria-hidden="true"></span>
+            Live, {{ s.asOf | date: 'h:mm a' }}
+          } @else {
+            Final for {{ s.date | date: 'MMM d' }}
+          }
+        </span>
+      }
+      <p-datepicker
+        [formControl]="dateControl"
+        dateFormat="yy-mm-dd"
+        [showIcon]="true"
+        iconDisplay="input"
+        [readonlyInput]="true"
+        [maxDate]="maxDate"
+        appendTo="body"
+      />
+      <p-button icon="pi pi-chevron-left" [text]="true" severity="secondary" (onClick)="previousDay()" ariaLabel="Previous day" />
+      <p-button
+        icon="pi pi-chevron-right"
+        [text]="true"
+        severity="secondary"
+        [disabled]="isToday()"
+        (onClick)="nextDay()"
+        ariaLabel="Next day"
+      />
+    </div>
+  </header>
+
+  @if (accessDenied()) {
+    <section class="access-denied" role="alert">
+      <i class="pi pi-lock" aria-hidden="true"></i>
+      <div>
+        <p class="access-title">Admins only</p>
+        <p class="access-body">The attendance board is available to organization owners and admins.</p>
+      </div>
+    </section>
+  } @else {
+    <!-- ─── Status summary ─────────────────────────────── -->
+    <section class="summary" aria-label="Attendance summary for the day">
+      <div class="summary-cards" role="group" aria-label="Filter roster by status">
+        @for (card of statusCards(); track card.key) {
+          <button
+            type="button"
+            class="seg"
+            [class]="'seg--' + card.tone"
+            [class.seg--active]="statusFilter() === card.key"
+            [attr.aria-pressed]="statusFilter() === card.key"
+            (click)="toggleStatusFilter(card.key)"
+          >
+            <span class="seg-key">
+              <span class="seg-label">
+                <span class="seg-dot" aria-hidden="true"></span>
+                {{ card.label }}
+              </span>
+              @if (card.hint) {
+                <span class="seg-hint">{{ card.hint }}</span>
+              }
+            </span>
+            <span class="seg-count">{{ card.count }}</span>
+          </button>
+        }
+      </div>
+
+    </section>
+
+    <!-- ─── Roster ─────────────────────────────────────── -->
+    <section class="panel">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="toolbar-lead">
+            <h2 class="panel-title">Employee Status</h2>
+            @if (statusFilter(); as active) {
+              <button type="button" class="filter-chip" (click)="toggleStatusFilter(active)">
+                {{ active }}
+                <i class="pi pi-times" aria-hidden="true"></i>
+                <span class="sr-only">Clear filter</span>
+              </button>
+            }
+          </div>
+
+          <div class="search-box">
+            <i class="pi pi-search search-icon" aria-hidden="true"></i>
+            <input
+              type="search"
+              class="search-input"
+              placeholder="Search by name or code…"
+              aria-label="Search roster"
+              [formControl]="rosterSearch"
+            />
+          </div>
+        </div>
+
+        <p-table
+          #rosterTable
+          [value]="rosterEntries()"
+          [lazy]="true"
+          (onLazyLoad)="onRosterLazyLoad($event)"
+          [paginator]="true"
+          [rows]="rosterRows()"
+          [totalRecords]="rosterTotal()"
+          [loading]="isLoadingRoster()"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
+          paginatorDropdownAppendTo="body"
+          [rowHover]="true"
+          dataKey="employeeId"
+          class="board-table"
+          [tableStyle]="{ 'width': '100%' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col"><div class="th-content">Employee</div></th>
+              <th scope="col" class="hide-md"><div class="th-content">Department</div></th>
+              <th scope="col"><div class="th-content">Availability</div></th>
+              <th scope="col"><div class="th-content">Status</div></th>
+              <th scope="col"><div class="th-content">First in</div></th>
+              <th scope="col" class="hide-md"><div class="th-content">Expected</div></th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-entry>
+            <tr
+              class="board-row"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'View attendance for ' + (entry.name ?? entry.email)"
+              (click)="openEmployee(entry)"
+              (keydown.enter)="openEmployee(entry)"
+              (keydown.space)="openEmployee(entry); $event.preventDefault()"
+            >
+              <td class="name-cell">
+                <span class="cell-name">{{ entry.name ?? entry.email }}</span>
+                @if (entry.employeeCode) {
+                  <span class="cell-sub">{{ entry.employeeCode }}</span>
+                }
+              </td>
+              <td class="hide-md">{{ entry.department ?? '—' }}</td>
+              <td>
+                <span class="avail" [class.avail--on]="entry.available">
+                  {{ entry.available ? 'Available' : 'Unavailable' }}
+                </span>
+              </td>
+              <td>
+                <app-attendance-status-badge [status]="entry.status" [showDetail]="true" />
+              </td>
+              <td class="time-cell">{{ entry.firstIn ? (entry.firstIn | date: 'h:mm a') : '—' }}</td>
+              <td class="hide-md hours-cell">{{ expectedHours(entry) }}</td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <div class="empty-icon" aria-hidden="true"><i class="pi pi-users"></i></div>
+                  <p class="empty-title">No employees to show</p>
+                  <p class="empty-body">
+                    @if (rosterSearch.value) {
+                      No one matches "{{ rosterSearch.value }}". Try different keywords.
+                    } @else if (statusFilter()) {
+                      No one is {{ statusFilter() }} for this day.
+                    } @else {
+                      No employees are set up for attendance yet.
+                    }
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+
+    <!-- ─── Tardiness scoreboard ───────────────────────── -->
+    <section class="panel">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="toolbar-lead">
+            <h2 class="panel-title">Tardiness scoreboard</h2>
+            @if (tardMeta(); as meta) {
+              <span class="window-label">{{ meta.from | date: 'MMM d' }} – {{ meta.to | date: 'MMM d' }}</span>
+            }
+          </div>
+
+          <div class="toolbar-controls">
+            <div class="segmented" role="group" aria-label="Scoreboard period">
+              @for (option of periodOptions; track option.key) {
+                <button
+                  type="button"
+                  class="segmented-btn"
+                  [class.segmented-btn--active]="period() === option.key"
+                  [attr.aria-pressed]="period() === option.key"
+                  (click)="setPeriod(option.key)"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+
+            <div class="search-box search-box--sm">
+              <i class="pi pi-search search-icon" aria-hidden="true"></i>
+              <input
+                type="search"
+                class="search-input"
+                placeholder="Search employee…"
+                aria-label="Search scoreboard"
+                [formControl]="tardSearch"
+              />
+            </div>
+          </div>
+        </div>
+
+        <p-table
+          #tardTable
+          [value]="tardEntries()"
+          [lazy]="true"
+          (onLazyLoad)="onTardLazyLoad($event)"
+          [paginator]="true"
+          [rows]="tardRows()"
+          [totalRecords]="tardTotal()"
+          [loading]="isLoadingTard()"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
+          paginatorDropdownAppendTo="body"
+          dataKey="employeeId"
+          class="board-table"
+          [tableStyle]="{ 'width': '100%' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" class="rank-col"><div class="th-content">#</div></th>
+              <th scope="col"><div class="th-content">Employee</div></th>
+              <th scope="col" class="hide-md"><div class="th-content">Department</div></th>
+              <th scope="col"><div class="th-content">Late days</div></th>
+              <th scope="col"><div class="th-content">Total late</div></th>
+              <th scope="col" class="hide-md"><div class="th-content">Avg late</div></th>
+              <th scope="col" class="hide-md"><div class="th-content">Worked</div></th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-entry>
+            <tr>
+              <td class="rank-col">
+                <span class="rank" [class.rank--top]="entry.rank <= 3 && entry.lateDays > 0">{{ entry.rank }}</span>
+              </td>
+              <td class="name-cell">
+                <span class="cell-name">{{ entry.name ?? entry.email }}</span>
+                @if (entry.employeeCode) {
+                  <span class="cell-sub">{{ entry.employeeCode }}</span>
+                }
+              </td>
+              <td class="hide-md">{{ entry.department ?? '—' }}</td>
+              <td class="hours-cell">
+                @if (entry.lateDays > 0) {
+                  <span class="late-days">{{ entry.lateDays }}</span>
+                } @else {
+                  <span class="on-time">0</span>
+                }
+              </td>
+              <td class="hours-cell">{{ lateTotalLabel(entry) }}</td>
+              <td class="hide-md hours-cell">{{ lateAvgLabel(entry) }}</td>
+              <td class="hide-md hours-cell">{{ entry.workedDays }}</td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <div class="empty-icon" aria-hidden="true"><i class="pi pi-verified"></i></div>
+                  <p class="empty-title">No lateness in this window</p>
+                  <p class="empty-body">
+                    @if (tardSearch.value) {
+                      No one matches "{{ tardSearch.value }}".
+                    } @else {
+                      No attendance was recorded for this period yet.
+                    }
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  }
+</main>

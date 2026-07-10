@@ -137,6 +137,17 @@
                 <small class="text-body/60 text-xs">Leave as “Any” when it varies (office, field, or home).</small>
               </div>
             </div>
+
+            <label
+              class="flex items-center gap-3 sm:pl-[6.75rem] cursor-pointer"
+              [for]="'late-' + group.controls.dayOfWeek.value"
+            >
+              <p-toggleSwitch [inputId]="'late-' + group.controls.dayOfWeek.value" formControlName="trackLateness" />
+              <span class="flex flex-col">
+                <span class="text-xs font-medium text-heading">Record lateness</span>
+                <span class="text-xs text-body/60">Turn off for flexible or any-time days (e.g. WFH). No one is marked late.</span>
+              </span>
+            </label>
           } @else {
             <div class="flex items-center gap-2 text-sm text-body/50 sm:pl-[6.75rem]">
               <i class="pi pi-moon text-xs" aria-hidden="true"></i>

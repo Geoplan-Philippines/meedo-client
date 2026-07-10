@@ -5,6 +5,14 @@
     <div>
       <h1 class="page-title">Attendance</h1>
       <p class="page-subtitle">First in, last out — across office, field, and work-from-home.</p>
+      @if (status(); as dayStatus) {
+        <div class="today-status">
+          <app-attendance-status-badge [status]="dayStatus" [showDetail]="true" />
+          @if (expectedLabel(); as expected) {
+            <span class="today-status-hint">Expected {{ expected }} · {{ expectedModeLabel() }}</span>
+          }
+        </div>
+      }
     </div>
     <span class="today-pill">{{ summary()?.date ?? null | date: 'fullDate' }}</span>
   </header>

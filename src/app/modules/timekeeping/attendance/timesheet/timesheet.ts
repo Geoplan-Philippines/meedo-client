@@ -20,6 +20,8 @@ import { MessageService } from 'primeng/api';
 import { AttendanceService } from '../services/attendance.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Roster } from '../roster/roster';
+import { AttendanceStatusBadge } from '../shared/attendance-status-badge';
+import { expectedSourceLabel, formatHours } from '../shared/attendance-status.util';
 import {
   AttendanceEvent,
   AttendanceEventType,
@@ -47,7 +49,7 @@ type PunchMode = 'in' | 'out';
 
 @Component({
   selector: 'app-attendance-timesheet',
-  imports: [ButtonModule, DialogModule, ToastModule, DatePipe, Roster],
+  imports: [ButtonModule, DialogModule, ToastModule, DatePipe, Roster, AttendanceStatusBadge],
   providers: [MessageService],
   templateUrl: './timesheet.html',
   styleUrl: './timesheet.css',
@@ -121,6 +123,18 @@ export class Timesheet implements OnInit {
   readonly lastOut = computed(() => this.summary()?.lastOut ?? null);
   readonly billableHours = computed(() => this.summary()?.billableHours ?? null);
   private readonly events = computed<AttendanceEvent[]>(() => this.summary()?.events ?? []);
+
+  /** Today's schedule-derived grade (status, expected hours, work mode). */
+  readonly status = computed(() => this.summary()?.status ?? null);
+  readonly expectedLabel = computed(() => {
+    const status = this.status();
+    if (!status || status.expectedHours <= 0) return null;
+    return formatHours(status.expectedHours);
+  });
+  readonly expectedModeLabel = computed(() => {
+    const status = this.status();
+    return status ? expectedSourceLabel(status) : null;
+  });
 
   readonly hasClockedIn = computed(() => this.firstIn() !== null);
 

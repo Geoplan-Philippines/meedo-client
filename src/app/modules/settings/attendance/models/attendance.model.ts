@@ -65,6 +65,8 @@ export interface WeeklyScheduleDay {
   dayOfWeek: DayOfWeek;
   isWorkingDay: boolean;
   expectedSource: AttendanceSource | null;
+  /** When false, lateness is not recorded for this day (e.g. a flexible WFH day). */
+  trackLateness: boolean;
   shiftId: string | null;
   /** Included by the API (`days.include.shift`). */
   shift: Shift | null;
@@ -92,6 +94,8 @@ export interface WeeklyScheduleDayInput {
   isWorkingDay: boolean;
   expectedSource?: AttendanceSource | null;
   shiftId?: string | null;
+  /** When false, lateness is not recorded for this day. Defaults to true server-side. */
+  trackLateness?: boolean;
 }
 
 export interface CreateWeeklySchedulePayload {
@@ -221,6 +225,7 @@ export interface EffectiveSchedule {
   expectedSource: AttendanceSource | null;
   expectedHours: number;
   isFlexible: boolean;
+  trackLateness: boolean;
   shift: Shift | null;
   isHoliday: boolean;
   policy: AttendancePolicy;

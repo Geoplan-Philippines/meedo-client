@@ -7,6 +7,11 @@ export const timekeepingRoutes: Routes = [
     redirectTo: 'attendance',
   },
   {
+    path: 'dashboard',
+    loadComponent: () =>
+      import('./attendance/dashboard/dashboard').then((m) => m.AttendanceDashboard),
+  },
+  {
     path: 'attendance',
     loadComponent: () =>
       import('./attendance/timesheet/timesheet').then((m) => m.Timesheet),

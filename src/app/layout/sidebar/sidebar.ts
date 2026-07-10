@@ -56,7 +56,9 @@ export class Sidebar {
     {
       title: 'Timekeeping',
       items: [
-        { label: 'Dashboard', route: '/timekeeping/dashboard', icon: 'pi-chart-line' },
+        ...(this.isAdmin()
+          ? [{ label: 'Dashboard', route: '/timekeeping/dashboard', icon: 'pi-chart-line' }]
+          : []),
         { label: 'Attendance', route: '/timekeeping/attendance', icon: 'pi-clock' },
         { label: 'Timesheet', route: '/timekeeping/timesheet', icon: 'pi-calendar' },
         ...(this.isAdmin()

@@ -46,6 +46,7 @@ type DayForm = FormGroup<{
   isWorkingDay: FormControl<boolean>;
   shiftId: FormControl<string | null>;
   expectedSource: FormControl<AttendanceSource | null>;
+  trackLateness: FormControl<boolean>;
 }>;
 
 interface ShiftOption {
@@ -153,6 +154,7 @@ export class ScheduleEditor implements OnInit {
           isWorkingDay: new FormControl(entry?.isWorkingDay ?? false, { nonNullable: true }),
           shiftId: new FormControl<string | null>(entry?.shiftId ?? null),
           expectedSource: new FormControl<AttendanceSource | null>(entry?.expectedSource ?? null),
+          trackLateness: new FormControl(entry?.trackLateness ?? true, { nonNullable: true }),
         },
         { validators: workingNeedsShift },
       );
@@ -181,11 +183,11 @@ export class ScheduleEditor implements OnInit {
     // Convenience: copy Monday's setup to Tue–Fri (the common 5-day pattern).
     const monday = this.days.controls.find((g) => g.controls.dayOfWeek.value === 'MONDAY');
     if (!monday) return;
-    const { isWorkingDay, shiftId, expectedSource } = monday.getRawValue();
+    const { isWorkingDay, shiftId, expectedSource, trackLateness } = monday.getRawValue();
     for (const group of this.days.controls) {
       const day = group.controls.dayOfWeek.value;
       if (day === 'MONDAY' || day === 'SATURDAY' || day === 'SUNDAY') continue;
-      group.patchValue({ isWorkingDay, shiftId, expectedSource });
+      group.patchValue({ isWorkingDay, shiftId, expectedSource, trackLateness });
     }
     this.days.markAsDirty();
   }
@@ -203,6 +205,7 @@ export class ScheduleEditor implements OnInit {
             isWorkingDay: true,
             shiftId: value.shiftId,
             expectedSource: value.expectedSource,
+            trackLateness: value.trackLateness,
           }
         : { dayOfWeek: value.dayOfWeek, isWorkingDay: false };
     });
