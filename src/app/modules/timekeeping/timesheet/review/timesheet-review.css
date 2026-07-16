@@ -23,10 +23,10 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 1.5rem 2rem;
+  padding: 2rem 2.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 /* ─── Breadcrumb ─────────────────────────────────────────────────────────── */
@@ -113,7 +113,7 @@
   flex: 0 0 auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
-  background: var(--color-background);
+  background: var(--color-surface);
   overflow: hidden;
 }
 
@@ -122,7 +122,6 @@
   align-items: flex-start;
   gap: 0.875rem;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .emp-avatar {
@@ -145,12 +144,20 @@
   min-width: 0;
 }
 
+.emp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.3rem;
+}
+
 .emp-name {
   font-size: 1rem;
   font-weight: 700;
   font-family: var(--font-heading);
   color: var(--color-heading);
-  margin: 0 0 0.3rem;
+  margin: 0;
 }
 
 .emp-meta {
@@ -169,51 +176,45 @@
 
 .emp-status {
   flex: 0 0 auto;
-  align-self: flex-start;
 }
 
+/* Separate white cards — same surface + hairline border as the Approvals/Timesheet stat cards. */
 .hours-strip {
   display: flex;
-  gap: 0;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .hours-chip {
   flex: 1 1 0;
+  min-width: 8rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  padding: 0.625rem 0.5rem;
-  border-right: 1px solid var(--color-border);
-  text-align: center;
-  background: color-mix(in srgb, var(--color-secondary) 20%, var(--color-background));
-}
-
-.hours-chip:last-child {
-  border-right: none;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
 }
 
 .hours-chip-label {
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-body);
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  white-space: nowrap;
 }
 
 .hours-chip-value {
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 700;
   font-family: var(--font-heading);
   color: var(--color-heading);
+  font-variant-numeric: tabular-nums;
 }
-
-/* Pending chip — uses primary-blue scheme; amber warning token not available in current theme */
-.hours-chip--pending { background: color-mix(in srgb, var(--color-secondary) 60%, var(--color-background)); }
-.hours-chip--pending .hours-chip-value { color: var(--color-primary); }
-
-.hours-chip--ot { background: color-mix(in srgb, var(--color-muted-success) 40%, var(--color-background)); }
-.hours-chip--ot .hours-chip-value { color: color-mix(in srgb, var(--color-success) 70%, var(--color-heading)); }
 
 /* ─── Section shared ─────────────────────────────────────────────────────── */
 
@@ -235,19 +236,16 @@
 
 .daily-section {
   flex: 0 0 auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: var(--color-background);
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
 }
 
 .daily-section-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .expand-toggle {
@@ -269,19 +267,31 @@
   border-radius: 2px;
 }
 
-.day-group-row td {
-  padding: 0;
-  border-bottom: 1px solid var(--color-border);
+/* ─── Day Cards ──────────────────────────────────────────────────────────── */
+
+.day-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.day-group-btn {
+.day-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  overflow: hidden;
+}
+
+.day-card-header {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 1rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
   border: none;
-  background: color-mix(in srgb, var(--color-secondary) 40%, var(--color-background));
+  border-bottom: 1px solid var(--color-border);
+  background: none;
   cursor: pointer;
   text-align: left;
   font: inherit;
@@ -289,13 +299,20 @@
   transition: background 150ms;
 }
 
-.day-group-btn:hover {
-  background: var(--color-secondary);
+.day-card-header:hover {
+  background: color-mix(in srgb, var(--color-secondary) 45%, var(--color-background));
 }
 
-.day-group-btn:focus-visible {
+.day-card-header:focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: -2px;
+}
+
+.day-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
 }
 
 .day-group-chevron {
@@ -307,22 +324,14 @@
 .day-date-label {
   font-size: 0.82rem;
   font-family: var(--font-heading);
-  flex: 1 1 auto;
+  white-space: nowrap;
 }
 
-.day-total-badge {
-  font-size: 0.78rem;
-  font-weight: 700;
-  font-family: var(--font-heading);
-  color: var(--color-primary);
-  background: var(--color-secondary);
-  border-radius: var(--radius-pill);
-  padding: 0.15rem 0.5rem;
-}
-
-.day-entry-count {
-  font-size: 0.72rem;
-  color: var(--color-body);
+.day-summary-text {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .day-entries-wrap {
@@ -348,7 +357,7 @@
 
 .day-entries-table thead th {
   padding: 0.5rem 0.75rem;
-  background: var(--color-background);
+  background: var(--color-surface);
   color: var(--color-body);
   font-size: 0.68rem;
   font-weight: 700;
@@ -358,6 +367,12 @@
   text-align: left;
   white-space: nowrap;
 }
+
+/* Headers must share the same alignment as their data column — otherwise
+   "thead th" (0,1,2) beats the plain ".col-num"/".col-flag" (0,1,0) rules below
+   and the header text drifts left of its right/center-aligned data. */
+.day-entries-table thead th.col-num { text-align: left; }
+.day-entries-table thead th.col-flag { text-align: left; }
 
 .day-entries-table tbody td {
   padding: 0.5rem 0.75rem;
@@ -382,8 +397,8 @@
   background: color-mix(in srgb, var(--color-muted-destructive) 20%, transparent);
 }
 
-.col-num { text-align: right; white-space: nowrap; }
-.col-flag { text-align: center; }
+.col-num { text-align: left; white-space: nowrap; }
+.col-flag { text-align: left; }
 
 .td-project { font-weight: 600; color: var(--color-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .td-wo { color: var(--color-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -416,16 +431,21 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   color: var(--color-heading);
+  text-align: left !important;
 }
 
+/* The task HTML comes from the rich-text editor and can carry an inline
+   text-align style on its own paragraphs — inline styles beat any external
+   rule regardless of specificity, so this needs !important to win. */
 .td-task-content :where(p, ul, ol) {
   margin: 0;
+  text-align: left !important;
 }
 .td-loc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .td-hrs { font-weight: 700; font-family: var(--font-heading); color: var(--color-heading); }
 .td-flag { font-size: 0.78rem; }
 
-.flag-yes { color: color-mix(in srgb, var(--color-success) 65%, var(--color-heading)); font-weight: 700; }
+.flag-yes { color: var(--color-heading); font-weight: 700; }
 .flag-no { color: var(--color-body); opacity: 0.4; }
 
 .rejection-note {
@@ -437,11 +457,14 @@
 
 /* ─── Status Badges ──────────────────────────────────────────────────────── */
 
+/* Dot + label, no fill — matches the Tickets status-cell pattern. */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  border-radius: var(--radius-pill);
-  padding: 0.2rem 0.55rem;
+  gap: 0.35rem;
+  border-radius: 0;
+  padding: 0;
+  background: none;
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -449,10 +472,25 @@
   text-transform: uppercase;
 }
 
-.status-badge--draft { background: color-mix(in srgb, var(--color-body) 8%, var(--color-background)); color: var(--color-body); }
-.status-badge--submitted, .status-badge--pending { background: var(--color-secondary); color: var(--color-primary); }
-.status-badge--approved { background: var(--color-muted-success); color: color-mix(in srgb, var(--color-success) 55%, var(--color-heading)); }
-.status-badge--rejected { background: var(--color-muted-destructive); color: color-mix(in srgb, var(--color-destructive) 55%, var(--color-heading)); }
+.status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-badge--draft { color: var(--color-body); }
+.status-badge--draft::before { background: var(--color-muted); }
+
+.status-badge--submitted, .status-badge--pending { color: var(--color-primary); }
+.status-badge--submitted::before, .status-badge--pending::before { background: var(--color-primary); }
+
+.status-badge--approved { color: color-mix(in srgb, var(--color-success) 55%, var(--color-heading)); }
+.status-badge--approved::before { background: var(--color-success); }
+
+.status-badge--rejected { color: color-mix(in srgb, var(--color-destructive) 55%, var(--color-heading)); }
+.status-badge--rejected::before { background: var(--color-destructive); }
 
 .top-notice--locked {
   display: inline-flex;
@@ -602,7 +640,7 @@
 
 .app-dialog {
   width: min(32rem, 100%);
-  background: var(--color-background);
+  background: var(--color-surface) !important;
   border-radius: var(--radius-base);
   border: 1px solid var(--color-border);
   padding: 1.25rem;
@@ -618,6 +656,7 @@
 .task-preview-dialog {
   width: min(32rem, 100%);
   max-height: 80vh;
+  background: var(--color-surface);
 }
 
 .task-preview-content {
@@ -689,7 +728,7 @@
   font: inherit;
   font-size: 0.875rem;
   color: var(--color-heading);
-  background: var(--color-background);
+  background: var(--color-surface) !important;
 }
 
 .dialog-textarea:focus {
