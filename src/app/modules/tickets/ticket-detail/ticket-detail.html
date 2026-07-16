@@ -63,6 +63,7 @@
         <app-markdown-editor
           class="detail-desc"
           [value]="t.description ?? ''"
+          [upload]="uploadAttachment"
           placeholder="Add description…"
           ariaLabel="Ticket description"
           (contentSave)="onDescriptionSave($event)"

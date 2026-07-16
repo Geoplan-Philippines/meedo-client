@@ -291,6 +291,7 @@
     <app-markdown-editor
       class="compose-body"
       [value]="composeDescription()"
+      [upload]="uploadAttachment"
       placeholder="Add description…"
       ariaLabel="Ticket description"
       (contentSave)="onComposeDescription($event)"
