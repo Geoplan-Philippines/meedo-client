@@ -18,7 +18,8 @@ import { forkJoin, finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
 import { SkeletonModule } from 'primeng/skeleton';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { CommentsService } from '../services/comments.service';
@@ -31,7 +32,10 @@ import { initialsFrom, relativeTime } from '../utils/ticket.utils';
 
 @Component({
   selector: 'app-ticket-thread',
-  imports: [ButtonModule, TextareaModule, SkeletonModule, DatePipe, NgTemplateOutlet, ReactiveFormsModule],
+  imports: [ButtonModule, TextareaModule, SkeletonModule, ConfirmDialogModule, DatePipe, NgTemplateOutlet, ReactiveFormsModule],
+  // Own ConfirmationService instance drives this component's <p-confirmDialog>;
+  // MessageService is intentionally inherited from the parent (see below).
+  providers: [ConfirmationService],
   templateUrl: './ticket-thread.html',
   styleUrl: './ticket-thread.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +47,7 @@ export class TicketThread {
   // Intentionally reuses the parent Tickets component's MessageService/<p-toast>.
   // This component must be rendered within Tickets (project pattern: each feature owns its toast).
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly ticketId = input.required<string>();
@@ -295,6 +300,19 @@ export class TicketThread {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update comment' });
         },
       });
+  }
+
+  /** Confirm before deleting — removal is permanent and there's no undo. */
+  confirmDelete(comment: TicketComment): void {
+    const noun = comment.parentId !== null ? 'reply' : 'comment';
+    this.confirmationService.confirm({
+      header: `Delete ${noun}?`,
+      message: `This ${noun} will be permanently removed. This can't be undone.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonProps: { label: 'Delete', severity: 'danger' },
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', text: true },
+      accept: () => this.deleteComment(comment),
+    });
   }
 
   deleteComment(comment: TicketComment): void {

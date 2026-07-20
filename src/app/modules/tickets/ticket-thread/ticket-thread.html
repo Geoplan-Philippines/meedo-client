@@ -1,4 +1,5 @@
 <section class="mt-5 border-t border-border pt-4" aria-label="Comments and activity">
+  <p-confirmDialog />
   <h2 class="font-heading text-heading text-sm font-semibold mb-3">Comments &amp; Activity</h2>
 
   @if (isLoading()) {
@@ -39,7 +40,7 @@
                 <button type="button" class="c-action" aria-label="Edit" (click)="startEditComment(comment)">
                   <i class="pi pi-pencil" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="c-action c-action--danger" aria-label="Delete" [disabled]="deletingCommentId() === comment.id" (click)="deleteComment(comment)">
+                <button type="button" class="c-action c-action--danger" aria-label="Delete" [disabled]="deletingCommentId() === comment.id" (click)="confirmDelete(comment)">
                   <i class="pi pi-trash" aria-hidden="true"></i>
                 </button>
               </span>
