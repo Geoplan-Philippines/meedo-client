@@ -169,6 +169,9 @@ export class TicketThread {
   onCommentKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
+      // Guard the keyboard path too: [disabled] only blocks the button, so a rapid
+      // double-Enter could fire twice before the request settles and re-renders.
+      if (this.isPostingComment()) return;
       this.postComment();
     }
   }
@@ -177,6 +180,7 @@ export class TicketThread {
   onEditCommentKeydown(event: KeyboardEvent, comment: TicketComment): void {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
+      if (this.isSavingComment()) return;
       this.saveEditComment(comment);
     }
   }
@@ -190,6 +194,7 @@ export class TicketThread {
     }
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
+      if (this.isPostingReply()) return;
       this.postReply(parent);
     }
   }

@@ -12,6 +12,32 @@ export function toDownloadUrl(url: string): string {
   return url;
 }
 
+/** Schemes an attachment href may use. Blocks `javascript:`/`data:`/`vbscript:` etc. */
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+
+/**
+ * Validate a stored href against the scheme allow-list. Untrusted HTML can smuggle a
+ * `javascript:` URI (including obfuscated forms like `java\tscript:` or leading
+ * whitespace/control chars that browsers strip before resolving the scheme), which
+ * would execute when the download chip is clicked. Returns the original url when its
+ * scheme is allowed — or when it has no scheme (relative) — and `null` otherwise.
+ */
+export function sanitizeHref(url: string | null | undefined): string | null {
+  if (!url) return null;
+  // Drop whitespace/control chars (<= U+0020 and U+007F) that browsers strip before
+  // resolving the scheme, so `java\tscript:` / leading-space tricks can't slip through.
+  const cleaned = Array.from(url)
+    .filter((ch) => {
+      const code = ch.charCodeAt(0);
+      return code > 0x20 && code !== 0x7f;
+    })
+    .join('')
+    .toLowerCase();
+  const scheme = cleaned.match(/^([a-z][a-z0-9+.-]*:)/);
+  if (!scheme) return url; // relative / anchor / protocol-relative — no scheme to exploit
+  return SAFE_PROTOCOLS.has(scheme[1]) ? url : null;
+}
+
 /** One uniform file icon for every attachment type (kept deliberately consistent). */
 const FILE_ICON = 'pi pi-file';
 
@@ -35,7 +61,7 @@ export const FileAttachment = Node.create({
     return {
       href: {
         default: null,
-        parseHTML: (el) => el.getAttribute('href'),
+        parseHTML: (el) => sanitizeHref(el.getAttribute('href')),
         renderHTML: (attrs) => (attrs['href'] ? { href: attrs['href'] } : {}),
       },
       name: {
@@ -80,7 +106,9 @@ export const FileAttachment = Node.create({
   addNodeView() {
     return ({ editor, node, getPos }) => {
       const name: string = node.attrs['name'] ?? 'file';
-      const href: string = node.attrs['href'] ?? '';
+      // Re-validate at render time: the href may have been set programmatically, not
+      // just via parseHTML. A rejected scheme yields no href so the chip is inert.
+      const safeHref = sanitizeHref(node.attrs['href']);
 
       const dom = document.createElement('span');
       dom.className = 'md-file';
@@ -91,7 +119,7 @@ export const FileAttachment = Node.create({
       // without navigating the app away or leaving a blank tab.
       const download = document.createElement('a');
       download.className = 'md-file__download';
-      download.href = toDownloadUrl(href);
+      if (safeHref) download.href = toDownloadUrl(safeHref);
       download.setAttribute('download', name);
       download.title = `Download ${name}`;
       download.setAttribute('aria-label', `Download ${name}`);
