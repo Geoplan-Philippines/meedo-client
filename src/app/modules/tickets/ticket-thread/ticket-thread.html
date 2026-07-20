@@ -1,19 +1,20 @@
 <section class="mt-5 border-t border-border pt-4" aria-label="Comments and activity">
+  <p-confirmDialog />
   <h2 class="font-heading text-heading text-sm font-semibold mb-3">Comments &amp; Activity</h2>
 
   @if (isLoading()) {
     <div role="status" aria-label="Loading comments and activity" class="flex flex-col gap-2">
-      <p-skeleton width="100%" height="2.5rem" />
-      <p-skeleton width="80%" height="2.5rem" />
+      <p-skeleton width="100%" height="3.5rem" />
+      <p-skeleton width="80%" height="3.5rem" />
     </div>
   } @else {
     @if (activities().length) {
-      <ul class="flex flex-col gap-2 mb-2" aria-label="Activity timeline">
+      <ul class="flex flex-col gap-2 mb-4" aria-label="Activity timeline">
         @for (activity of activities(); track activity.id) {
           <li class="flex items-center gap-2 text-xs text-body">
             <i class="pi pi-circle-fill text-primary activity-dot" aria-hidden="true"></i>
             <span><strong class="text-heading font-medium">{{ actorName(activity) }}</strong> {{ activityLabel(activity) }}</span>
-            <span class="ml-auto">{{ activity.createdAt | date: 'MMM d, h:mm a' }}</span>
+            <span class="ml-auto text-muted">{{ activity.createdAt | date: 'MMM d, h:mm a' }}</span>
           </li>
         }
       </ul>
@@ -26,59 +27,100 @@
       }
     }
 
+    <!-- Reusable comment row (used for both top-level comments and replies). -->
+    <ng-template #row let-comment="comment">
+      <article class="c-row">
+        <span class="avatar" [class]="avatarClass(authorName(comment))" aria-hidden="true">{{ initials(authorName(comment)) }}</span>
+        <div class="c-body">
+          <div class="c-meta">
+            <span class="c-author">{{ authorName(comment) }}</span>
+            <span class="c-time" [title]="comment.createdAt | date: 'MMM d, y, h:mm a'">{{ relTime(comment.createdAt) }}</span>
+            @if (comment.canModify && editingCommentId() !== comment.id) {
+              <span class="c-actions">
+                <button type="button" class="c-action" aria-label="Edit" (click)="startEditComment(comment)">
+                  <i class="pi pi-pencil" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="c-action c-action--danger" aria-label="Delete" [disabled]="deletingCommentId() === comment.id" (click)="confirmDelete(comment)">
+                  <i class="pi pi-trash" aria-hidden="true"></i>
+                </button>
+              </span>
+            }
+          </div>
+
+          @if (editingCommentId() === comment.id) {
+            <textarea pTextarea [formControl]="editCommentControl" rows="2" [autoResize]="true" class="w-full mt-1" aria-label="Edit comment" (keydown)="onEditCommentKeydown($event, comment)"></textarea>
+            <div class="flex justify-end gap-2 mt-2">
+              <p-button label="Cancel" severity="secondary" [text]="true" size="small" (onClick)="cancelEditComment()" [disabled]="isSavingComment()" />
+              <p-button label="Save" icon="pi pi-check" size="small" (onClick)="saveEditComment(comment)" [loading]="isSavingComment()" />
+            </div>
+          } @else {
+            <p class="c-text">{{ comment.body }}</p>
+          }
+        </div>
+      </article>
+    </ng-template>
+
     @if (comments().length) {
-      <ul class="flex flex-col gap-3 mb-2" aria-label="Comments">
+      <ul class="thread-list" aria-label="Comments">
         @for (comment of comments(); track comment.id) {
-          <li class="rounded-base border border-border bg-surface p-3">
-            <div class="flex items-center justify-between mb-1 gap-2">
-              <span class="text-heading text-sm font-medium">{{ authorName(comment) }}</span>
-              <div class="flex items-center gap-2">
-                <span class="text-body text-xs">{{ comment.createdAt | date: 'MMM d, y, h:mm a' }}</span>
-                @if (comment.canModify && editingCommentId() !== comment.id) {
-                  <button type="button" class="text-body hover:text-primary" aria-label="Edit comment" (click)="startEditComment(comment)">
-                    <i class="pi pi-pencil"></i>
-                  </button>
-                  <button type="button" class="text-body hover:text-destructive" aria-label="Delete comment" [disabled]="deletingCommentId() === comment.id" (click)="deleteComment(comment)">
-                    <i class="pi pi-trash"></i>
-                  </button>
+          <li class="thread">
+            <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ comment }" />
+
+            @if (comment.replies?.length) {
+              <div class="replies">
+                @for (reply of comment.replies ?? []; track reply.id) {
+                  <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ comment: reply }" />
                 }
               </div>
-            </div>
-            @if (editingCommentId() === comment.id) {
-              <textarea pTextarea [formControl]="editCommentControl" rows="2" class="w-full" aria-label="Edit comment" (keydown)="onEditCommentKeydown($event, comment)"></textarea>
-              @if (editCommentControl.invalid && editCommentControl.touched) {
-                <small class="form-error" role="alert">Comment cannot be empty.</small>
-              }
-              <div class="flex justify-end gap-2 mt-2">
-                <p-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="cancelEditComment()" [disabled]="isSavingComment()" />
-                <p-button label="Save" icon="pi pi-check" size="small" (onClick)="saveEditComment(comment)" [loading]="isSavingComment()" />
-              </div>
-            } @else {
-              <p class="text-body text-sm whitespace-pre-line">{{ comment.body }}</p>
             }
+
+            <div class="reply-foot">
+              @if (replyingToId() === comment.id) {
+                <div class="c-row">
+                  <span class="avatar" [class]="avatarClass(currentUserName())" aria-hidden="true">{{ initials(currentUserName()) }}</span>
+                  <div class="c-body">
+                    <textarea #replyBox pTextarea [formControl]="replyControl" rows="1" [autoResize]="true" class="w-full" placeholder="Write a reply…" aria-label="Write a reply" (keydown)="onReplyKeydown($event, comment)"></textarea>
+                    <div class="flex items-center justify-between gap-2 mt-2">
+                      <span class="text-muted text-xs">Enter to send · Esc to cancel</span>
+                      <div class="flex items-center gap-2">
+                        <p-button label="Cancel" severity="secondary" [text]="true" size="small" (onClick)="cancelReply()" [disabled]="isPostingReply()" />
+                        <p-button icon="pi pi-arrow-up" [rounded]="true" size="small" ariaLabel="Send reply" (onClick)="postReply(comment)" [loading]="isPostingReply()" [disabled]="!replyControl.value.trim() || isPostingReply()" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              } @else {
+                <button type="button" class="reply-open" (click)="startReply(comment)" [attr.aria-label]="'Reply to ' + authorName(comment)">
+                  <span class="avatar" [class]="avatarClass(currentUserName())" aria-hidden="true">{{ initials(currentUserName()) }}</span>
+                  <span class="reply-open-text">Leave a reply…</span>
+                  <i class="pi pi-arrow-up reply-open-icon" aria-hidden="true"></i>
+                </button>
+              }
+            </div>
           </li>
         }
       </ul>
+
       @if (hasMoreComments()) {
-        <div class="mb-2">
+        <div class="mt-3">
           <button type="button" class="text-xs text-primary hover:underline" (click)="loadMoreComments()" [disabled]="loadingMoreComments()">
             {{ loadingMoreComments() ? 'Loading…' : 'Load more comments' }}
           </button>
         </div>
       }
     } @else {
-      <p class="text-body text-sm mb-4">No comments yet. Be the first to comment.</p>
+      <p class="text-body text-sm mb-3">No comments yet. Be the first to comment.</p>
     }
 
-    <div class="flex flex-col gap-2 mt-2">
-      <label class="form-label" for="ticket-comment">Add a comment</label>
-      <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Write a comment…" rows="2" class="w-full" aria-label="Add a comment" (keydown)="onCommentKeydown($event)"></textarea>
-      @if (commentControl.invalid && commentControl.touched) {
-        <small class="form-error" role="alert">Comment cannot be empty.</small>
-      }
-      <div class="flex items-center justify-between gap-2">
-        <span class="text-muted text-xs">Enter to send · Shift+Enter for a new line</span>
-        <p-button label="Comment" icon="pi pi-send" size="small" (onClick)="postComment()" [loading]="isPostingComment()" [disabled]="isPostingComment()" />
+    <!-- New top-level comment composer. -->
+    <div class="composer">
+      <span class="avatar" [class]="avatarClass(currentUserName())" aria-hidden="true">{{ initials(currentUserName()) }}</span>
+      <div class="c-body">
+        <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Leave a comment…" rows="1" [autoResize]="true" class="w-full" aria-label="Add a comment" (keydown)="onCommentKeydown($event)"></textarea>
+        <div class="flex items-center justify-between gap-2 mt-2">
+          <span class="text-muted text-xs">Enter to send · Shift+Enter for a new line</span>
+          <p-button icon="pi pi-arrow-up" [rounded]="true" size="small" ariaLabel="Post comment" (onClick)="postComment()" [loading]="isPostingComment()" [disabled]="!commentControl.value.trim() || isPostingComment()" />
+        </div>
       </div>
     </div>
   }

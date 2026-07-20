@@ -19,7 +19,56 @@ import Underline from '@tiptap/extension-underline';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
+import Image from '@tiptap/extension-image';
+import { NodeSelection } from '@tiptap/pm/state';
 import { Markdown } from 'tiptap-markdown';
+
+import { FileAttachment } from './attachment-node';
+
+/** Result the host's upload handler must resolve with for one uploaded file. */
+export interface UploadedAttachment {
+  url: string;
+  name: string;
+  mimeType: string;
+  bytes?: number | null;
+  /** 'image' renders inline; anything else becomes a file chip. */
+  resourceType?: string;
+}
+
+/** A file the host uploads on behalf of the editor. */
+export type UploadHandler = (file: File) => Promise<UploadedAttachment>;
+
+/** One in-flight (or failed) upload shown in the editor toolbar. */
+interface UploadTask {
+  id: number;
+  name: string;
+  status: 'uploading' | 'error';
+  /** Kept so a failed upload can be retried. */
+  file: File;
+  at: number | null;
+  message: string;
+  retriable: boolean;
+}
+
+/** Client-side ceiling — mirrors the server's MAX_ATTACHMENT_BYTES. */
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
+
+/** Pulls real File objects out of a clipboard/drag payload (via files or items). */
+function extractFiles(dt: DataTransfer | null): File[] {
+  if (!dt) return [];
+  if (dt.files && dt.files.length) return Array.from(dt.files);
+  // Some sources (e.g. a pasted screenshot) expose files only through items.
+  return Array.from(dt.items ?? [])
+    .filter((item) => item.kind === 'file')
+    .map((item) => item.getAsFile())
+    .filter((file): file is File => !!file);
+}
+
+/** True when a drag payload carries files (not just selected text/html). */
+function hasFiles(event: DragEvent): boolean {
+  const types = event.dataTransfer?.types;
+  return !!types && Array.from(types).includes('Files');
+}
 
 /** One entry in the `/` block menu. `run` applies the block to the current line. */
 interface SlashItem {
@@ -42,11 +91,14 @@ interface SlashItem {
 }
 
 /**
- * Linear-style WYSIWYG markdown editor. Always editable, no toolbar — you type
- * markdown and it transforms live (`# ` heading, `- ` bullet, `[ ] ` checklist,
- * `**bold**`, `> ` quote, ``` code, `---` rule). Type `/` at the start of a line
- * to pick a block from a menu instead. Select text to get a floating Bold / Italic /
- * Underline toolbar. Reads/writes plain **markdown** and **autosaves**: it emits
+ * Linear-style WYSIWYG markdown editor. Always editable — you type markdown and it
+ * transforms live (`# ` heading, `- ` bullet, `[ ] ` checklist, `**bold**`, `> ` quote,
+ * ``` code, `---` rule). Type `/` at the start of a line to pick a block from a menu
+ * instead. Select text to get a floating Bold / Italic / Underline toolbar.
+ *
+ * When a host `upload` handler is supplied, the editor also accepts **attachments**:
+ * paste, drag-and-drop, or the Attach button. Images render inline; other file types
+ * become download chips. Reads/writes plain **markdown** and **autosaves**: it emits
  * `contentSave` shortly after you stop typing and on blur, so the host can PATCH
  * without a Save button.
  */
@@ -56,7 +108,75 @@ interface SlashItem {
   styleUrl: './markdown-editor.css',
   host: { class: 'md-editor' },
   template: `
-    <div #host class="md-host"></div>
+    <div
+      class="md-shell"
+      [class.md-shell--drag]="dragActive()"
+      (dragenter)="onDragEnter($event)"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onShellDrop($event)"
+    >
+      <div #host class="md-host"></div>
+
+      @if (dragActive()) {
+        <div class="md-dropzone" aria-hidden="true">
+          <i class="pi pi-paperclip" aria-hidden="true"></i>
+          <span>Drop files to attach</span>
+        </div>
+      }
+
+      @if (canAttach()) {
+        <div class="md-toolbar">
+          <button
+            type="button"
+            class="md-attach"
+            (click)="triggerFilePicker()"
+            [attr.aria-label]="'Attach files'"
+          >
+            <i class="pi pi-paperclip" aria-hidden="true"></i>
+            <span>Attach</span>
+          </button>
+          <span class="md-toolbar-hint">or paste / drop a file</span>
+
+          @if (uploads().length) {
+            <ul class="md-uploads" aria-live="polite">
+              @for (task of uploads(); track task.id) {
+                <li class="md-upload" [class.md-upload--error]="task.status === 'error'">
+                  @if (task.status === 'uploading') {
+                    <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                    <span class="md-upload__name">{{ task.name }}</span>
+                    <span class="md-upload__state">Uploading…</span>
+                  } @else {
+                    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                    <span class="md-upload__name">{{ task.name }}</span>
+                    <span class="md-upload__state">{{ task.message }}</span>
+                    @if (task.retriable) {
+                      <button type="button" class="md-upload__btn" (click)="retryUpload(task)">Retry</button>
+                    }
+                    <button
+                      type="button"
+                      class="md-upload__btn md-upload__btn--dismiss"
+                      (click)="dismissUpload(task.id)"
+                      aria-label="Dismiss"
+                    >
+                      <i class="pi pi-times" aria-hidden="true"></i>
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      <input
+        #fileInput
+        type="file"
+        class="md-file-input"
+        multiple
+        (change)="onFilesSelected($event)"
+      />
+    </div>
 
     <!-- Portaled to <body> in ngAfterViewInit so the dialog/scroll container can't clip it. -->
     <div
@@ -149,13 +269,28 @@ export class MarkdownEditor implements AfterViewInit {
   readonly value = input('');
   readonly placeholder = input('Write something…');
   readonly ariaLabel = input('');
+  /**
+   * Host-provided uploader. When set, the editor accepts pasted / dropped / picked
+   * files: images render inline, other types become download chips. Left unset the
+   * attach affordances hide and the editor behaves exactly as before.
+   */
+  readonly upload = input<UploadHandler | null>(null);
   /** Emits the current markdown a beat after typing stops, and immediately on blur. */
   readonly contentSave = output<string>();
 
   private readonly hostEl = viewChild.required<ElementRef<HTMLElement>>('host');
   private readonly slashMenuEl = viewChild.required<ElementRef<HTMLElement>>('slashMenu');
   private readonly formatBarEl = viewChild.required<ElementRef<HTMLElement>>('formatBar');
+  private readonly fileInputEl = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
   private readonly destroyRef = inject(DestroyRef);
+
+  // ─── Attachments ────────────────────────────────────────
+  protected readonly canAttach = computed(() => !!this.upload());
+  protected readonly dragActive = signal(false);
+  protected readonly uploads = signal<UploadTask[]>([]);
+  /** dragenter/leave fire per child element; counting keeps the overlay from flickering. */
+  private dragDepth = 0;
+  private nextUploadId = 0;
 
   private editor: Editor | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -276,6 +411,8 @@ export class MarkdownEditor implements AfterViewInit {
           ...(this.ariaLabel() ? { 'aria-label': this.ariaLabel() } : {}),
         },
         handleKeyDown: (_view, event) => this.onEditorKeyDown(event),
+        handlePaste: (_view, event) => this.onEditorPaste(event),
+        handleDrop: (view, event) => this.onEditorDrop(view, event as DragEvent),
       },
       extensions: [
         StarterKit.configure({
@@ -285,6 +422,8 @@ export class MarkdownEditor implements AfterViewInit {
         Underline,
         TaskList,
         TaskItem.configure({ nested: true }),
+        Image.configure({ inline: false, allowBase64: false }),
+        FileAttachment,
         Placeholder.configure({ placeholder: () => this.placeholder() }),
         Markdown.configure({
           // html: true lets raw HTML (e.g. <u>) survive the markdown round-trip — required
@@ -317,6 +456,179 @@ export class MarkdownEditor implements AfterViewInit {
     this.lastKnownValue = this.value();
   }
 
+  // ─── Attachments ────────────────────────────────────────
+  /** ProseMirror paste hook — intercepts pasted files (images and others). */
+  private onEditorPaste(event: ClipboardEvent): boolean {
+    if (!this.upload()) return false;
+    const files = extractFiles(event.clipboardData);
+    if (!files.length) return false;
+    event.preventDefault();
+    this.handleFiles(files, null);
+    return true;
+  }
+
+  /** ProseMirror drop hook — uploads dropped files at the drop position. */
+  private onEditorDrop(view: Editor['view'], event: DragEvent): boolean {
+    if (!this.upload()) return false;
+    const files = extractFiles(event.dataTransfer);
+    if (!files.length) return false;
+    event.preventDefault();
+    this.resetDrag();
+    const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? null;
+    this.handleFiles(files, pos);
+    return true;
+  }
+
+  protected onDragEnter(event: DragEvent): void {
+    if (!this.canAttach() || !hasFiles(event)) return;
+    event.preventDefault();
+    this.dragDepth++;
+    this.dragActive.set(true);
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    if (!this.canAttach() || !hasFiles(event)) return;
+    // Required so the browser fires a drop event over the whole shell (toolbar included).
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  }
+
+  protected onDragLeave(event: DragEvent): void {
+    if (!this.canAttach()) return;
+    this.dragDepth = Math.max(0, this.dragDepth - 1);
+    if (this.dragDepth === 0) this.dragActive.set(false);
+  }
+
+  /** Catches drops that land on the toolbar/padding (outside the editable). */
+  protected onShellDrop(event: DragEvent): void {
+    this.resetDrag();
+    if (!this.canAttach()) return;
+    // The editor's own handleDrop already claimed drops inside the text.
+    if (event.defaultPrevented) return;
+    const files = extractFiles(event.dataTransfer);
+    if (!files.length) return;
+    event.preventDefault();
+    this.handleFiles(files, null);
+  }
+
+  protected triggerFilePicker(): void {
+    this.fileInputEl().nativeElement.click();
+  }
+
+  protected onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    input.value = ''; // let the same file be picked again later
+    if (files.length) this.handleFiles(files, null);
+  }
+
+  protected retryUpload(task: UploadTask): void {
+    this.removeTask(task.id);
+    void this.uploadOne(task.file, task.at);
+  }
+
+  protected dismissUpload(id: number): void {
+    this.removeTask(id);
+  }
+
+  private resetDrag(): void {
+    this.dragDepth = 0;
+    this.dragActive.set(false);
+  }
+
+  private handleFiles(files: File[], at: number | null): void {
+    this.editor?.commands.focus();
+    for (const file of files) void this.uploadOne(file, at);
+  }
+
+  private async uploadOne(file: File, at: number | null): Promise<void> {
+    const handler = this.upload();
+    if (!handler) return;
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      this.addTask(file, at, 'error', {
+        message: `Too large — ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB max`,
+        retriable: false,
+      });
+      return;
+    }
+
+    const task = this.addTask(file, at, 'uploading');
+    try {
+      const result = await handler(file);
+      this.insertAttachment(result, at);
+      this.removeTask(task.id);
+    } catch (err) {
+      // Never swallow: an upload OR insert failure both surface here.
+      console.error('Attachment failed:', err);
+      this.setTaskError(task.id);
+    }
+  }
+
+  private insertAttachment(att: UploadedAttachment, at: number | null): void {
+    const editor = this.editor;
+    if (!editor) return;
+
+    // Decide from the browser mime type ONLY — never Cloudinary's resourceType,
+    // which labels PDFs (and other docs) as 'image', producing a broken <img>.
+    const isImage = (att.mimeType ?? '').startsWith('image/');
+    const node = isImage
+      ? { type: 'image', attrs: { src: att.url, alt: att.name, title: att.name } }
+      : {
+          type: 'fileAttachment',
+          attrs: { href: att.url, name: att.name, size: att.bytes ?? null, mime: att.mimeType ?? null },
+        };
+
+    const pos = at != null ? Math.min(at, editor.state.doc.content.size) : null;
+    try {
+      const chain = editor.chain().focus();
+      if (pos != null) chain.insertContentAt(pos, node);
+      else chain.insertContent(node);
+      // A trailing space after an inline chip keeps typing natural.
+      if (!isImage) chain.insertContent(' ');
+      chain.run();
+    } catch (err) {
+      // Graceful fallback: if the node insert ever fails, drop in a plain markdown
+      // link so the uploaded file is never lost — it's still downloadable.
+      console.error('Attachment node insert failed, falling back to link:', err);
+      const link = `[${att.name}](${att.url}) `;
+      const chain = editor.chain().focus();
+      if (pos != null) chain.insertContentAt(pos, link);
+      else chain.insertContent(link);
+      chain.run();
+    }
+    this.scheduleSave();
+  }
+
+  private addTask(
+    file: File,
+    at: number | null,
+    status: UploadTask['status'],
+    opts?: { message?: string; retriable?: boolean },
+  ): UploadTask {
+    const task: UploadTask = {
+      id: this.nextUploadId++,
+      name: file.name,
+      status,
+      file,
+      at,
+      message: opts?.message ?? 'Upload failed.',
+      retriable: opts?.retriable ?? true,
+    };
+    this.uploads.update((list) => [...list, task]);
+    return task;
+  }
+
+  private removeTask(id: number): void {
+    this.uploads.update((list) => list.filter((task) => task.id !== id));
+  }
+
+  private setTaskError(id: number): void {
+    this.uploads.update((list) =>
+      list.map((task) => (task.id === id ? { ...task, status: 'error' as const } : task)),
+    );
+  }
+
   // ─── Format bar ─────────────────────────────────────────
   protected applyBold(): void { this.editor?.chain().focus().toggleBold().run(); }
   protected applyItalic(): void { this.editor?.chain().focus().toggleItalic().run(); }
@@ -328,6 +640,9 @@ export class MarkdownEditor implements AfterViewInit {
     const { selection, doc } = editor.state;
 
     if (selection.empty) { this.closeFormatBar(); return; }
+    // A NodeSelection (selected image / file chip) is non-empty but holds no
+    // formattable text — never show the Bold/Italic/Underline bar over it.
+    if (selection instanceof NodeSelection) { this.closeFormatBar(); return; }
     // Don't show inside code blocks — formatting doesn't apply there.
     if (selection.$from.parent.type.name === 'codeBlock') { this.closeFormatBar(); return; }
     // Don't show while the slash menu is open.

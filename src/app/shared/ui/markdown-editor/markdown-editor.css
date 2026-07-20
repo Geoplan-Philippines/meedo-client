@@ -3,8 +3,305 @@
   display: block;
 }
 
+.md-shell {
+  position: relative;
+  display: block;
+}
+
 .md-host {
   display: block;
+}
+
+.md-file-input {
+  display: none;
+}
+
+/* ─── Inline images (pasted / dropped / attached) ────────── */
+:host ::ng-deep .md-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.25rem 0 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+}
+
+:host ::ng-deep .md-prose img.ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+}
+
+/* ─── File attachment chip (non-image) ─────────────────────
+   Uniform + compact: file icon · filename · download glyph, plus remove (edit).
+   The whole chip is one download link. */
+:host ::ng-deep .md-prose .md-file {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  margin: 0 1px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  vertical-align: baseline;
+  line-height: 1.3;
+  overflow: hidden;
+  transition: border-color 120ms ease;
+}
+
+:host ::ng-deep .md-prose .md-file:hover {
+  border-color: var(--color-border-strong);
+}
+
+:host ::ng-deep .md-prose .md-file.ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+}
+
+/* Whole chip = the download affordance. */
+:host ::ng-deep .md-prose .md-file__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.1875rem 0.4375rem;
+  color: var(--color-body);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+:host ::ng-deep .md-prose .md-file__download:hover {
+  background: color-mix(in srgb, var(--color-heading) 5%, transparent);
+}
+
+:host ::ng-deep .md-prose .md-file__icon {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+:host ::ng-deep .md-prose .md-file__name {
+  overflow: hidden;
+  max-width: 16rem;
+  color: var(--color-heading);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* Trailing download glyph — signals the click action. */
+:host ::ng-deep .md-prose .md-file__dl {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--color-muted);
+  transition: color 120ms ease;
+}
+
+:host ::ng-deep .md-prose .md-file__download:hover .md-file__dl {
+  color: var(--color-primary);
+}
+
+:host ::ng-deep .md-prose .md-file__remove {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.625rem;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+:host ::ng-deep .md-prose .md-file__remove:hover {
+  background: var(--color-muted-destructive, color-mix(in srgb, var(--color-destructive) 14%, transparent));
+  color: var(--color-destructive);
+}
+
+:host ::ng-deep .md-prose .md-file__download:focus-visible,
+:host ::ng-deep .md-prose .md-file__remove:focus-visible {
+  outline: 2px solid var(--color-ring, var(--color-primary));
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .md-prose .md-file,
+  :host ::ng-deep .md-prose .md-file__download,
+  :host ::ng-deep .md-prose .md-file__dl,
+  :host ::ng-deep .md-prose .md-file__remove {
+    transition: none;
+  }
+}
+
+/* ─── Drop overlay ───────────────────────────────────────── */
+/* The overlay is pointer-events:none so drops still reach the editor beneath it,
+   letting ProseMirror's handleDrop place the file at the exact drop position. */
+.md-dropzone {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1.5px dashed var(--color-primary);
+  border-radius: var(--radius-base);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+/* ─── Attach toolbar ─────────────────────────────────────── */
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  font-family: var(--font-body);
+}
+
+.md-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-base);
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.md-attach:hover {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-heading) 5%, transparent);
+  border-color: var(--color-border);
+}
+
+.md-attach:focus-visible {
+  outline: 2px solid var(--color-ring, var(--color-primary));
+  outline-offset: 2px;
+}
+
+.md-attach i {
+  font-size: 0.75rem;
+}
+
+.md-toolbar-hint {
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+}
+
+/* ─── Upload progress / errors ───────────────────────────── */
+.md-uploads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.md-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  color: var(--color-body);
+  font-size: 0.75rem;
+}
+
+.md-upload--error {
+  border-color: color-mix(in srgb, var(--color-destructive) 40%, var(--color-border));
+  background: var(--color-muted-destructive, color-mix(in srgb, var(--color-destructive) 10%, var(--color-surface)));
+  color: var(--color-muted-destructive-foreground, var(--color-destructive));
+}
+
+.md-upload > i {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+.md-upload--error > i {
+  color: var(--color-destructive);
+}
+
+.md-upload__name {
+  overflow: hidden;
+  max-width: 12rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.md-upload__state {
+  color: var(--color-muted);
+}
+
+.md-upload--error .md-upload__state {
+  color: inherit;
+}
+
+.md-upload__btn {
+  padding: 0.0625rem 0.25rem;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.md-upload--error .md-upload__btn {
+  color: var(--color-muted-destructive-foreground, var(--color-destructive));
+}
+
+.md-upload__btn:hover {
+  text-decoration: underline;
+}
+
+.md-upload__btn--dismiss {
+  display: grid;
+  place-items: center;
+  font-size: 0.625rem;
+}
+
+.md-upload__btn:focus-visible {
+  outline: 2px solid var(--color-ring, var(--color-primary));
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-attach,
+  .md-file,
+  .md-file__remove {
+    transition: none;
+  }
+
+  .md-upload .pi-spin {
+    animation: none;
+  }
 }
 
 :host ::ng-deep .md-prose {

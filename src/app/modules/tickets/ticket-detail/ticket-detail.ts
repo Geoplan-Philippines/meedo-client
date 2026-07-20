@@ -21,6 +21,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from '../services/tickets.service';
+import { TicketAttachmentsService } from '../services/attachments.service';
 import { TicketCategoriesService } from '../services/ticket-categories.service';
 import { StatusesService } from '../services/statuses.service';
 import { ProjectsService } from '../services/projects.service';
@@ -71,6 +72,7 @@ export class TicketDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly ticketsService = inject(TicketsService);
+  private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
   private readonly projectsService = inject(ProjectsService);
@@ -472,6 +474,9 @@ export class TicketDetail {
         },
       });
   }
+
+  /** Upload handler for the description editor (paste / drop / attach). Arrow keeps `this`. */
+  readonly uploadAttachment = (file: File) => this.attachmentsService.upload(file);
 
   // ─── Helpers ────────────────────────────────────────────
   safeStatusColor(color?: string | null): string {
