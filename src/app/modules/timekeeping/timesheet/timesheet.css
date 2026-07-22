@@ -36,26 +36,22 @@
   margin: 0;
 }
 
-.header-controls {
+/* In-card toolbar at the top of the grid: the week picker lives inside the table card
+   (right-aligned), History on the left — mirroring the roster's table toolbar. */
+.grid-toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
 }
 
-.week-picker-group,
-.action-buttons {
+.week-picker-group {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-}
-
-.week-picker-group {
-  padding: 0.25rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: color-mix(in srgb, var(--color-secondary) 22%, var(--color-background));
 }
 
 .week-range-label {
@@ -79,21 +75,26 @@
   white-space: nowrap;
 }
 
-/* Match the Approvals header buttons (Lock week / Export) — default PrimeNG size/weight, no overrides. */
-:host ::ng-deep .action-buttons .p-button {
+:host ::ng-deep .week-nav-btn.p-button { width: 2rem; padding-inline: 0; }
+
+/* Page actions match the Approvals header buttons — default PrimeNG size/weight, no overrides. */
+:host ::ng-deep .add-project-btn.p-button,
+:host ::ng-deep .history-btn.p-button,
+:host ::ng-deep .submit-approval-btn.p-button {
   white-space: nowrap;
 }
 
-:host ::ng-deep .week-nav-btn.p-button  { width: 2rem; padding-inline: 0; }
-:host ::ng-deep .history-btn.p-button   { background: var(--color-background); }
-
-/* Disabled state reads as a dim outlined button (border + muted text at 0.5 opacity)
-   instead of PrimeNG's near-invisible default — matches the History button's outlined look. */
+/* Submit keeps its Dispatch-Blue identity even when disabled — faded, not greyed —
+   so it always reads as the blue primary action, just not-yet-available. Because it
+   still looks blue, the cursor must signal it's inactive: not-allowed on hover
+   (pointer-events kept live so the cursor shows; the disabled attribute still blocks clicks). */
 :host ::ng-deep .submit-approval-btn.p-button:disabled {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  color: var(--color-body);
-  opacity: 0.5;
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary-foreground);
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: auto;
 }
 
 .lock-banner {
@@ -109,24 +110,20 @@
 }
 
 .hours-strip {
-  display: flex;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
   gap: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .hours-item {
-  flex: 1;
-  min-width: 8rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  gap: 0.3rem;
-  padding: 0.75rem 1rem;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
   text-align: left;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-base);
 }
 
@@ -140,24 +137,22 @@
 }
 
 .hours-value {
-  font-size: 0.92rem;
+  font-size: 1.5rem;
+  line-height: 1;
   font-weight: 700;
   font-family: var(--font-heading);
   color: var(--color-heading);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* Cards are self-contained now — no divider needed between them. */
-.hours-divider {
-  display: none;
-}
-
-/* White card wrapper — same surface + hairline border as the Attendance/Tickets table cards. */
+/* The editable week grid is the page's work surface — a defined edge (stronger than
+   the read-only list tables' hairline) seats it off the near-white canvas. Flat, no shadow. */
 .grid-card {
   flex: 1;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-base);
   background: var(--color-surface);
   overflow: hidden;
@@ -188,17 +183,24 @@
   align-items: center;
   border-bottom: 1px solid var(--color-border);
   list-style: none;
+  transition: background 0.12s ease;
 }
 
 .grid-row:last-child { border-bottom: none; }
 
+/* Whole-row hover: follow one project across the week, not just a single cell. */
+.grid-row--body:hover {
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+}
+
+/* Uniform white surface — header and total read through weight and border seams,
+   not fills. Structure comes from the borders, not colour. */
 .grid-row--head {
-  background: transparent;
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .grid-row--total {
-  background: transparent;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-strong);
   font-weight: 700;
 }
 
@@ -234,7 +236,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-muted);
+  color: var(--color-body);
 }
 
 .grid-cell--day {
@@ -242,6 +244,8 @@
   flex-direction: column;
   gap: 0.1rem;
   line-height: 1.3;
+  /* Column separator continues the day columns up through the header band. */
+  border-left: 1px solid var(--color-border);
 }
 
 .grid-row--head .grid-cell--day strong {
@@ -249,7 +253,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-muted);
+  color: var(--color-body);
 }
 
 .grid-cell--day strong {
@@ -259,7 +263,7 @@
 }
 
 .grid-row--head .grid-cell--day small {
-  color: var(--color-muted);
+  color: var(--color-body);
 }
 
 .grid-cell--day small {
@@ -269,7 +273,7 @@
 
 .grid-cell--value {
   border: none;
-  border-left: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-left: 1px solid var(--color-border);
   background: transparent;
   cursor: pointer;
   font: inherit;
@@ -342,18 +346,89 @@ button.grid-cell--value:hover {
 .grid-cell--status-approved  { color: color-mix(in srgb, var(--color-success) 58%, var(--color-heading)); }
 .grid-cell--status-rejected  { color: color-mix(in srgb, var(--color-destructive) 62%, var(--color-heading)); }
 
+/* Logged cells read a touch heavier than the empty placeholders. */
+.grid-cell--filled { font-weight: 600; }
+
+/* Empty day cells recede to a quiet muted dash so logged hours lead. */
+.grid-row--body .grid-cell--value:not(.grid-cell--filled) {
+  color: var(--color-muted);
+}
+
+/* Today marker — header underline + accent date only; no cell fill, so the grid
+   stays uniformly white. */
+.grid-row--head .grid-cell--today {
+  box-shadow: inset 0 -2px 0 var(--color-primary);
+}
+
+.grid-row--head .grid-cell--today strong,
+.grid-row--head .grid-cell--today small {
+  color: var(--color-primary);
+}
+
 .grid-cell--actions {
   padding: 0.35rem;
 }
 
 .grid-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.85rem;
   flex: 1;
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;
+  text-align: center;
   color: var(--color-body);
+}
+
+.grid-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: var(--color-secondary);
+  color: var(--color-primary);
+  font-size: 1.15rem;
+}
+
+.grid-empty-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.grid-empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  color: var(--color-heading);
+}
+
+.grid-empty-text {
+  font-size: 0.82rem;
+  color: var(--color-body);
+}
+
+/* Footer action band — Submit anchors the bottom-right, mirroring Add Project's blue. */
+.timesheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footer-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.footer-hint .pi {
   font-size: 0.85rem;
 }
 
@@ -645,14 +720,14 @@ button.grid-cell--value:hover {
 
   .page-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0.75rem;
   }
 
-  .header-controls {
+  .grid-toolbar {
     flex-direction: column;
     align-items: stretch;
-    width: 100%;
+    gap: 0.6rem;
   }
 
   .week-picker-group {
@@ -661,19 +736,25 @@ button.grid-cell--value:hover {
   }
 
   :host ::ng-deep .week-picker-group .p-datepicker { width: 100%; flex: 1; }
-  :host ::ng-deep .week-nav-btn.p-button            { flex: 0 0 2.5rem; }
+  :host ::ng-deep .week-nav-btn.p-button           { flex: 0 0 2.5rem; }
 
-  .action-buttons {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .hours-strip {
-    overflow-x: auto;
-  }
-
+  .history-btn,
   .add-project-btn {
     width: 100%;
+  }
+
+  .timesheet-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .submit-approval-btn {
+    width: 100%;
+  }
+
+  .footer-hint {
+    justify-content: center;
   }
 
   .dialog-backdrop {
@@ -695,6 +776,6 @@ button.grid-cell--value:hover {
 
 @media (min-width: 769px) and (max-width: 1120px) {
   .timesheet-page { padding: 1rem; }
-  .header-controls { width: 100%; align-items: stretch; }
-  .week-picker-group, .action-buttons { justify-content: flex-start; flex-wrap: wrap; }
+  .grid-toolbar { flex-wrap: wrap; }
+  .week-picker-group { justify-content: flex-start; flex-wrap: wrap; }
 }

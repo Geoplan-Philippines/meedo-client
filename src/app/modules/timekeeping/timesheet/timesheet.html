@@ -1,4 +1,5 @@
 <p-toast />
+<p-confirmDialog />
 
 <div class="timesheet-page">
   <header class="page-header">
@@ -7,28 +8,7 @@
       <p class="page-subtitle">Your weekly work log.</p>
     </div>
 
-    <div class="header-controls" aria-label="Timesheet week controls">
-      <div class="week-picker-group" aria-label="Selected timesheet week">
-        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
-        <p-datepicker
-          inputId="timesheet-week"
-          [ngModel]="selectedDate()"
-          (ngModelChange)="onWeekChange($event)"
-          [showIcon]="true"
-          dateFormat="M d, yy"
-          appendTo="body"
-          ariaLabel="Select a date in the timesheet week"
-        />
-        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-right" (click)="nextWeek()" [disabled]="isLoading()" aria-label="Next week"></button>
-        <span class="week-range-label">{{ weekLabel() }}</span>
-      </div>
-
-      <div class="action-buttons" aria-label="Timesheet actions">
-        <button class="history-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-history" label="History" (click)="showHistoryDialog.set(true)"></button>
-        <button class="submit-approval-btn" pButton type="button" icon="pi pi-send" label="Submit for Approval" severity="secondary" (click)="submitWeek()" [loading]="isSubmittingWeek()" [disabled]="isLocked() || isLoading() || isSubmittingWeek() || !hasSubmittableEntries()"></button>
-        <button pButton type="button" icon="pi pi-plus" label="Add Project" class="add-project-btn" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
-      </div>
-    </div>
+    <button pButton type="button" icon="pi pi-plus" label="Add Project" class="add-project-btn" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
   </header>
 
   @if (lockMessage(); as message) {
@@ -44,25 +24,21 @@
       @let weekTotal = totalHours();
       <strong class="hours-value">{{ weekTotal > 0 ? (weekTotal | number: '1.0-2') + 'h' : '—' }}</strong>
     </div>
-    <span class="hours-divider" aria-hidden="true"></span>
     <div class="hours-item">
       <span class="hours-label">Regular</span>
       @let regular = regularHours();
       <strong class="hours-value">{{ regular > 0 ? (regular | number: '1.0-2') + 'h' : '—' }}</strong>
     </div>
-    <span class="hours-divider" aria-hidden="true"></span>
     <div class="hours-item">
       <span class="hours-label">Overtime</span>
       @let overtime = overtimeHours();
       <strong class="hours-value">{{ overtime > 0 ? (overtime | number: '1.0-2') + 'h' : '—' }}</strong>
     </div>
-    <span class="hours-divider" aria-hidden="true"></span>
     <div class="hours-item">
       <span class="hours-label">Leave / ND</span>
       @let leaveNight = leaveNightHours();
       <strong class="hours-value">{{ leaveNight > 0 ? (leaveNight | number: '1.0-2') + 'h' : '—' }}</strong>
     </div>
-    <span class="hours-divider" aria-hidden="true"></span>
     <div class="hours-item">
       <span class="hours-label">Offset</span>
       @let offset = offsetHours();
@@ -71,12 +47,31 @@
   </section>
 
   <div class="grid-card">
+    <div class="grid-toolbar" aria-label="Timesheet week controls">
+      <button class="history-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-history" label="History" (click)="showHistoryDialog.set(true)"></button>
+
+      <div class="week-picker-group" aria-label="Selected timesheet week">
+        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
+        <p-datepicker
+          inputId="timesheet-week"
+          [ngModel]="selectedDate()"
+          (ngModelChange)="onWeekChange($event)"
+          [showIcon]="true"
+          dateFormat="M d, yy"
+          appendTo="body"
+          ariaLabel="Select a date in the timesheet week"
+        />
+        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-right" (click)="nextWeek()" [disabled]="isLoading()" aria-label="Next week"></button>
+        <span class="week-range-label">{{ weekLabel() }}</span>
+      </div>
+    </div>
+
     <div class="grid-scroll">
       <div class="grid-table" role="table" aria-label="Weekly timesheet grid">
         <div class="grid-row grid-row--head" role="row">
           <span class="grid-cell grid-cell--label" role="columnheader">Project</span>
           @for (day of weekDays(); track day.toISOString()) {
-            <span class="grid-cell grid-cell--day" role="columnheader">
+            <span class="grid-cell grid-cell--day" role="columnheader" [class.grid-cell--today]="isToday(day)">
               <strong>{{ day | date: 'EEE' }}</strong>
               <small>{{ day | date: 'M/d' }}</small>
             </span>
@@ -85,7 +80,7 @@
         </div>
 
         @for (projectId of tableProjectIds(); track projectId) {
-          <div class="grid-row" role="row">
+          <div class="grid-row grid-row--body" role="row">
             <span class="grid-cell grid-cell--label" role="rowheader">
               <span class="grid-cell-project-name">{{ projectName(projectId) }}</span>
             </span>
@@ -95,6 +90,8 @@
                 type="button"
                 class="grid-cell grid-cell--value"
                 [class]="cellStatusClass(entry)"
+                [class.grid-cell--today]="isToday(day)"
+                [class.grid-cell--filled]="entry"
                 (click)="openEntryCellModal(projectId, day)"
               >
                 {{ cellLabel(entry) }}
@@ -106,28 +103,51 @@
               </button>
             }
             <span class="grid-cell grid-cell--actions">
-              <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Remove project" (click)="removeProjectRow(projectId)" [disabled]="isLocked() || isRemovingProject()"></button>
+              <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Remove project" (click)="confirmRemoveProject(projectId)" [disabled]="isLocked() || isRemovingProject()"></button>
             </span>
           </div>
         }
 
         @if (tableProjectIds().length === 0) {
           <div class="grid-empty">
-            <i class="pi pi-briefcase" aria-hidden="true"></i>
-            <span>No projects added yet. Click "+ Add Project" to get started.</span>
+            <span class="grid-empty-icon" aria-hidden="true"><i class="pi pi-briefcase"></i></span>
+            <div class="grid-empty-copy">
+              <strong class="grid-empty-title">No projects yet</strong>
+              <span class="grid-empty-text">Add a project to start logging hours for this week.</span>
+            </div>
+            <button pButton type="button" icon="pi pi-plus" label="Add Project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
           </div>
         }
 
         <div class="grid-row grid-row--total" role="row">
           <span class="grid-cell grid-cell--label">Total</span>
           @for (day of weekDays(); track day.toISOString()) {
-            <span class="grid-cell grid-cell--value">{{ totalForDay(day) | number: '1.0-2' }} hr</span>
+            <span class="grid-cell grid-cell--value" [class.grid-cell--today]="isToday(day)">{{ totalForDay(day) | number: '1.0-2' }} hr</span>
           }
           <span class="grid-cell grid-cell--actions"></span>
         </div>
       </div>
     </div>
   </div>
+
+  <footer class="timesheet-footer">
+    <p class="footer-hint">
+      @if (isLocked()) {
+        <i class="pi pi-lock" aria-hidden="true"></i>
+        <span>This week is locked — no further changes can be submitted.</span>
+      } @else {
+        @let drafts = draftCount();
+        @if (drafts > 0) {
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          <span>{{ drafts }} draft {{ drafts === 1 ? 'entry' : 'entries' }} ready to submit.</span>
+        } @else {
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          <span>Log your hours, then submit the week for approval.</span>
+        }
+      }
+    </p>
+    <button class="submit-approval-btn" pButton type="button" icon="pi pi-send" label="Submit for Approval" (click)="submitWeek()" [loading]="isSubmittingWeek()" [disabled]="isLocked() || isLoading() || isSubmittingWeek() || !hasSubmittableEntries()"></button>
+  </footer>
 
   @if (addProjectModal(); as addProject) {
     <div class="dialog-backdrop" role="presentation" (click)="closeAddProjectModal()">
