@@ -54,7 +54,15 @@
               <p-button label="Save" icon="pi pi-check" size="small" (onClick)="saveEditComment(comment)" [loading]="isSavingComment()" />
             </div>
           } @else {
-            <p class="c-text">{{ comment.body }}</p>
+            <!-- Segments wrapped in inline elements so template indentation never
+                 leaks as stray whitespace under the .c-text pre-wrap. -->
+            <p class="c-text">@for (part of comment.body | linkify; track $index) {
+              @if (part.href) {
+                <a class="c-link" [href]="part.href" target="_blank" rel="noopener noreferrer nofollow">{{ part.text }}</a>
+              } @else {
+                <span>{{ part.text }}</span>
+              }
+            }</p>
           }
         </div>
       </article>

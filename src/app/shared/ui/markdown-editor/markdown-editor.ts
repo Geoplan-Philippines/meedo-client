@@ -417,7 +417,14 @@ export class MarkdownEditor implements AfterViewInit {
       extensions: [
         StarterKit.configure({
           heading: { levels: [1, 2, 3] },
-          link: { openOnClick: false, autolink: true },
+          // Pasted/typed URLs autolink; a plain click opens them in a new tab.
+          // rel hardens the external navigation (no window.opener, no referrer/SEO leak).
+          link: {
+            openOnClick: true,
+            autolink: true,
+            defaultProtocol: 'https',
+            HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' },
+          },
         }),
         Underline,
         TaskList,
@@ -436,6 +443,9 @@ export class MarkdownEditor implements AfterViewInit {
           tightLists: true,
           transformPastedText: true,
           transformCopiedText: true,
+          // Re-link bare URLs stored in the saved markdown so they stay clickable
+          // after a reload (autolinked URLs serialize back to plain text).
+          linkify: true,
         }),
       ],
       onUpdate: () => {

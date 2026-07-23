@@ -389,7 +389,8 @@
   text-decoration: line-through;
 }
 
-:host ::ng-deep .md-prose a { color: var(--color-primary); text-decoration: underline; }
+/* openOnClick is on — a plain click opens the link, so signal it as clickable. */
+:host ::ng-deep .md-prose a { color: var(--color-primary); text-decoration: underline; cursor: pointer; }
 :host ::ng-deep .md-prose strong { color: var(--color-heading); font-weight: 600; }
 
 :host ::ng-deep .md-prose code {
