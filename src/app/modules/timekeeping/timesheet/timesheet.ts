@@ -495,10 +495,20 @@ export class Timesheet implements OnInit {
     const hours = Number(modal.hours) || 0;
     if (hours < 1 || hours > 9) return 'Hours must be between 1 and 9.';
 
-    const otherTotal = this.entries()
-      .filter((item) => item.localId !== modal.localId && item.date === modal.date)
-      .reduce((total, item) => total + (Number(item.hours) || 0), 0);
+    const sameDayEntries = this.entries().filter((item) => item.localId !== modal.localId && item.date === modal.date);
+
+    const otherTotal = sameDayEntries.reduce((total, item) => total + (Number(item.hours) || 0), 0);
     if (otherTotal + hours > 24) return 'Total hours for one day cannot exceed 24.';
+
+    if (!modal.isOvertime) {
+      const otherRegularTotal = sameDayEntries
+        .filter((item) => !item.isOvertime)
+        .reduce((total, item) => total + (Number(item.hours) || 0), 0);
+      if (otherRegularTotal + hours > 9) {
+        return 'Regular hours across all projects cannot exceed 9 for one day. Mark the extra hours as overtime.';
+      }
+    }
+
     return null;
   }
 
