@@ -226,7 +226,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleEntry(entry: TimesheetEntry, checked: boolean): void {
-    if (this.isPeriodLocked() || !isActionable(entry.status)) return;
+    if (!isActionable(entry.status)) return;
     this.selectedEntryIds.update(ids => {
       const next = new Set(ids);
       checked ? next.add(entry.id) : next.delete(entry.id);
@@ -239,7 +239,6 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleAllSubmitted(checked: boolean): void {
-    if (this.isPeriodLocked()) return;
     this.selectedEntryIds.set(checked ? new Set(this.submittedEntryIds()) : new Set());
   }
 
@@ -255,7 +254,6 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleEmployeeSubmitted(employee: TimesheetSummaryEmployee, checked: boolean): void {
-    if (this.isPeriodLocked()) return;
     const ids = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     this.selectedEntryIds.update(set => {
       const next = new Set(set);
@@ -265,7 +263,6 @@ export class TimesheetApproval implements OnInit {
   }
 
   approveSelected(): void {
-    if (this.isPeriodLocked()) return;
     const entryIds = [...this.selectedEntryIds()];
     if (entryIds.length === 0) return;
 
@@ -303,7 +300,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   openRejectDialog(): void {
-    if (this.isPeriodLocked() || this.selectedCount() === 0) return;
+    if (this.selectedCount() === 0) return;
     this.rejectReason.set('');
     this.showRejectDialog.set(true);
   }
@@ -314,7 +311,6 @@ export class TimesheetApproval implements OnInit {
   }
 
   rejectSelected(): void {
-    if (this.isPeriodLocked()) return;
     const reason = this.rejectReason().trim();
     if (!reason) {
       this.messageService.add({ severity: 'warn', summary: 'Reason required', detail: 'Please enter a rejection reason.' });
