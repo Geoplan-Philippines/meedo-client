@@ -386,11 +386,12 @@ export class Timesheet implements OnInit {
 
     const raw = modal.hours;
     if (raw === null || raw === undefined || `${raw}`.trim() === '') {
-      return this.entrySaveAttempted() ? 'Hours is required.' : null;
+      return modal.workType !== 'LEAVE' && this.entrySaveAttempted() ? 'Hours is required.' : null;
     }
 
     const hours = Number(raw);
     if (Number.isNaN(hours)) return 'Enter a valid number of hours.';
+    if (modal.workType === 'LEAVE') return null;
     if (hours < 1) return 'Hours must be at least 1.';
     if (hours > 9) return 'Hours cannot exceed 9.';
     return null;
@@ -493,7 +494,7 @@ export class Timesheet implements OnInit {
 
   private validateModalEntry(modal: EntryModalState): string | null {
     const hours = Number(modal.hours) || 0;
-    if (hours < 1 || hours > 9) return 'Hours must be between 1 and 9.';
+    if (modal.workType !== 'LEAVE' && (hours < 1 || hours > 9)) return 'Hours must be between 1 and 9.';
 
     const sameDayEntries = this.entries().filter((item) => item.localId !== modal.localId && item.date === modal.date);
 
@@ -537,7 +538,7 @@ export class Timesheet implements OnInit {
     return {
       projectId: modal.projectId,
       workDate: modal.date,
-      hours: Number(modal.hours),
+      hours: Number(modal.hours) || 0,
       workType: modal.workType,
       location: locationForWorkType(modal.workType),
       task: modal.task.trim(),
