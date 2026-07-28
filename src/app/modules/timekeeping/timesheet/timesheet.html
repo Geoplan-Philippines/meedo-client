@@ -88,18 +88,24 @@
               <span class="grid-cell-project-name">{{ projectName(projectId) }}</span>
             </span>
             @for (day of weekDays(); track day.toISOString()) {
-              @let entry = entryForCell(projectId, day);
+              @let cellEntries = entriesForCell(projectId, day);
               <button
                 type="button"
                 class="grid-cell grid-cell--value"
-                [class]="cellStatusClass(entry)"
+                [class]="cellStatusClass(cellEntries)"
+                [class.grid-cell--has-entries]="cellEntries.length > 0"
                 (click)="openEntryCellModal(projectId, day)"
               >
-                {{ cellLabel(entry) }}
-                @if (entry) {
-                  <span [class]="statusBadgeClass(entry.status)" [title]="entry.status === 'REJECTED' ? entry.rejectionReason ?? '' : ''">
-                    {{ statusBadgeLabel(entry.status) }}
+                @if (cellEntries.length > 0) {
+                  <strong class="cell-total-hours">{{ formatHours(cellHoursTotal(cellEntries)) }} hr</strong>
+                  @if (cellEntries.length > 1) {
+                    <span class="cell-task-count">{{ cellEntries.length }} tasks</span>
+                  }
+                  <span [class]="statusBadgeClass(cellStatus(cellEntries))">
+                    {{ statusBadgeLabel(cellStatus(cellEntries)) }}
                   </span>
+                } @else {
+                  ------
                 }
               </button>
             }
@@ -160,14 +166,12 @@
     </div>
   }
 
-  @if (entryModal(); as entry) {
+  @if (cellModal(); as modal) {
     <div class="dialog-backdrop" role="presentation">
       <div class="app-dialog entry-modal-dialog light-scope" role="dialog" aria-modal="true" aria-labelledby="entry-modal-title" (click)="$event.stopPropagation()">
         <div class="dialog-header">
-          <h3 id="entry-modal-title" class="dialog-title">
-            {{ entry.readonly ? 'Entry Details' : entry.isNew ? 'Add Entry' : 'Edit Entry' }}
-          </h3>
-          <button type="button" class="dialog-close-btn" (click)="closeEntryModal(false)" aria-label="Close">
+          <h3 id="entry-modal-title" class="dialog-title">{{ modal.readonly ? 'Entry Details' : 'Edit Entries' }}</h3>
+          <button type="button" class="dialog-close-btn" (click)="closeCellModal(false)" aria-label="Close">
             <i class="pi pi-times" aria-hidden="true"></i>
           </button>
         </div>
@@ -176,107 +180,131 @@
           <div class="entry-summary-card">
             <div class="entry-summary-cell">
               <span class="entry-summary-label">Date</span>
-              <strong class="entry-summary-value">{{ entry.date | date: 'EEEE, MMM d' }}</strong>
+              <strong class="entry-summary-value">{{ modal.date | date: 'EEEE, MMM d' }}</strong>
             </div>
             <div class="entry-summary-cell">
               <span class="entry-summary-label">Project Name</span>
-              <strong class="entry-summary-value">{{ projectName(entry.projectId) }}</strong>
+              <strong class="entry-summary-value">{{ projectName(modal.projectId) }}</strong>
             </div>
             <div class="entry-summary-cell">
               <span class="entry-summary-label">Project Tag</span>
-              <strong class="entry-summary-value">{{ projectWorkOrder(entry.projectId) || '—' }}</strong>
+              <strong class="entry-summary-value">{{ projectWorkOrder(modal.projectId) || '—' }}</strong>
             </div>
             <div class="entry-summary-cell">
-              <span class="entry-summary-label">Status</span>
-              <strong class="entry-summary-value">{{ statusBadgeLabel(entry.status) }}</strong>
+              <span class="entry-summary-label">Total Hours</span>
+              <strong class="entry-summary-value">{{ formatHours(rowsHoursTotal(modal.rows)) }} hr</strong>
             </div>
           </div>
 
-          @if (entry.status === 'REJECTED' && entry.rejectionReason) {
-            <div class="entry-modal-rejection">
-              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-              <span>Rejected: {{ entry.rejectionReason }}</span>
-            </div>
-          }
+          <div class="modal-row-list">
+            @for (row of modal.rows; track row.localId) {
+              <div class="modal-row-card">
+                <div class="modal-row-card-header">
+                  <span [class]="statusBadgeClass(row.status)">{{ statusBadgeLabel(row.status) }}</span>
+                  @if (!modal.readonly && !row.readonly) {
+                    <button
+                      type="button"
+                      class="modal-row-remove-btn"
+                      (click)="removeModalRow(row.localId)"
+                      [attr.aria-label]="'Remove task row'"
+                    >
+                      <i class="pi pi-trash" aria-hidden="true"></i>
+                    </button>
+                  }
+                </div>
 
-          <div class="modal-field-row grid grid-cols-2 gap-4">
-            <label class="modal-field">
-              <span>Hours</span>
-              <input
-                type="number"
-                class="cell-input"
-                [class.cell-input--invalid]="entryHoursInvalid()"
-                [attr.min]="entry.workType === 'LEAVE' ? null : 1"
-                [attr.max]="entry.workType === 'LEAVE' ? null : 9"
-                step="0.25"
-                [ngModel]="entry.hours"
-                (ngModelChange)="patchEntryModal({ hours: $event })"
-                [disabled]="entry.readonly"
-              />
-              @if (entryHoursError(); as hoursError) {
-                <small class="modal-field-error">{{ hoursError }}</small>
-              }
-            </label>
+                @if (row.status === 'REJECTED' && row.rejectionReason) {
+                  <div class="entry-modal-rejection">
+                    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                    <span>Rejected: {{ row.rejectionReason }}</span>
+                  </div>
+                }
 
-            <label class="modal-field">
-              <span>Work Type</span>
-              <p-select
-                [ngModel]="entry.workType"
-                (ngModelChange)="onEntryWorkTypeChange($event)"
-                [options]="workTypeOptions"
-                optionLabel="label"
-                optionValue="value"
-                [disabled]="entry.readonly"
-                appendTo="body"
-                styleClass="entry-select"
-              />
-            </label>
-          </div>
+                <div class="modal-field-row grid grid-cols-2 gap-4">
+                  <label class="modal-field">
+                    <span>Hours</span>
+                    <input
+                      type="number"
+                      class="cell-input"
+                      [class.cell-input--invalid]="rowHoursInvalid(row)"
+                      [attr.min]="row.workType === 'LEAVE' ? null : 1"
+                      [attr.max]="row.workType === 'LEAVE' ? null : 9"
+                      step="0.25"
+                      [ngModel]="row.hours"
+                      (ngModelChange)="patchModalRow(row.localId, { hours: $event })"
+                      [disabled]="modal.readonly || row.readonly"
+                    />
+                    @if (rowHoursError(row); as hoursError) {
+                      <small class="modal-field-error">{{ hoursError }}</small>
+                    }
+                  </label>
 
-          <div class="modal-field modal-field--checkboxes">
-            <span>Flags</span>
-            <div class="modal-checkbox-row">
-              <label class="modal-checkbox">
-                <input
-                  type="checkbox"
-                  [ngModel]="entry.isOvertime"
-                  (ngModelChange)="patchEntryModal({ isOvertime: $event })"
-                  [disabled]="entry.readonly"
-                />
-                <span>Overtime (OT)</span>
-              </label>
-              <label class="modal-checkbox">
-                <input
-                  type="checkbox"
-                  [ngModel]="entry.isNightDifferential"
-                  (ngModelChange)="patchEntryModal({ isNightDifferential: $event })"
-                  [disabled]="entry.readonly"
-                />
-                <span>Night Differential (ND)</span>
-              </label>
-            </div>
-          </div>
+                  <label class="modal-field">
+                    <span>Work Type</span>
+                    <p-select
+                      [ngModel]="row.workType"
+                      (ngModelChange)="onRowWorkTypeChange(row.localId, $event)"
+                      [options]="workTypeOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [disabled]="modal.readonly || row.readonly"
+                      appendTo="body"
+                      styleClass="entry-select"
+                    />
+                  </label>
+                </div>
 
-          <div class="modal-field">
-            <span>Task</span>
-            <app-rich-text-editor
-              [content]="entry.task"
-              (contentChange)="patchEntryModal({ task: $event })"
-              [editable]="!entry.readonly"
-              placeholder="What are you working on? Type / for options…"
-            />
-            @if (entryTaskInvalid()) {
-              <small class="modal-field-error">Task is required.</small>
+                <div class="modal-field modal-field--checkboxes">
+                  <span>Flags</span>
+                  <div class="modal-checkbox-row">
+                    <label class="modal-checkbox">
+                      <input
+                        type="checkbox"
+                        [ngModel]="row.isOvertime"
+                        (ngModelChange)="patchModalRow(row.localId, { isOvertime: $event })"
+                        [disabled]="modal.readonly || row.readonly"
+                      />
+                      <span>Overtime (OT)</span>
+                    </label>
+                    <label class="modal-checkbox">
+                      <input
+                        type="checkbox"
+                        [ngModel]="row.isNightDifferential"
+                        (ngModelChange)="patchModalRow(row.localId, { isNightDifferential: $event })"
+                        [disabled]="modal.readonly || row.readonly"
+                      />
+                      <span>Night Differential (ND)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="modal-field">
+                  <span>Task</span>
+                  <app-rich-text-editor
+                    [content]="row.task"
+                    (contentChange)="patchModalRow(row.localId, { task: $event })"
+                    [editable]="!modal.readonly && !row.readonly"
+                    placeholder="What are you working on? Type / for options…"
+                  />
+                  @if (rowTaskInvalid(row)) {
+                    <small class="modal-field-error">Task is required.</small>
+                  }
+                </div>
+              </div>
             }
           </div>
+
+          @if (!modal.readonly) {
+            <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-plus" label="Add another task" class="modal-add-row-btn" (click)="addModalRow()"></button>
+          }
         </div>
 
         <div class="modal-actions">
-          @if (entry.readonly) {
-            <button pButton type="button" label="Close" (click)="closeEntryModal(false)"></button>
+          @if (modal.readonly) {
+            <button pButton type="button" label="Close" (click)="closeCellModal(false)"></button>
           } @else {
-            <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="closeEntryModal(false)"></button>
-            <button pButton type="button" icon="pi pi-check" label="Save" (click)="closeEntryModal(true)" [loading]="isSavingEntry()" [disabled]="isSavingEntry()"></button>
+            <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="closeCellModal(false)"></button>
+            <button pButton type="button" icon="pi pi-check" label="Save" (click)="closeCellModal(true)" [loading]="isSavingEntry()" [disabled]="isSavingEntry()"></button>
           }
         </div>
       </div>
