@@ -93,7 +93,7 @@ describe('Timesheet', () => {
     expect(component.projects()[0].workOrderNumber).toBe('WO-001');
   });
 
-  it('adds a project row and a new entry from the entry modal', () => {
+  it('adds a project row and a new entry from the cell modal', () => {
     component.openAddProjectModal();
     component.onAddProjectChange('project-1');
     component.confirmAddProject();
@@ -102,15 +102,49 @@ describe('Timesheet', () => {
 
     const day = component.weekDays()[0];
     component.openEntryCellModal('project-1', day);
-    const modal = component.entryModal();
+    const modal = component.cellModal();
     if (modal) {
-      modal.hours = 8;
-      modal.task = 'Inspection';
+      component.patchModalRow(modal.rows[0].localId, { hours: 8, task: 'Inspection' });
     }
-    component.closeEntryModal(true);
+    component.closeCellModal(true);
 
     expect(component.entries().length).toBe(1);
     expect(component.entries()[0].projectId).toBe('project-1');
+  });
+
+  it('adds a second task row to the same project/day cell without duplicating the first', () => {
+    component.openAddProjectModal();
+    component.onAddProjectChange('project-1');
+    component.confirmAddProject();
+
+    const day = component.weekDays()[0];
+    component.openEntryCellModal('project-1', day);
+    let modal = component.cellModal();
+    if (modal) {
+      component.patchModalRow(modal.rows[0].localId, { hours: 3, task: 'Site inspection' });
+    }
+    component.closeCellModal(true);
+
+    expect(component.entries().length).toBe(1);
+    expect(createCalls).toBe(1);
+
+    component.openEntryCellModal('project-1', day);
+    modal = component.cellModal();
+    expect(modal?.rows.length).toBe(1);
+    expect(modal?.rows[0].hours).toBe(3);
+
+    component.addModalRow();
+    modal = component.cellModal();
+    expect(modal?.rows.length).toBe(2);
+    if (modal) {
+      component.patchModalRow(modal.rows[1].localId, { hours: 5, task: 'Report writing' });
+    }
+    component.closeCellModal(true);
+
+    expect(createCalls).toBe(2);
+    expect(component.entries().length).toBe(2);
+    const cellEntries = component.entriesForCell('project-1', day);
+    expect(component.cellHoursTotal(cellEntries)).toBe(8);
   });
 
   it('does not add a project row when the period is locked', () => {
@@ -129,12 +163,11 @@ describe('Timesheet', () => {
 
     const day = component.weekDays()[0];
     component.openEntryCellModal('project-1', day);
-    const modal = component.entryModal();
+    const modal = component.cellModal();
     if (modal) {
-      modal.hours = 25;
-      modal.task = 'Inspection';
+      component.patchModalRow(modal.rows[0].localId, { hours: 25, task: 'Inspection' });
     }
-    component.closeEntryModal(true);
+    component.closeCellModal(true);
 
     expect(createCalls).toBe(0);
   });
