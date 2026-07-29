@@ -27,6 +27,7 @@ import { PopoverModule } from 'primeng/popover';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from './services/tickets.service';
+import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { StatusesService } from './services/statuses.service';
 import { ProjectsService } from './services/projects.service';
@@ -84,6 +85,7 @@ import {
 })
 export class Tickets implements OnInit {
   private readonly ticketsService = inject(TicketsService);
+  private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
   private readonly projectsService = inject(ProjectsService);
@@ -588,6 +590,9 @@ export class Tickets implements OnInit {
   onComposeDescription(markdown: string): void {
     this.ticketForm.controls.description.setValue(markdown);
   }
+
+  /** Upload handler for the description editor (paste / drop / attach). Arrow keeps `this`. */
+  readonly uploadAttachment = (file: File) => this.attachmentsService.upload(file);
 
   private resetCreateForm(): void {
     this.ticketForm.reset({

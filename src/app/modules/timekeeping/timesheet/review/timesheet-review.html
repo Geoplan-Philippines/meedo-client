@@ -90,7 +90,10 @@
         <div class="emp-card-top">
           <div class="emp-avatar" aria-hidden="true">{{ getInitials(emp.employeeName) }}</div>
           <div class="emp-info">
-            <h2 class="emp-name">{{ emp.employeeName }}</h2>
+            <div class="emp-name-row">
+              <h2 class="emp-name">{{ emp.employeeName }}</h2>
+              <span [class]="statusClass(emp.status)" class="emp-status">{{ emp.status }}</span>
+            </div>
             <div class="emp-meta">
               @if (emp.department) {
                 <span><i class="pi pi-building" aria-hidden="true"></i> {{ emp.department }}</span>
@@ -99,35 +102,39 @@
               <span><i class="pi pi-clock" aria-hidden="true"></i> Total: {{ emp.totalHours | number: '1.1-1' }}h</span>
             </div>
           </div>
-          <span [class]="statusClass(emp.status)" class="emp-status">{{ emp.status }}</span>
         </div>
+      </div>
 
-        <!-- Hours breakdown strip -->
-        <div class="hours-strip" aria-label="Hours breakdown">
-          <div class="hours-chip hours-chip--pending">
-            <span class="hours-chip-label">Pending</span>
-            <strong class="hours-chip-value">{{ pendingHours() | number: '1.0-1' }}h</strong>
-          </div>
-          <div class="hours-chip">
-            <span class="hours-chip-label">Regular</span>
-            <strong class="hours-chip-value">{{ emp.regularHours | number: '1.0-1' }}h</strong>
-          </div>
-          <div class="hours-chip hours-chip--ot">
-            <span class="hours-chip-label">Overtime</span>
-            <strong class="hours-chip-value">{{ emp.overtimeHours | number: '1.0-1' }}h</strong>
-          </div>
-          <div class="hours-chip">
-            <span class="hours-chip-label">Leave</span>
-            <strong class="hours-chip-value">{{ emp.leaveHours | number: '1.0-1' }}h</strong>
-          </div>
-          <div class="hours-chip">
-            <span class="hours-chip-label">Offset</span>
-            <strong class="hours-chip-value">{{ emp.offsetHours | number: '1.0-1' }}h</strong>
-          </div>
-          <div class="hours-chip">
-            <span class="hours-chip-label">Others</span>
-            <strong class="hours-chip-value">0h</strong>
-          </div>
+      <!-- Hours breakdown strip -->
+      <div class="hours-strip" aria-label="Hours breakdown">
+        <div class="hours-chip hours-chip--pending">
+          <span class="hours-chip-label">Pending</span>
+          @let pending = pendingHours();
+          <strong class="hours-chip-value">{{ pending > 0 ? (pending | number: '1.0-1') + 'h' : '—' }}</strong>
+        </div>
+        <div class="hours-chip">
+          <span class="hours-chip-label">Regular</span>
+          @let regularH = emp.regularHours;
+          <strong class="hours-chip-value">{{ regularH > 0 ? (regularH | number: '1.0-1') + 'h' : '—' }}</strong>
+        </div>
+        <div class="hours-chip hours-chip--ot">
+          <span class="hours-chip-label">Overtime</span>
+          @let overtimeH = emp.overtimeHours;
+          <strong class="hours-chip-value">{{ overtimeH > 0 ? (overtimeH | number: '1.0-1') + 'h' : '—' }}</strong>
+        </div>
+        <div class="hours-chip">
+          <span class="hours-chip-label">Leave</span>
+          @let leaveH = emp.leaveHours;
+          <strong class="hours-chip-value">{{ leaveH > 0 ? (leaveH | number: '1.0-1') + 'h' : '—' }}</strong>
+        </div>
+        <div class="hours-chip">
+          <span class="hours-chip-label">Offset</span>
+          @let offsetH = emp.offsetHours;
+          <strong class="hours-chip-value">{{ offsetH > 0 ? (offsetH | number: '1.0-1') + 'h' : '—' }}</strong>
+        </div>
+        <div class="hours-chip">
+          <span class="hours-chip-label">Others</span>
+          <strong class="hours-chip-value">—</strong>
         </div>
       </div>
 
@@ -148,126 +155,128 @@
         </div>
 
         @if (dayGroups().length > 0) {
-          <div class="day-entries-wrap">
-            <table class="day-entries-table">
-              <colgroup>
-                <col class="col-w-project" />
-                <col class="col-w-wo" />
-                <col class="col-w-task" />
-                <col class="col-w-loc" />
-                <col class="col-w-hours" />
-                <col class="col-w-flag" />
-                <col class="col-w-flag" />
-                <col class="col-w-status" />
-                <col class="col-w-actions" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th scope="col">Project</th>
-                  <th scope="col">Work Order</th>
-                  <th scope="col">Task / Description</th>
-                  <th scope="col">Location</th>
-                  <th scope="col" class="col-num">Hours</th>
-                  <th scope="col" class="col-flag">OT</th>
-                  <th scope="col" class="col-flag">ND</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" class="col-actions">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (group of dayGroups(); track group.date) {
-                  <tr class="day-group-row">
-                    <td colspan="9">
-                      <button
-                        type="button"
-                        class="day-group-btn"
-                        (click)="toggleDate(group.date)"
-                        [attr.aria-expanded]="isDateExpanded(group.date)"
-                      >
-                        <i
-                          class="pi day-group-chevron"
-                          [class.pi-chevron-down]="isDateExpanded(group.date)"
-                          [class.pi-chevron-right]="!isDateExpanded(group.date)"
-                          aria-hidden="true"
-                        ></i>
-                        <strong class="day-date-label">{{ formatDayHeader(group.date) }}</strong>
-                        <span class="day-total-badge">{{ groupTotal(group.entries) | number: '1.1-1' }}h</span>
-                        <span class="day-entry-count">{{ group.entries.length }} entry/entries</span>
-                      </button>
-                    </td>
-                  </tr>
+          <div class="day-cards">
+            @for (group of dayGroups(); track group.date) {
+              <div class="day-card">
+                <button
+                  type="button"
+                  class="day-card-header"
+                  (click)="toggleDate(group.date)"
+                  [attr.aria-expanded]="isDateExpanded(group.date)"
+                >
+                  <span class="day-card-left">
+                    <i
+                      class="pi day-group-chevron"
+                      [class.pi-chevron-down]="isDateExpanded(group.date)"
+                      [class.pi-chevron-right]="!isDateExpanded(group.date)"
+                      aria-hidden="true"
+                    ></i>
+                    <strong class="day-date-label">{{ formatDayHeader(group.date) }}</strong>
+                  </span>
+                  @let dayTotal = groupTotal(group.entries);
+                  <span class="day-summary-text">{{ dayTotal > 0 ? (dayTotal | number: '1.1-1') + 'h' : '—' }} · {{ group.entries.length }} {{ group.entries.length === 1 ? 'entry' : 'entries' }}</span>
+                </button>
 
-                  @if (isDateExpanded(group.date)) {
-                    @for (entry of group.entries; track entry.id) {
-                      <tr [class.entry--approved]="entry.status === 'APPROVED'" [class.entry--rejected]="entry.status === 'REJECTED'">
-                        <td class="td-project">{{ projectLabel(entry) }}</td>
-                        <td class="td-wo">{{ workOrderLabel(entry) }}</td>
-                        <td class="td-task">
-                          <button type="button" class="task-cell-btn" (click)="openTaskPreview(entry)" aria-label="View full task description">
-                            <div class="td-task-content" [innerHTML]="entry.task"></div>
-                          </button>
-                        </td>
-                        <td class="td-loc">{{ entry.location }}</td>
-                        <td class="col-num td-hrs">{{ entry.hours | number: '1.1-1' }}</td>
-                        <td class="col-flag td-flag">
-                          @if (entry.isOvertime) {
-                            <span class="flag-yes">Yes</span>
-                          } @else {
-                            <span class="flag-no">—</span>
-                          }
-                        </td>
-                        <td class="col-flag td-flag">
-                          @if (entry.isNightDifferential) {
-                            <span class="flag-yes">Yes</span>
-                          } @else {
-                            <span class="flag-no">—</span>
-                          }
-                        </td>
-                        <td>
-                          <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
-                          @if (entry.rejectionReason) {
-                            <small class="rejection-note">{{ entry.rejectionReason }}</small>
-                          }
-                        </td>
-                        <td class="col-actions td-actions">
-                          @if (isEntryActionable(entry)) {
-                            <button
-                              pButton
-                              type="button"
-                              [text]="true"
-                              severity="danger"
-                              size="small"
-                              icon="pi pi-times"
-                              (click)="rejectEntry(entry)"
-                              [disabled]="isEntryApproving(entry) || isRejecting()"
-                              [attr.aria-label]="'Reject entry for ' + formatDayHeader(group.date)"
-                              pTooltip="Reject"
-                              tooltipPosition="top"
-                            ></button>
-                            <button
-                              pButton
-                              type="button"
-                              [text]="true"
-                              severity="success"
-                              size="small"
-                              icon="pi pi-check"
-                              (click)="approveEntry(entry)"
-                              [loading]="isEntryApproving(entry)"
-                              [disabled]="isRejecting()"
-                              [attr.aria-label]="'Approve entry for ' + formatDayHeader(group.date)"
-                              pTooltip="Approve"
-                              tooltipPosition="top"
-                            ></button>
-                          } @else {
-                            <span class="no-value">—</span>
-                          }
-                        </td>
-                      </tr>
-                    }
-                  }
+                @if (isDateExpanded(group.date)) {
+                  <div class="day-entries-wrap">
+                    <table class="day-entries-table">
+                      <colgroup>
+                        <col class="col-w-project" />
+                        <col class="col-w-wo" />
+                        <col class="col-w-task" />
+                        <col class="col-w-loc" />
+                        <col class="col-w-hours" />
+                        <col class="col-w-flag" />
+                        <col class="col-w-flag" />
+                        <col class="col-w-status" />
+                        <col class="col-w-actions" />
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th scope="col">Project</th>
+                          <th scope="col">Work Order</th>
+                          <th scope="col">Task / Description</th>
+                          <th scope="col">Location</th>
+                          <th scope="col" class="col-num">Hours</th>
+                          <th scope="col" class="col-flag">OT</th>
+                          <th scope="col" class="col-flag">ND</th>
+                          <th scope="col">Status</th>
+                          <th scope="col" class="col-actions">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (entry of group.entries; track entry.id) {
+                          <tr [class.entry--approved]="entry.status === 'APPROVED'" [class.entry--rejected]="entry.status === 'REJECTED'">
+                            <td class="td-project">{{ projectLabel(entry) }}</td>
+                            <td class="td-wo">{{ workOrderLabel(entry) }}</td>
+                            <td class="td-task">
+                              <button type="button" class="task-cell-btn" (click)="openTaskPreview(entry)" aria-label="View full task description">
+                                <div class="td-task-content" [innerHTML]="entry.task"></div>
+                              </button>
+                            </td>
+                            <td class="td-loc">{{ entry.location }}</td>
+                            <td class="col-num td-hrs">{{ entry.hours > 0 ? (entry.hours | number: '1.1-1') : '—' }}</td>
+                            <td class="col-flag td-flag">
+                              @if (entry.isOvertime) {
+                                <span class="flag-yes">Yes</span>
+                              } @else {
+                                <span class="flag-no">—</span>
+                              }
+                            </td>
+                            <td class="col-flag td-flag">
+                              @if (entry.isNightDifferential) {
+                                <span class="flag-yes">Yes</span>
+                              } @else {
+                                <span class="flag-no">—</span>
+                              }
+                            </td>
+                            <td>
+                              <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
+                              @if (entry.rejectionReason) {
+                                <small class="rejection-note">{{ entry.rejectionReason }}</small>
+                              }
+                            </td>
+                            <td class="col-actions td-actions">
+                              @if (isEntryActionable(entry)) {
+                                <button
+                                  pButton
+                                  type="button"
+                                  [text]="true"
+                                  severity="danger"
+                                  size="small"
+                                  icon="pi pi-times"
+                                  (click)="rejectEntry(entry)"
+                                  [disabled]="isEntryApproving(entry) || isRejecting()"
+                                  [attr.aria-label]="'Reject entry for ' + formatDayHeader(group.date)"
+                                  pTooltip="Reject"
+                                  tooltipPosition="top"
+                                ></button>
+                                <button
+                                  pButton
+                                  type="button"
+                                  [text]="true"
+                                  severity="success"
+                                  size="small"
+                                  icon="pi pi-check"
+                                  (click)="approveEntry(entry)"
+                                  [loading]="isEntryApproving(entry)"
+                                  [disabled]="isRejecting()"
+                                  [attr.aria-label]="'Approve entry for ' + formatDayHeader(group.date)"
+                                  pTooltip="Approve"
+                                  tooltipPosition="top"
+                                ></button>
+                              } @else {
+                                <span class="no-value">—</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 }
-              </tbody>
-            </table>
+              </div>
+            }
           </div>
         } @else {
           <div class="empty-state">

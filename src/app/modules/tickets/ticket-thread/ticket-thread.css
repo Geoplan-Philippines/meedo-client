@@ -1,3 +1,191 @@
 .activity-dot {
   font-size: 0.45rem;
 }
+
+/* ── Avatar bubble (palette classes .avatar-* are global in styles.css) ── */
+.avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── Threaded comments ─────────────────────────────────── */
+.thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.thread {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.c-row {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.c-body {
+  flex: 1 1 auto;
+  min-width: 0; /* let long words wrap instead of overflowing the row */
+}
+
+.c-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.75rem;
+}
+
+.c-author {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.c-time {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.c-text {
+  margin-top: 0.125rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.c-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.c-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.c-link:focus-visible {
+  outline: 2px solid var(--color-ring, var(--color-primary));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Row actions reveal on hover / keyboard focus (desk power-user pattern). */
+.c-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.c-row:hover .c-actions,
+.c-row:focus-within .c-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .c-actions {
+    opacity: 1;
+  }
+}
+
+.c-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius);
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.c-action:hover {
+  color: var(--color-heading);
+  background: color-mix(in srgb, var(--color-heading) 8%, transparent);
+}
+
+.c-action--danger:hover {
+  color: var(--color-destructive);
+}
+
+.c-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Replies: indented under the parent, divided by a hairline. */
+.replies {
+  padding-left: 2.5rem;
+}
+
+.replies .c-row,
+.reply-foot {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Collapsed reply trigger — reads like a slim input, expands to a composer on click. */
+.reply-open {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  color: var(--color-muted);
+  transition: background-color 150ms ease-out;
+}
+
+.reply-open:hover {
+  background: color-mix(in srgb, var(--color-heading) 8%, transparent);
+}
+
+.reply-open-text {
+  font-size: 0.875rem;
+}
+
+.reply-open-icon {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+/* ── New-comment composer ──────────────────────────────── */
+.composer {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .c-actions,
+  .c-action,
+  .reply-open {
+    transition: none;
+  }
+}

@@ -14,7 +14,6 @@ import {
 } from '@angular/core';
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
 import { BulletList, ListItem, OrderedList } from '@tiptap/extension-list';
 import { BubbleMenu } from '@tiptap/extension-bubble-menu';
 
@@ -95,7 +94,6 @@ export class RichTextEditor implements AfterViewInit, OnDestroy {
         BulletList,
         OrderedList,
         ListItem,
-        Underline,
         BubbleMenu.configure({
           element: this.bubbleMenuHost.nativeElement,
           shouldShow: ({ editor, from, to }) => this.editable() && !editor.state.selection.empty && from !== to,
