@@ -389,6 +389,7 @@
   text-decoration: line-through;
 }
 
+/* Always-editable: a plain click edits (text caret); Ctrl/Cmd+click opens. */
 :host ::ng-deep .md-prose a { color: var(--color-primary); text-decoration: underline; }
 :host ::ng-deep .md-prose strong { color: var(--color-heading); font-weight: 600; }
 

@@ -297,6 +297,12 @@ export class MarkdownEditor implements AfterViewInit {
   /** The last markdown the editor has reconciled with (emitted or received). */
   private lastKnownValue = '';
 
+  /** Cmd on macOS, Ctrl elsewhere — the modifier that opens a link on click. */
+  private readonly isMac =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+  /** Hover title on links, teaching the modifier-click affordance. */
+  private readonly openLinkHint = `${this.isMac ? '⌘' : 'Ctrl'} + click to open link`;
+
   // ─── Slash command menu ─────────────────────────────────
   private static nextId = 0;
   /** Unique per instance so multiple editors on a page don't share ARIA ids. */
@@ -413,11 +419,25 @@ export class MarkdownEditor implements AfterViewInit {
         handleKeyDown: (_view, event) => this.onEditorKeyDown(event),
         handlePaste: (_view, event) => this.onEditorPaste(event),
         handleDrop: (view, event) => this.onEditorDrop(view, event as DragEvent),
+        handleClick: (_view, _pos, event) => this.onEditorClickOpenLink(event),
       },
       extensions: [
         StarterKit.configure({
           heading: { levels: [1, 2, 3] },
-          link: { openOnClick: false, autolink: true },
+          // Pasted/typed URLs autolink. openOnClick stays false because this editor is
+          // ALWAYS editable — a plain click must place the caret to edit, not navigate.
+          // Opening is a deliberate Ctrl/Cmd+click, handled in onEditorClickOpenLink.
+          // rel/target harden the eventual external nav (no window.opener, no referrer/SEO leak).
+          link: {
+            openOnClick: false,
+            autolink: true,
+            defaultProtocol: 'https',
+            HTMLAttributes: {
+              target: '_blank',
+              rel: 'noopener noreferrer nofollow',
+              title: this.openLinkHint,
+            },
+          },
         }),
         Underline,
         TaskList,
@@ -436,6 +456,9 @@ export class MarkdownEditor implements AfterViewInit {
           tightLists: true,
           transformPastedText: true,
           transformCopiedText: true,
+          // Re-link bare URLs stored in the saved markdown so they stay clickable
+          // after a reload (autolinked URLs serialize back to plain text).
+          linkify: true,
         }),
       ],
       onUpdate: () => {
@@ -454,6 +477,24 @@ export class MarkdownEditor implements AfterViewInit {
       },
     });
     this.lastKnownValue = this.value();
+  }
+
+  /**
+   * The editor is always editable, so a plain click must place the caret to edit —
+   * never navigate. Opening a link is a deliberate Ctrl/Cmd+click (same convention as
+   * VS Code and note apps). Returns true only when it consumed the click to open.
+   */
+  private onEditorClickOpenLink(event: MouseEvent): boolean {
+    if (!event.metaKey && !event.ctrlKey) return false;
+    const anchor = (event.target as HTMLElement | null)?.closest('a');
+    const href = anchor?.getAttribute('href');
+    // Attachment chips own their own click (download) — never open them as links.
+    if (!anchor || !href || anchor.hasAttribute('data-file') || anchor.classList.contains('md-file__download')) {
+      return false;
+    }
+    event.preventDefault();
+    window.open(href, '_blank', 'noopener,noreferrer');
+    return true;
   }
 
   // ─── Attachments ────────────────────────────────────────

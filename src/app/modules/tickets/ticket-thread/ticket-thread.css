@@ -69,6 +69,22 @@
   overflow-wrap: anywhere;
 }
 
+.c-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.c-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.c-link:focus-visible {
+  outline: 2px solid var(--color-ring, var(--color-primary));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* Row actions reveal on hover / keyboard focus (desk power-user pattern). */
 .c-actions {
   display: inline-flex;

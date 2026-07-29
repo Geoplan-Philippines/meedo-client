@@ -28,11 +28,12 @@ import { TicketComment } from '../models/ticket-comment.model';
 import { TicketActivity, TicketActivityType } from '../models/ticket-activity.model';
 import { THREAD_PAGE_SIZE, TICKET_COMMENT_MAX_LENGTH } from '../tickets.constants';
 import { getAvatarClass } from '../../../shared/utils/avatar.utils';
+import { LinkifyPipe } from '../../../shared/pipes/linkify';
 import { initialsFrom, relativeTime } from '../utils/ticket.utils';
 
 @Component({
   selector: 'app-ticket-thread',
-  imports: [ButtonModule, TextareaModule, SkeletonModule, ConfirmDialogModule, DatePipe, NgTemplateOutlet, ReactiveFormsModule],
+  imports: [ButtonModule, TextareaModule, SkeletonModule, ConfirmDialogModule, DatePipe, NgTemplateOutlet, ReactiveFormsModule, LinkifyPipe],
   // Own ConfirmationService instance drives this component's <p-confirmDialog>;
   // MessageService is intentionally inherited from the parent (see below).
   providers: [ConfirmationService],
