@@ -48,6 +48,17 @@ export class Settings implements OnInit {
       ],
     },
     {
+      label: 'Timekeeping',
+      cards: [
+        {
+          label: 'Attendance',
+          description: 'Shifts, schedules, holidays and policy',
+          route: 'attendance',
+          icon: 'pi-clock',
+        },
+      ],
+    },
+    {
       label: 'Workspace',
       cards: [
         { label: 'Projects', description: 'Active and archived projects', icon: 'pi-briefcase' },

@@ -1,0 +1,248 @@
+<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
+  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+    <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
+    <span class="mx-2 opacity-60">/</span>
+    <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
+    <span class="mx-2 opacity-60">/</span>
+    <span class="text-heading">Shifts</span>
+  </nav>
+
+  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+    <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
+    Back to Attendance settings
+  </a>
+
+  <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-semibold text-heading">Shifts</h1>
+      <p class="text-sm text-body/70 max-w-2xl">
+        A shift is a block of working hours with a break. Weekly schedules assign one to each working day.
+      </p>
+    </div>
+    <div class="flex items-center gap-4 flex-wrap">
+      @if (archivedCount() > 0) {
+        <label for="show-archived" class="flex items-center gap-2 text-sm text-body cursor-pointer select-none">
+          <p-toggleSwitch inputId="show-archived" [formControl]="showArchivedControl" />
+          Show archived ({{ archivedCount() }})
+        </label>
+      }
+      <p-button label="New shift" icon="pi pi-plus" (onClick)="openCreate()" />
+    </div>
+  </header>
+
+  @if (error()) {
+    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+      <span>{{ error() }}</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-12 text-body/70">
+      <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
+      Loading shifts…
+    </div>
+  } @else if (visibleShifts().length === 0) {
+    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
+      <i class="pi pi-clock text-3xl text-body/40" aria-hidden="true"></i>
+      <p class="text-body font-medium">No shifts yet</p>
+      <p class="text-sm text-body/70 max-w-sm">
+        Create your first shift (for example a 9-to-6 with a one-hour break), then build weekly schedules from it.
+      </p>
+      <p-button label="New shift" icon="pi pi-plus" (onClick)="openCreate()" class="mt-2" />
+    </div>
+  } @else {
+    <div class="rounded-base border border-border overflow-hidden">
+      <p-table [value]="visibleShifts()" dataKey="id" styleClass="text-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th scope="col">Shift</th>
+            <th scope="col">Hours</th>
+            <th scope="col" class="text-right">Worked</th>
+            <th scope="col" class="hidden md:table-cell text-right">Break</th>
+            <th scope="col" class="hidden lg:table-cell text-right">Grace</th>
+            <th scope="col" class="hidden sm:table-cell">Type</th>
+            <th scope="col" class="text-right">Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-shift>
+          <tr [class.opacity-60]="shift.isArchived">
+            <td>
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="inline-block w-3 h-3 rounded-full border border-border shrink-0"
+                  [style.background-color]="shift.color"
+                  aria-hidden="true"
+                ></span>
+                <span class="font-medium text-heading">{{ shift.name }}</span>
+                @if (shift.isArchived) {
+                  <span class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-body/70">
+                    <i class="pi pi-inbox text-[10px]" aria-hidden="true"></i> Archived
+                  </span>
+                }
+              </div>
+            </td>
+            <td>
+              <span class="text-body whitespace-nowrap tabular-nums">
+                {{ time12h(shift.startTime) }} – {{ time12h(shift.endTime) }}
+              </span>
+              @if (shift.crossesMidnight) {
+                <span
+                  class="ml-1.5 inline-flex items-center gap-1 rounded-full bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-secondary-foreground align-middle"
+                  pTooltip="Ends the next day" tooltipPosition="top"
+                >
+                  <i class="pi pi-moon text-[10px]" aria-hidden="true"></i> +1
+                </span>
+              }
+            </td>
+            <td class="text-right tabular-nums text-body">{{ workedHours(shift) }}h</td>
+            <td class="hidden md:table-cell text-right tabular-nums text-body/80">{{ shift.breakMinutes }}m</td>
+            <td class="hidden lg:table-cell text-right tabular-nums text-body/80">
+              @if (shift.graceMinutes === null) {
+                <span class="text-body/50">Policy</span>
+              } @else {
+                {{ shift.graceMinutes }}m
+              }
+            </td>
+            <td class="hidden sm:table-cell">
+              @if (shift.isFlexible) {
+                <span class="inline-flex items-center gap-1 rounded-full bg-muted-warning px-2 py-0.5 text-xs text-muted-warning-foreground">
+                  <i class="pi pi-bolt text-[10px]" aria-hidden="true"></i> Flexible
+                </span>
+              } @else {
+                <span class="text-body/60 text-xs">Fixed</span>
+              }
+            </td>
+            <td class="text-right whitespace-nowrap">
+              <div class="inline-flex items-center gap-0.5">
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  text rounded size="small"
+                  [ariaLabel]="'Edit ' + shift.name"
+                  pTooltip="Edit" tooltipPosition="top"
+                  (onClick)="openEdit(shift)"
+                />
+                <p-button
+                  [icon]="shift.isArchived ? 'pi pi-replay' : 'pi pi-inbox'"
+                  severity="secondary"
+                  text rounded size="small"
+                  [ariaLabel]="(shift.isArchived ? 'Restore ' : 'Archive ') + shift.name"
+                  [pTooltip]="shift.isArchived ? 'Restore' : 'Archive'"
+                  tooltipPosition="top"
+                  [loading]="archivingId() === shift.id"
+                  [disabled]="archivingId() !== null && archivingId() !== shift.id"
+                  (onClick)="quickToggleArchive(shift)"
+                />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  }
+</main>
+
+<p-dialog
+  [visible]="isDialogOpen()"
+  (visibleChange)="$event ? null : closeDialog()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!isSaving()"
+  [style]="{ width: '520px', maxWidth: '95vw', maxHeight: '90vh' }"
+  [header]="dialogMode() === 'create' ? 'New shift' : 'Edit shift'"
+>
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label for="shift-name" class="text-sm font-medium text-heading">Name</label>
+        <span class="text-xs text-body/60" aria-live="polite">{{ nameLength() }} / 100</span>
+      </div>
+      <input id="shift-name" pInputText formControlName="name" autocomplete="off" maxlength="100" placeholder="e.g. Day Shift" />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <small class="text-destructive">Name is required.</small>
+      }
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label for="shift-start" class="text-sm font-medium text-heading">Start</label>
+        <input id="shift-start" type="time" formControlName="startTime" class="attendance-time" required />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="shift-end" class="text-sm font-medium text-heading">End</label>
+        <input id="shift-end" type="time" formControlName="endTime" class="attendance-time" required />
+      </div>
+    </div>
+    @if (form.hasError('endBeforeStart') && !form.controls.crossesMidnight.value) {
+      <small class="text-destructive -mt-2">
+        End must be after start. For an overnight shift, turn on “Ends the next day”.
+      </small>
+    }
+
+    <label for="shift-overnight" class="flex items-center justify-between gap-3 cursor-pointer">
+      <span class="flex flex-col">
+        <span class="text-sm font-medium text-heading">Ends the next day</span>
+        <span class="text-xs text-body/70">Overnight shift: the end time falls after midnight.</span>
+      </span>
+      <p-toggleSwitch inputId="shift-overnight" formControlName="crossesMidnight" />
+    </label>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label for="shift-break" class="text-sm font-medium text-heading">Break (minutes)</label>
+        <p-inputNumber inputId="shift-break" formControlName="breakMinutes" [min]="0" [max]="480" [step]="15" styleClass="w-full" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="shift-grace" class="text-sm font-medium text-heading">Grace (minutes)</label>
+        <p-inputNumber inputId="shift-grace" formControlName="graceMinutes" [min]="0" [max]="240" [step]="5" placeholder="Use policy" styleClass="w-full" />
+        <small class="text-body/60 text-xs">Leave empty to use the org policy.</small>
+      </div>
+    </div>
+
+    <label for="shift-flexible" class="flex items-center justify-between gap-3 cursor-pointer">
+      <span class="flex flex-col">
+        <span class="text-sm font-medium text-heading">Flexible</span>
+        <span class="text-xs text-body/70">Start time is nominal; lateness isn’t tracked.</span>
+      </span>
+      <p-toggleSwitch inputId="shift-flexible" formControlName="isFlexible" />
+    </label>
+
+    <fieldset class="flex flex-col gap-2 m-0 p-0 border-0">
+      <legend class="text-sm font-medium text-heading p-0 mb-0.5">Color</legend>
+      <div class="flex flex-wrap gap-2.5">
+        @for (option of colorOptions; track option.value) {
+          <label class="relative inline-flex cursor-pointer">
+            <input type="radio" formControlName="color" [value]="option.value" [attr.aria-label]="option.name" class="peer sr-only" />
+            <span
+              class="block h-8 w-8 rounded-base border border-border transition-shadow
+                     peer-checked:ring-2 peer-checked:ring-ring peer-checked:ring-offset-2
+                     peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
+              [style.background-color]="option.value"
+            ></span>
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <div class="rounded-base border border-border bg-secondary/40 p-3 flex items-center justify-between">
+      <span class="text-xs font-medium text-body/70 uppercase tracking-wide">Paid hours</span>
+      @if (previewHours() !== null) {
+        <span class="text-lg font-semibold text-heading tabular-nums">{{ previewHours() }}h</span>
+      } @else {
+        <span class="text-sm text-body/50" aria-label="Enter valid times to preview">·</span>
+      }
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" text (onClick)="closeDialog()" [disabled]="isSaving()" />
+    <p-button
+      [label]="dialogMode() === 'create' ? 'Create shift' : 'Save changes'"
+      (onClick)="save()"
+      [loading]="isSaving()"
+      [disabled]="form.invalid"
+    />
+  </ng-template>
+</p-dialog>

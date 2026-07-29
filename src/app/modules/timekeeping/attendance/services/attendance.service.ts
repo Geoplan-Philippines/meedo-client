@@ -8,6 +8,10 @@ import {
   AttendanceHistoryParams,
   AttendanceHistoryResponse,
   AttendanceRealtimeUpdate,
+  BoardRosterParams,
+  BoardRosterResponse,
+  BoardSummary,
+  BoardSummaryResponse,
   DailyAttendanceSummary,
   DailySummaryResponse,
   RecognizeResponse,
@@ -15,6 +19,8 @@ import {
   RecordEventResponse,
   RosterParams,
   RosterResponse,
+  TardinessParams,
+  TardinessResponse,
 } from '../models/attendance.model';
 
 /** Builds page/limit/date-range query params shared by history endpoints. */
@@ -114,6 +120,46 @@ export class AttendanceService {
     if (params.search) httpParams = httpParams.set('search', params.search);
 
     return this.http.get<RosterResponse>(`${this.baseUrl}/roster`, {
+      params: httpParams,
+      withCredentials: true,
+    });
+  }
+
+  /* ─── Admin attendance board ───────────────────────────── */
+
+  /** Headline present/late/absent counts for a day (admins only). */
+  getBoardSummary(date?: string) {
+    let params = new HttpParams();
+    if (date) params = params.set('date', date);
+
+    return this.http
+      .get<BoardSummaryResponse>(`${this.baseUrl}/board/summary`, { params, withCredentials: true })
+      .pipe(map((res): BoardSummary => res.data));
+  }
+
+  /** Member-centric, paginated roster for a day, filterable by status (admins only). */
+  getBoardRoster(params: BoardRosterParams) {
+    let httpParams = new HttpParams().set('page', params.page).set('limit', params.limit);
+    if (params.date) httpParams = httpParams.set('date', params.date);
+    if (params.search) httpParams = httpParams.set('search', params.search);
+    if (params.status) httpParams = httpParams.set('status', params.status);
+
+    return this.http.get<BoardRosterResponse>(`${this.baseUrl}/board/roster`, {
+      params: httpParams,
+      withCredentials: true,
+    });
+  }
+
+  /** Lateness scoreboard over a day/week/month window (admins only). */
+  getTardiness(params: TardinessParams) {
+    let httpParams = new HttpParams()
+      .set('page', params.page)
+      .set('limit', params.limit)
+      .set('period', params.period);
+    if (params.date) httpParams = httpParams.set('date', params.date);
+    if (params.search) httpParams = httpParams.set('search', params.search);
+
+    return this.http.get<TardinessResponse>(`${this.baseUrl}/board/tardiness`, {
       params: httpParams,
       withCredentials: true,
     });

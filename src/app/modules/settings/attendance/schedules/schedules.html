@@ -1,0 +1,204 @@
+<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
+  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+    <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
+    <span class="mx-2 opacity-60">/</span>
+    <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
+    <span class="mx-2 opacity-60">/</span>
+    <span class="text-heading">Weekly schedules</span>
+  </nav>
+
+  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+    <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
+    Back to Attendance settings
+  </a>
+
+  <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-semibold text-heading">Weekly schedules</h1>
+      <p class="text-sm text-body/70 max-w-2xl">
+        A schedule maps a shift to each weekday. The default applies to anyone without a team or personal override.
+      </p>
+    </div>
+    <p-button label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" />
+  </header>
+
+  @if (error()) {
+    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+      <span>{{ error() }}</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-12 text-body/70">
+      <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
+      Loading schedules…
+    </div>
+  } @else if (schedules().length === 0) {
+    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
+      <i class="pi pi-calendar text-3xl text-body/40" aria-hidden="true"></i>
+      <p class="text-body font-medium">No schedules yet</p>
+      <p class="text-sm text-body/70 max-w-sm">
+        Create a schedule, then open it to set which days are working days and which shift each one uses.
+      </p>
+      <p-button label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" class="mt-2" />
+    </div>
+  } @else {
+    <ul class="flex flex-col gap-3" aria-label="Weekly schedules">
+      @for (schedule of schedules(); track schedule.id) {
+        <li class="rounded-base border border-border bg-surface p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="flex flex-col gap-2 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-semibold text-heading truncate">{{ schedule.name }}</span>
+              @if (schedule.isDefault) {
+                <span class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+                  <i class="pi pi-star-fill text-[10px]" aria-hidden="true"></i> Default
+                </span>
+              }
+              @if (!schedule.isActive) {
+                <span class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-body/70">Inactive</span>
+              }
+              @if (inUseCount(schedule) > 0) {
+                <span class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground" [pTooltip]="'Assigned to ' + inUseCount(schedule) + ' team(s)/employee(s)'" tooltipPosition="top">
+                  <i class="pi pi-link text-[10px]" aria-hidden="true"></i> In use
+                </span>
+              }
+            </div>
+
+            @if (isConfigured(schedule)) {
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="flex items-center gap-1" role="img" [attr.aria-label]="workingCount(schedule) + ' working days per week'">
+                  @for (dot of dayDots(schedule); track dot.day) {
+                    <span
+                      class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-medium border transition-colors"
+                      [class.text-body]="!dot.working"
+                      [class.border-border]="!dot.working"
+                      [style.background-color]="dot.working ? (dot.color ?? 'var(--primary)') : 'transparent'"
+                      [style.color]="dot.working ? '#fff' : null"
+                      [style.border-color]="dot.working ? 'transparent' : null"
+                      [pTooltip]="dot.short + (dot.working ? ' · working' : ' · rest')"
+                      tooltipPosition="top"
+                    >{{ dot.short.charAt(0) }}</span>
+                  }
+                </div>
+                <span class="text-sm text-body/70">{{ workingCount(schedule) }} working days</span>
+              </div>
+            } @else {
+              <span class="inline-flex items-center gap-1.5 text-sm text-muted-warning-foreground">
+                <i class="pi pi-exclamation-triangle text-xs" aria-hidden="true"></i>
+                Not set up yet. Open it to configure the week.
+              </span>
+            }
+          </div>
+
+          <div class="flex items-center gap-1 shrink-0">
+            @if (!schedule.isDefault) {
+              <p-button
+                label="Set default"
+                icon="pi pi-star"
+                severity="secondary"
+                text size="small"
+                [loading]="settingDefaultId() === schedule.id"
+                [disabled]="settingDefaultId() !== null && settingDefaultId() !== schedule.id"
+                (onClick)="setDefault(schedule)"
+              />
+            }
+            <p-button
+              label="Edit week"
+              icon="pi pi-calendar"
+              [outlined]="true"
+              severity="secondary"
+              size="small"
+              [routerLink]="[schedule.id]"
+            />
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              text rounded size="small"
+              [ariaLabel]="'Rename ' + schedule.name"
+              pTooltip="Rename" tooltipPosition="top"
+              (onClick)="openEdit(schedule)"
+            />
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              text rounded size="small"
+              [ariaLabel]="'Delete ' + schedule.name"
+              [pTooltip]="inUseCount(schedule) > 0 ? 'Assigned to a team or employee; reassign before deleting' : 'Delete'"
+              tooltipPosition="top"
+              [disabled]="inUseCount(schedule) > 0"
+              (onClick)="askDelete(schedule)"
+            />
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</main>
+
+<p-dialog
+  [visible]="isDialogOpen()"
+  (visibleChange)="$event ? null : closeDialog()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!isSaving()"
+  [style]="{ width: '440px', maxWidth: '95vw', maxHeight: '90vh' }"
+  [header]="dialogMode() === 'create' ? 'New schedule' : 'Rename schedule'"
+>
+  <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <label for="schedule-name" class="text-sm font-medium text-heading">Name</label>
+        <span class="text-xs text-body/60" aria-live="polite">{{ nameLength() }} / 100</span>
+      </div>
+      <input id="schedule-name" pInputText formControlName="name" autocomplete="off" maxlength="100" placeholder="e.g. Standard week" />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <small class="text-destructive">Name is required.</small>
+      }
+    </div>
+
+    @if (dialogMode() === 'create') {
+      <label for="schedule-default" class="flex items-center justify-between gap-3 cursor-pointer">
+        <span class="flex flex-col">
+          <span class="text-sm font-medium text-heading">Make this the default</span>
+          <span class="text-xs text-body/70">Applied to anyone without a team or personal schedule.</span>
+        </span>
+        <p-toggleSwitch inputId="schedule-default" formControlName="isDefault" />
+      </label>
+
+      <p class="text-xs text-body/60">You’ll set up the working days and shifts next.</p>
+    }
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" text (onClick)="closeDialog()" [disabled]="isSaving()" />
+    <p-button [label]="dialogMode() === 'create' ? 'Create schedule' : 'Save changes'" (onClick)="save()" [loading]="isSaving()" [disabled]="form.invalid" />
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  [visible]="!!scheduleToDelete()"
+  (visibleChange)="$event ? null : cancelDelete()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!isDeleting()"
+  [style]="{ width: '440px', maxWidth: '95vw' }"
+  header="Delete schedule"
+>
+  <div class="flex flex-col gap-3 text-sm text-body">
+    <p>
+      Delete <strong class="text-heading">{{ scheduleToDelete()?.name }}</strong>? Its working days are removed too. This can’t be undone.
+    </p>
+    @if (deleteError()) {
+      <p role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3">
+        {{ deleteError() }}
+      </p>
+    }
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" text (onClick)="cancelDelete()" [disabled]="isDeleting()" />
+    <p-button label="Delete schedule" severity="danger" (onClick)="confirmDelete()" [loading]="isDeleting()" />
+  </ng-template>
+</p-dialog>
