@@ -147,6 +147,11 @@
   flex-wrap: wrap;
 }
 
+.grid-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .grid-card {
   flex: 1;
   display: flex;
@@ -689,6 +694,10 @@ button.grid-cell--value:hover {
   }
 
   .add-project-btn {
+    width: 100%;
+  }
+
+  .grid-footer button {
     width: 100%;
   }
 
