@@ -8,7 +8,8 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
 import { RichTextEditor } from '../../../shared/ui/rich-text-editor';
 import {
@@ -99,10 +100,11 @@ function stripHtml(value: string): string {
     DatePickerModule,
     SelectModule,
     ToastModule,
+    ConfirmDialogModule,
     DatePipe,
     RichTextEditor,
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './timesheet.html',
   styleUrl: './timesheet.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,6 +115,7 @@ function stripHtml(value: string): string {
 export class Timesheet implements OnInit {
   private readonly timesheetService = inject(TimesheetService);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
 
   readonly selectedDate = signal<Date>(new Date());
   readonly selectedWeek = computed(() => startOfWeek(this.selectedDate()));
@@ -187,9 +190,16 @@ export class Timesheet implements OnInit {
   });
 
   readonly hasSubmittableEntries = computed(() => this.entries().some((entry) => entry.status === 'DRAFT'));
+  readonly draftCount = computed(() => this.entries().filter((entry) => entry.status === 'DRAFT').length);
+
+  private readonly todayKey = toDateInputValue(new Date());
 
   ngOnInit(): void {
     this.loadWeek();
+  }
+
+  isToday(day: Date): boolean {
+    return toDateInputValue(day) === this.todayKey;
   }
 
   onWeekChange(date: Date | Date[] | null): void {
@@ -247,7 +257,7 @@ export class Timesheet implements OnInit {
 
   cellLabel(entry: TimesheetDayEntry | undefined): string {
     const hours = Number(entry?.hours) || 0;
-    return hours > 0 ? `${trimNumber(hours)} hr` : '------';
+    return hours > 0 ? `${trimNumber(hours)} hr` : '—';
   }
 
   cellStatusClass(entry: TimesheetDayEntry | undefined): string {
@@ -296,6 +306,27 @@ export class Timesheet implements OnInit {
 
     this.addedProjectIds.update((ids) => new Set(ids).add(modal.projectId!));
     this.addProjectModal.set(null);
+  }
+
+  confirmRemoveProject(projectId: string): void {
+    if (this.isLocked() || this.isRemovingProject()) return;
+
+    // No logged hours yet — nothing to lose, so skip the warning and remove the empty row.
+    const hasLoggedEntries = this.entries().some((entry) => entry.projectId === projectId && entry.entryId);
+    if (!hasLoggedEntries) {
+      this.removeProjectRow(projectId);
+      return;
+    }
+
+    const name = this.projectName(projectId);
+    this.confirmationService.confirm({
+      header: 'Remove project?',
+      message: `All logged hours for "${name}" this week will be permanently deleted. This can't be undone.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonProps: { label: 'Delete', severity: 'danger' },
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', text: true },
+      accept: () => this.removeProjectRow(projectId),
+    });
   }
 
   removeProjectRow(projectId: string): void {
