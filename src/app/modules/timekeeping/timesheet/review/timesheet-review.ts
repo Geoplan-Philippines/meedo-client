@@ -39,6 +39,8 @@ export class TimesheetReview implements OnInit {
   readonly showHistoryDialog = signal(false);
   readonly rejectMode = signal<'reject' | 'changes'>('reject');
   readonly rejectReason = signal('');
+  readonly rejectTargetIds = signal<string[]>([]);
+  readonly approvingEntryIds = signal<Set<string>>(new Set());
 
   readonly employee = signal<TimesheetSummaryEmployee | null>(null);
   readonly periodLock = signal<TimesheetPeriodLock | null>(null);
@@ -177,7 +179,7 @@ export class TimesheetReview implements OnInit {
 
   approveTimesheet(): void {
     const entryIds = this.submittedEntryIds();
-    if (entryIds.length === 0 || this.isPeriodLocked()) return;
+    if (entryIds.length === 0) return;
 
     this.isApproving.set(true);
     this.timesheetService.bulkApprove(entryIds)
@@ -194,9 +196,45 @@ export class TimesheetReview implements OnInit {
       });
   }
 
-  openRejectDialog(mode: 'reject' | 'changes' = 'reject'): void {
+  isEntryApproving(entry: TimesheetEntry): boolean {
+    return this.approvingEntryIds().has(entry.id);
+  }
+
+  isEntryActionable(entry: TimesheetEntry): boolean {
+    return isActionable(entry.status);
+  }
+
+  approveEntry(entry: TimesheetEntry): void {
+    if (!isActionable(entry.status)) return;
+
+    this.approvingEntryIds.update(ids => new Set(ids).add(entry.id));
+    this.timesheetService.bulkApprove([entry.id])
+      .pipe(finalize(() => this.approvingEntryIds.update(ids => {
+        const next = new Set(ids);
+        next.delete(entry.id);
+        return next;
+      })))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Approved', detail: 'Entry approved' });
+          this.loadData();
+        },
+        error: (err: unknown) => {
+          console.error('Error approving entry:', err);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to approve entry') });
+        },
+      });
+  }
+
+  rejectEntry(entry: TimesheetEntry): void {
+    if (!isActionable(entry.status)) return;
+    this.openRejectDialog('reject', [entry.id]);
+  }
+
+  openRejectDialog(mode: 'reject' | 'changes' = 'reject', entryIds?: string[]): void {
     this.rejectMode.set(mode);
     this.rejectReason.set('');
+    this.rejectTargetIds.set(entryIds ?? this.submittedEntryIds());
     this.showRejectDialog.set(true);
   }
 
@@ -212,7 +250,7 @@ export class TimesheetReview implements OnInit {
       return;
     }
 
-    const entryIds = this.submittedEntryIds();
+    const entryIds = this.rejectTargetIds();
     this.isRejecting.set(true);
     this.timesheetService.bulkReject(entryIds, reason)
       .pipe(finalize(() => this.isRejecting.set(false)))

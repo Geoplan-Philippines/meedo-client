@@ -89,8 +89,8 @@
     <div class="bulk-bar" role="status" aria-live="polite">
       <span class="bulk-count">{{ selectedCount() }} row(s) selected</span>
       <div class="bulk-actions">
-        <button pButton type="button" size="small" icon="pi pi-check" label="Approve" (click)="approveSelected()" [loading]="isApproving()" [disabled]="isPeriodLocked()"></button>
-        <button pButton type="button" size="small" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject" (click)="openRejectDialog()" [disabled]="isPeriodLocked() || isApproving()"></button>
+        <button pButton type="button" size="small" icon="pi pi-check" label="Approve" (click)="approveSelected()" [loading]="isApproving()"></button>
+        <button pButton type="button" size="small" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject" (click)="openRejectDialog()" [disabled]="isApproving()"></button>
         <button pButton type="button" size="small" severity="secondary" [text]="true" label="Clear selection" (click)="toggleAllSubmitted(false)"></button>
       </div>
     </div>
@@ -187,7 +187,7 @@
                   type="checkbox"
                   [checked]="selectedCount() > 0 && selectedCount() === submittedEntryIds().length"
                   (change)="toggleAllSubmitted($any($event.target).checked)"
-                  [disabled]="isPeriodLocked() || submittedEntryIds().length === 0"
+                  [disabled]="submittedEntryIds().length === 0"
                   aria-label="Select all submitted entries"
                 />
               </th>
@@ -221,7 +221,7 @@
                   [checked]="employeeAllSubmittedSelected(employee)"
                   [indeterminate]="employeeSomeSubmittedSelected(employee)"
                   (change)="toggleEmployeeSubmitted(employee, $any($event.target).checked)"
-                  [disabled]="isPeriodLocked() || employeeSubmittedCount(employee) === 0"
+                  [disabled]="employeeSubmittedCount(employee) === 0"
                   [attr.aria-label]="'Select submitted entries for ' + employee.employeeName"
                 />
               </td>
@@ -427,12 +427,7 @@
         </div>
 
         <div class="panel-footer">
-          @if (isPeriodLocked()) {
-            <div class="footer-info footer-info--locked">
-              <i class="pi pi-lock" aria-hidden="true"></i>
-              <span>Period locked — unlock to make changes.</span>
-            </div>
-          } @else if (hasSubmittedEntries(emp)) {
+          @if (hasSubmittedEntries(emp)) {
             <button
               pButton
               type="button"

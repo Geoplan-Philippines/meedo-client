@@ -341,19 +341,20 @@
 
 .day-entries-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 860px;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
 
-.col-w-project { width: 14%; }
-.col-w-wo { width: 12%; }
-.col-w-task { width: 28%; }
-.col-w-loc { width: 10%; }
-.col-w-hours { width: 8%; }
-.col-w-flag { width: 6%; }
-.col-w-status { width: 16%; }
+.col-w-project { width: 13%; }
+.col-w-wo { width: 11%; }
+.col-w-task { width: 25%; }
+.col-w-loc { width: 9%; }
+.col-w-hours { width: 7%; }
+.col-w-flag { width: 5%; }
+.col-w-status { width: 14%; }
+.col-w-actions { width: 11%; }
 
 .day-entries-table thead th {
   padding: 0.5rem 0.75rem;
@@ -399,6 +400,21 @@
 
 .col-num { text-align: left; white-space: nowrap; }
 .col-flag { text-align: left; }
+.col-actions { text-align: right; }
+
+.td-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .td-actions .p-button + .p-button {
+  margin-left: 0.15rem;
+}
+
+.no-value {
+  color: var(--color-body);
+  opacity: 0.4;
+}
 
 .td-project { font-weight: 600; color: var(--color-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .td-wo { color: var(--color-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

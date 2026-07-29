@@ -46,11 +46,9 @@ interface TimesheetActivityItem {
   tone: 'success' | 'info' | 'warning';
 }
 
-interface EntryModalState {
+interface CellRowState {
   localId: string;
   entryId?: string;
-  date: string;
-  projectId: string;
   hours: number | null;
   workType: TimesheetWorkType;
   task: string;
@@ -58,8 +56,26 @@ interface EntryModalState {
   isNightDifferential: boolean;
   status: TimesheetEntryStatus;
   rejectionReason?: string | null;
-  isNew: boolean;
   readonly: boolean;
+}
+
+interface CellModalState {
+  projectId: string;
+  date: string;
+  rows: CellRowState[];
+  pendingDeleteIds: string[];
+  readonly: boolean;
+}
+
+const STATUS_PRECEDENCE: Record<TimesheetEntryStatus, number> = {
+  REJECTED: 3,
+  SUBMITTED: 2,
+  APPROVED: 1,
+  DRAFT: 0,
+};
+
+function rollupStatus(statuses: TimesheetEntryStatus[]): TimesheetEntryStatus {
+  return statuses.reduce((worst, status) => (STATUS_PRECEDENCE[status] > STATUS_PRECEDENCE[worst] ? status : worst), 'DRAFT' as TimesheetEntryStatus);
 }
 
 interface AddProjectModalState {
@@ -129,7 +145,7 @@ export class Timesheet implements OnInit {
   readonly lockMessage = signal<string | null>(null);
   readonly showHistoryDialog = signal(false);
   readonly addedProjectIds = signal<Set<string>>(new Set());
-  readonly entryModal = signal<EntryModalState | null>(null);
+  readonly cellModal = signal<CellModalState | null>(null);
   readonly entrySaveAttempted = signal(false);
   readonly addProjectModal = signal<AddProjectModalState | null>(null);
 
@@ -250,18 +266,29 @@ export class Timesheet implements OnInit {
     return this.projects().find((project) => project.id === projectId)?.workOrderNumber ?? '';
   }
 
-  entryForCell(projectId: string, day: Date): TimesheetDayEntry | undefined {
+  entriesForCell(projectId: string, day: Date): TimesheetDayEntry[] {
     const date = toDateInputValue(day);
-    return this.entries().find((entry) => entry.projectId === projectId && entry.date === date);
+    return this.entries().filter((entry) => entry.projectId === projectId && entry.date === date);
   }
 
-  cellLabel(entry: TimesheetDayEntry | undefined): string {
-    const hours = Number(entry?.hours) || 0;
-    return hours > 0 ? `${trimNumber(hours)} hr` : '—';
+  cellHoursTotal(entries: TimesheetDayEntry[]): number {
+    return entries.reduce((total, entry) => total + (Number(entry.hours) || 0), 0);
   }
 
-  cellStatusClass(entry: TimesheetDayEntry | undefined): string {
-    return entry?.status ? `grid-cell--status-${entry.status.toLowerCase()}` : '';
+  rowsHoursTotal(rows: CellRowState[]): number {
+    return rows.reduce((total, row) => total + (Number(row.hours) || 0), 0);
+  }
+
+  cellStatus(entries: TimesheetDayEntry[]): TimesheetEntryStatus {
+    return rollupStatus(entries.map((entry) => entry.status));
+  }
+
+  cellStatusClass(entries: TimesheetDayEntry[]): string {
+    return entries.length > 0 ? `grid-cell--status-${this.cellStatus(entries).toLowerCase()}` : '';
+  }
+
+  formatHours(hours: number | null): string {
+    return trimNumber(Number(hours) || 0);
   }
 
   isEntryReadonly(entry: TimesheetDayEntry): boolean {
@@ -360,119 +387,117 @@ export class Timesheet implements OnInit {
   }
 
   openEntryCellModal(projectId: string, day: Date): void {
-    const existing = this.entryForCell(projectId, day);
-    if (existing) {
-      this.openEditEntryModal(existing);
-      return;
-    }
+    const date = toDateInputValue(day);
+    const existing = this.entriesForCell(projectId, day);
+    const locked = this.isLocked();
 
-    if (this.isLocked()) return;
+    if (existing.length === 0 && locked) return;
+
     this.entrySaveAttempted.set(false);
-    this.entryModal.set({
-      localId: crypto.randomUUID?.() ?? `entry-${Date.now()}-${Math.random()}`,
-      date: toDateInputValue(day),
-      projectId,
-      hours: null,
-      workType: 'REGULAR',
-      task: '',
-      isOvertime: false,
-      isNightDifferential: false,
-      status: 'DRAFT',
-      isNew: true,
-      readonly: false,
+    const rows = existing.length > 0 ? existing.map((entry) => this.entryToRow(entry)) : [this.blankRow()];
+
+    this.cellModal.set({ projectId, date, rows, pendingDeleteIds: [], readonly: locked });
+  }
+
+  addModalRow(): void {
+    this.cellModal.update((modal) => (modal && !modal.readonly ? { ...modal, rows: [...modal.rows, this.blankRow()] } : modal));
+  }
+
+  removeModalRow(localId: string): void {
+    this.cellModal.update((modal) => {
+      if (!modal || modal.readonly) return modal;
+      const row = modal.rows.find((item) => item.localId === localId);
+      if (!row || row.readonly) return modal;
+
+      return {
+        ...modal,
+        rows: modal.rows.filter((item) => item.localId !== localId),
+        pendingDeleteIds: row.entryId ? [...modal.pendingDeleteIds, row.entryId] : modal.pendingDeleteIds,
+      };
     });
   }
 
-  openEditEntryModal(entry: TimesheetDayEntry): void {
-    if (!entry.projectId) return;
-    this.entrySaveAttempted.set(false);
-    this.entryModal.set({
-      localId: entry.localId,
-      entryId: entry.entryId,
-      date: entry.date,
-      projectId: entry.projectId,
-      hours: entry.hours,
-      workType: entry.workType,
-      task: entry.task,
-      isOvertime: entry.isOvertime,
-      isNightDifferential: entry.isNightDifferential,
-      status: entry.status,
-      rejectionReason: entry.rejectionReason,
-      isNew: false,
-      readonly: this.isEntryReadonly(entry),
+  patchModalRow(localId: string, patch: Partial<CellRowState>): void {
+    this.cellModal.update((modal) => modal && {
+      ...modal,
+      rows: modal.rows.map((row) => (row.localId === localId ? { ...row, ...patch } : row)),
     });
   }
 
-  onEntryWorkTypeChange(value: TimesheetWorkType): void {
-    this.patchEntryModal({ workType: value });
+  onRowWorkTypeChange(localId: string, value: TimesheetWorkType): void {
+    this.patchModalRow(localId, { workType: value });
   }
 
-  patchEntryModal(patch: Partial<EntryModalState>): void {
-    this.entryModal.update((modal) => modal && { ...modal, ...patch });
-  }
-
-  entryHoursError(): string | null {
-    const modal = this.entryModal();
-    if (!modal) return null;
-
-    const raw = modal.hours;
+  rowHoursError(row: CellRowState): string | null {
+    const raw = row.hours;
     if (raw === null || raw === undefined || `${raw}`.trim() === '') {
-      return this.entrySaveAttempted() ? 'Hours is required.' : null;
+      return row.workType !== 'LEAVE' && this.entrySaveAttempted() ? 'Hours is required.' : null;
     }
 
     const hours = Number(raw);
     if (Number.isNaN(hours)) return 'Enter a valid number of hours.';
+    if (row.workType === 'LEAVE') return null;
     if (hours < 1) return 'Hours must be at least 1.';
     if (hours > 9) return 'Hours cannot exceed 9.';
     return null;
   }
 
-  entryHoursInvalid(): boolean {
-    return !!this.entryHoursError();
+  rowHoursInvalid(row: CellRowState): boolean {
+    return !!this.rowHoursError(row);
   }
 
-  entryTaskInvalid(): boolean {
-    const modal = this.entryModal();
-    return !!modal && this.entrySaveAttempted() && !stripHtml(modal.task);
+  rowTaskInvalid(row: CellRowState): boolean {
+    return this.entrySaveAttempted() && !stripHtml(row.task);
   }
 
-  closeEntryModal(save: boolean): void {
-    const modal = this.entryModal();
+  closeCellModal(save: boolean): void {
+    const modal = this.cellModal();
     if (!modal) return;
 
     if (!save || modal.readonly) {
-      this.entryModal.set(null);
+      this.cellModal.set(null);
       return;
     }
 
-    if (this.entryHoursError() || !stripHtml(modal.task)) {
+    const editableRows = modal.rows.filter((row) => !row.readonly);
+    const hasInvalidRow = editableRows.some((row) => this.rowHoursError(row) || !stripHtml(row.task));
+    if (hasInvalidRow) {
       this.entrySaveAttempted.set(true);
       return;
     }
 
-    const validationError = this.validateModalEntry(modal);
+    const validationError = this.validateModalRows(modal, editableRows);
     if (validationError) {
       this.messageService.add({ severity: 'warn', summary: 'Check entry', detail: validationError });
       return;
     }
 
-    const payload = this.modalToPayload(modal);
-    const operation = modal.entryId
-      ? this.timesheetService.updateEntry(modal.entryId, payload)
-      : this.timesheetService.createEntry(payload);
-
-    this.entryModal.set(null);
-    this.isSavingEntry.set(true);
-    operation.pipe(finalize(() => this.isSavingEntry.set(false))).subscribe({
-      next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Entry saved. You can keep editing until the week is locked.' });
-        this.loadWeek();
-      },
-      error: (err: unknown) => {
-        console.error('Error saving entry:', err);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save entry') });
-      },
+    const deletes = modal.pendingDeleteIds.map((id) => this.timesheetService.deleteEntry(id));
+    const saves = editableRows.map((row) => {
+      const payload = this.rowToPayload(row, modal.projectId, modal.date);
+      return row.entryId ? this.timesheetService.updateEntry(row.entryId, payload) : this.timesheetService.createEntry(payload);
     });
+
+    if (deletes.length === 0 && saves.length === 0) {
+      this.cellModal.set(null);
+      return;
+    }
+
+    this.cellModal.set(null);
+    this.isSavingEntry.set(true);
+    forkJoin([...deletes, ...saves])
+      .pipe(finalize(() => this.isSavingEntry.set(false)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Entries saved. You can keep editing until the week is locked.' });
+          this.loadWeek();
+        },
+        error: (err: unknown) => {
+          console.error('Error saving entries:', err);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to save entries') });
+          this.loadWeek();
+        },
+      });
   }
 
   submitWeek(): void {
@@ -522,14 +547,28 @@ export class Timesheet implements OnInit {
     return this.entries().reduce((total, entry) => (predicate(entry) ? total + (Number(entry.hours) || 0) : total), 0);
   }
 
-  private validateModalEntry(modal: EntryModalState): string | null {
-    const hours = Number(modal.hours) || 0;
-    if (hours < 1 || hours > 9) return 'Hours must be between 1 and 9.';
+  private validateModalRows(modal: CellModalState, rows: CellRowState[]): string | null {
+    for (const row of rows) {
+      const hours = Number(row.hours) || 0;
+      if (row.workType !== 'LEAVE' && (hours < 1 || hours > 9)) return 'Hours must be between 1 and 9.';
+    }
 
-    const otherTotal = this.entries()
-      .filter((item) => item.localId !== modal.localId && item.date === modal.date)
-      .reduce((total, item) => total + (Number(item.hours) || 0), 0);
-    if (otherTotal + hours > 24) return 'Total hours for one day cannot exceed 24.';
+    const otherEntries = this.entries().filter((entry) => entry.date === modal.date && entry.projectId !== modal.projectId);
+    const otherTotal = otherEntries.reduce((total, entry) => total + (Number(entry.hours) || 0), 0);
+    const otherRegularTotal = otherEntries
+      .filter((entry) => !entry.isOvertime)
+      .reduce((total, entry) => total + (Number(entry.hours) || 0), 0);
+
+    const cellTotal = rows.reduce((total, row) => total + (Number(row.hours) || 0), 0);
+    const cellRegularTotal = rows
+      .filter((row) => !row.isOvertime)
+      .reduce((total, row) => total + (Number(row.hours) || 0), 0);
+
+    if (otherTotal + cellTotal > 24) return 'Total hours for one day cannot exceed 24.';
+    if (otherRegularTotal + cellRegularTotal > 9) {
+      return 'Regular hours across all projects cannot exceed 9 for one day. Mark the extra hours as overtime.';
+    }
+
     return null;
   }
 
@@ -554,16 +593,44 @@ export class Timesheet implements OnInit {
     }));
   }
 
-  private modalToPayload(modal: EntryModalState): TimesheetEntryPayload {
+  private rowToPayload(row: CellRowState, projectId: string, date: string): TimesheetEntryPayload {
     return {
-      projectId: modal.projectId,
-      workDate: modal.date,
-      hours: Number(modal.hours),
-      workType: modal.workType,
-      location: locationForWorkType(modal.workType),
-      task: modal.task.trim(),
-      isOvertime: modal.isOvertime,
-      isNightDifferential: modal.isNightDifferential,
+      projectId,
+      workDate: date,
+      hours: Number(row.hours) || 0,
+      workType: row.workType,
+      location: locationForWorkType(row.workType),
+      task: row.task.trim(),
+      isOvertime: row.isOvertime,
+      isNightDifferential: row.isNightDifferential,
+    };
+  }
+
+  private entryToRow(entry: TimesheetDayEntry): CellRowState {
+    return {
+      localId: entry.localId,
+      entryId: entry.entryId,
+      hours: entry.hours,
+      workType: entry.workType,
+      task: entry.task,
+      isOvertime: entry.isOvertime,
+      isNightDifferential: entry.isNightDifferential,
+      status: entry.status,
+      rejectionReason: entry.rejectionReason,
+      readonly: this.isEntryReadonly(entry),
+    };
+  }
+
+  private blankRow(): CellRowState {
+    return {
+      localId: crypto.randomUUID?.() ?? `entry-${Date.now()}-${Math.random()}`,
+      hours: null,
+      workType: 'REGULAR',
+      task: '',
+      isOvertime: false,
+      isNightDifferential: false,
+      status: 'DRAFT',
+      readonly: false,
     };
   }
 }

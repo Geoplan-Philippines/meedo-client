@@ -46,7 +46,8 @@
             <span class="top-notice--locked">
               <i class="pi pi-lock" aria-hidden="true"></i> Period locked
             </span>
-          } @else if (hasSubmittedEntries()) {
+          }
+          @if (hasSubmittedEntries()) {
             <button
               pButton
               type="button"
@@ -188,6 +189,7 @@
                         <col class="col-w-flag" />
                         <col class="col-w-flag" />
                         <col class="col-w-status" />
+                        <col class="col-w-actions" />
                       </colgroup>
                       <thead>
                         <tr>
@@ -199,6 +201,7 @@
                           <th scope="col" class="col-flag">OT</th>
                           <th scope="col" class="col-flag">ND</th>
                           <th scope="col">Status</th>
+                          <th scope="col" class="col-actions">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -231,6 +234,39 @@
                               <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
                               @if (entry.rejectionReason) {
                                 <small class="rejection-note">{{ entry.rejectionReason }}</small>
+                              }
+                            </td>
+                            <td class="col-actions td-actions">
+                              @if (isEntryActionable(entry)) {
+                                <button
+                                  pButton
+                                  type="button"
+                                  [text]="true"
+                                  severity="danger"
+                                  size="small"
+                                  icon="pi pi-times"
+                                  (click)="rejectEntry(entry)"
+                                  [disabled]="isEntryApproving(entry) || isRejecting()"
+                                  [attr.aria-label]="'Reject entry for ' + formatDayHeader(group.date)"
+                                  pTooltip="Reject"
+                                  tooltipPosition="top"
+                                ></button>
+                                <button
+                                  pButton
+                                  type="button"
+                                  [text]="true"
+                                  severity="success"
+                                  size="small"
+                                  icon="pi pi-check"
+                                  (click)="approveEntry(entry)"
+                                  [loading]="isEntryApproving(entry)"
+                                  [disabled]="isRejecting()"
+                                  [attr.aria-label]="'Approve entry for ' + formatDayHeader(group.date)"
+                                  pTooltip="Approve"
+                                  tooltipPosition="top"
+                                ></button>
+                              } @else {
+                                <span class="no-value">—</span>
                               }
                             </td>
                           </tr>
