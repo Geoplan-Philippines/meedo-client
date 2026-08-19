@@ -296,8 +296,9 @@ export class Timesheet implements OnInit {
     return trimNumber(Number(hours) || 0);
   }
 
+  /** Determines row-level read-only state when mapping existing entries in entryToRow(). */
   isEntryReadonly(entry: TimesheetDayEntry): boolean {
-    // Draft, rejected, and submitted (pending) entries stay editable; approved or locked entries are read-only.
+    // Draft, rejected, and submitted (pending) entries stay editable; approved, locked, or future-dated entries are read-only.
     const isFuture = entry.date > this.todayKey;
     return this.isLocked() || isFuture || entry.status === 'APPROVED';
   }

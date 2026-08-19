@@ -39,7 +39,6 @@
       @let leave = leaveHours();
       <strong class="hours-value">{{ leave > 0 ? (leave | number: '1.0-2') + 'h' : '—' }}</strong>
     </div>
-    <span class="hours-divider" aria-hidden="true"></span>
     <div class="hours-item">
       <span class="hours-label">ND</span>
       @let nd = ndHours();
