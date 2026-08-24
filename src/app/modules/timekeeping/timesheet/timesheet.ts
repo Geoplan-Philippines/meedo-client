@@ -168,7 +168,8 @@ export class Timesheet implements OnInit {
   readonly totalHours = computed(() => this.sumAllHours(() => true));
   readonly regularHours = computed(() => this.sumAllHours((entry) => !entry.isOvertime && !entry.isNightDifferential && !['LEAVE', 'OFFSET'].includes(entry.workType)));
   readonly overtimeHours = computed(() => this.sumAllHours((entry) => entry.isOvertime));
-  readonly leaveNightHours = computed(() => this.sumAllHours((entry) => entry.isNightDifferential || entry.workType === 'LEAVE'));
+  readonly leaveHours = computed(() => this.sumAllHours((entry) => entry.workType === 'LEAVE'));
+  readonly ndHours = computed(() => this.sumAllHours((entry) => entry.isNightDifferential));
   readonly offsetHours = computed(() => this.sumAllHours((entry) => entry.workType === 'OFFSET'));
 
   readonly dailyTotals = computed(() => {
@@ -216,6 +217,10 @@ export class Timesheet implements OnInit {
 
   isToday(day: Date): boolean {
     return toDateInputValue(day) === this.todayKey;
+  }
+
+  isFuture(day: Date): boolean {
+    return toDateInputValue(day) > this.todayKey;
   }
 
   onWeekChange(date: Date | Date[] | null): void {
@@ -291,9 +296,11 @@ export class Timesheet implements OnInit {
     return trimNumber(Number(hours) || 0);
   }
 
+  /** Determines row-level read-only state when mapping existing entries in entryToRow(). */
   isEntryReadonly(entry: TimesheetDayEntry): boolean {
-    // Draft, rejected, and submitted (pending) entries stay editable; approved or locked entries are read-only.
-    return this.isLocked() || entry.status === 'APPROVED';
+    // Draft, rejected, and submitted (pending) entries stay editable; approved, locked, or future-dated entries are read-only.
+    const isFuture = entry.date > this.todayKey;
+    return this.isLocked() || isFuture || entry.status === 'APPROVED';
   }
 
   statusBadgeClass(status: TimesheetEntryStatus): string {
@@ -389,9 +396,15 @@ export class Timesheet implements OnInit {
   openEntryCellModal(projectId: string, day: Date): void {
     const date = toDateInputValue(day);
     const existing = this.entriesForCell(projectId, day);
-    const locked = this.isLocked();
+    const isFuture = date > this.todayKey;
+    const locked = this.isLocked() || isFuture;
 
-    if (existing.length === 0 && locked) return;
+    if (existing.length === 0 && locked) {
+      if (isFuture && !this.isLocked()) {
+        this.messageService.add({ severity: 'info', summary: 'Future Date', detail: 'You cannot log hours for future dates.' });
+      }
+      return;
+    }
 
     this.entrySaveAttempted.set(false);
     const rows = existing.length > 0 ? existing.map((entry) => this.entryToRow(entry)) : [this.blankRow()];

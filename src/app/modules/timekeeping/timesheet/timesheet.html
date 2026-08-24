@@ -35,9 +35,14 @@
       <strong class="hours-value">{{ overtime > 0 ? (overtime | number: '1.0-2') + 'h' : '—' }}</strong>
     </div>
     <div class="hours-item">
-      <span class="hours-label">Leave / ND</span>
-      @let leaveNight = leaveNightHours();
-      <strong class="hours-value">{{ leaveNight > 0 ? (leaveNight | number: '1.0-2') + 'h' : '—' }}</strong>
+      <span class="hours-label">Leave</span>
+      @let leave = leaveHours();
+      <strong class="hours-value">{{ leave > 0 ? (leave | number: '1.0-2') + 'h' : '—' }}</strong>
+    </div>
+    <div class="hours-item">
+      <span class="hours-label">ND</span>
+      @let nd = ndHours();
+      <strong class="hours-value">{{ nd > 0 ? (nd | number: '1.0-2') + 'h' : '—' }}</strong>
     </div>
     <div class="hours-item">
       <span class="hours-label">Offset</span>
@@ -71,7 +76,7 @@
         <div class="grid-row grid-row--head" role="row">
           <span class="grid-cell grid-cell--label" role="columnheader">Project</span>
           @for (day of weekDays(); track day.toISOString()) {
-            <span class="grid-cell grid-cell--day" role="columnheader" [class.grid-cell--today]="isToday(day)">
+            <span class="grid-cell grid-cell--day" role="columnheader" [class.grid-cell--today]="isToday(day)" [class.grid-cell--future]="isFuture(day)">
               <strong>{{ day | date: 'EEE' }}</strong>
               <small>{{ day | date: 'M/d' }}</small>
             </span>
@@ -93,6 +98,7 @@
                 [class.grid-cell--has-entries]="cellEntries.length > 0"
                 [class.grid-cell--filled]="cellEntries.length > 0"
                 [class.grid-cell--today]="isToday(day)"
+                [class.grid-cell--future]="isFuture(day)"
                 (click)="openEntryCellModal(projectId, day)"
               >
                 @if (cellEntries.length > 0) {

@@ -423,6 +423,16 @@ button.grid-cell--value:hover {
   color: var(--color-primary);
 }
 
+.grid-cell--future {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+}
+
+button.grid-cell--value.grid-cell--future:hover {
+  background: transparent;
+  color: inherit;
+}
+
 .grid-cell--actions {
   padding: 0.35rem;
 }

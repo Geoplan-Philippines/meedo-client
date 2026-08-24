@@ -25,12 +25,22 @@ export class TimesheetService {
   private readonly baseUrl = `${environment.apiBaseUrl}/timekeeping/timesheet`;
 
   getEntries(periodStart: string, periodEnd: string) {
-    return this.http
-      .get<PaginatedApiResponse<TimesheetEntry>>(`${this.baseUrl}/entries`, {
-        params: { periodStart, periodEnd },
-        withCredentials: true,
-      })
-      .pipe(map((response) => ({ data: response.data })));
+    return this.fetchEntriesPage(periodStart, periodEnd, 1).pipe(
+      expand((response) =>
+        response.meta.page < response.meta.lastPage
+          ? this.fetchEntriesPage(periodStart, periodEnd, response.meta.page + 1)
+          : EMPTY,
+      ),
+      reduce((all, response) => all.concat(response.data), [] as TimesheetEntry[]),
+      map((entries) => ({ data: entries }))
+    );
+  }
+
+  private fetchEntriesPage(periodStart: string, periodEnd: string, page: number) {
+    return this.http.get<PaginatedApiResponse<TimesheetEntry>>(`${this.baseUrl}/entries`, {
+      params: { periodStart, periodEnd, page, limit: 50 },
+      withCredentials: true,
+    });
   }
 
   createEntry(payload: TimesheetEntryPayload) {
