@@ -78,10 +78,14 @@ export class TimesheetService {
       ),
       reduce((all, response) => all.concat(response.data), [] as TimesheetProject[]),
       map((projects) =>
-        projects.map((project) => ({
-          ...project,
-          displayName: `${project.customerName} — ${project.workOrderNumber}`,
-        })),
+        projects.map((project) => {
+          const customerName = project.customerName?.trim() || project.client?.customerName?.trim() || '';
+          return {
+            ...project,
+            customerName,
+            displayName: customerName ? `${customerName} — ${project.workOrderNumber}` : project.workOrderNumber,
+          };
+        }),
       ),
     );
   }

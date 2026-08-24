@@ -19,11 +19,14 @@ export type TimesheetWorkType =
 
 export interface TimesheetProject {
   id: string;
-  customerName: string;
+  customerName?: string;
   workOrderNumber: string;
   status: string;
   reportedDate?: string | null;
   displayName?: string;
+  client?: {
+    customerName?: string;
+  } | null;
 }
 
 export interface TimesheetPerson {

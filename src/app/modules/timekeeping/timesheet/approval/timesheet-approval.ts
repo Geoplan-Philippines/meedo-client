@@ -428,7 +428,9 @@ export class TimesheetApproval implements OnInit {
 
   projectLabel(entry: TimesheetEntry): string {
     if (!entry.project) return '—';
-    return `${entry.project.customerName} — ${entry.project.workOrderNumber}`;
+    const customer = entry.project.customerName?.trim() || entry.project.client?.customerName?.trim();
+    const workOrder = entry.project.workOrderNumber?.trim() || '';
+    return customer ? `${customer} — ${workOrder}` : (workOrder || '—');
   }
 
   approvedBy(entry: TimesheetEntry): string {

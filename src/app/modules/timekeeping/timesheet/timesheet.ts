@@ -264,7 +264,9 @@ export class Timesheet implements OnInit {
   }
 
   projectName(projectId: string | null): string {
-    return this.projects().find((project) => project.id === projectId)?.customerName ?? 'Unknown project';
+    if (!projectId) return 'Timesheet';
+    const project = this.projects().find((p) => p.id === projectId);
+    return project?.customerName || project?.client?.customerName || 'Unknown project';
   }
 
   projectWorkOrder(projectId: string | null): string {
@@ -686,12 +688,14 @@ function formatStatusLabel(status: TimesheetEntryStatus): string {
 }
 
 function projectNameFromList(projects: TimesheetProject[], projectId: string | null): string {
-  return projects.find((project) => project.id === projectId)?.customerName ?? 'Timesheet';
+  const project = projects.find((p) => p.id === projectId);
+  return project?.customerName || project?.client?.customerName || 'Timesheet';
 }
 
 function formatProjectLabel(project: TimesheetProject): string {
+  const customerName = project.customerName?.trim() || project.client?.customerName?.trim();
   const workOrder = project.workOrderNumber?.trim() || 'No Work Order';
-  return `${project.customerName} — ${workOrder}`;
+  return customerName ? `${customerName} — ${workOrder}` : workOrder;
 }
 
 function trimNumber(value: number): string {

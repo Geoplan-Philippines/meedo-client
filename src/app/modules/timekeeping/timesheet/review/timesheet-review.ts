@@ -294,7 +294,7 @@ export class TimesheetReview implements OnInit {
   }
 
   projectLabel(entry: TimesheetEntry): string {
-    return entry.project?.customerName ?? '—';
+    return entry.project?.customerName || entry.project?.client?.customerName || '—';
   }
 
   workOrderLabel(entry: TimesheetEntry): string {
