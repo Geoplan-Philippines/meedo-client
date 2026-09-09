@@ -20,7 +20,7 @@
 } @else if (loadState() === 'error') {
   <div class="detail-missing" role="alert">
     <div class="missing-icon missing-icon--error" aria-hidden="true"><i class="pi pi-exclamation-triangle"></i></div>
-    <p class="missing-title">Couldn't load this ticket</p>
+    <p class="missing-title">Couldn't load this task</p>
     <p class="missing-body">
       Something went wrong while loading it{{ loadErrorStatus() ? ' (error ' + loadErrorStatus() + ')' : '' }}. Check your connection and try again.
     </p>
@@ -29,7 +29,7 @@
         <i class="pi pi-refresh" aria-hidden="true"></i> Try again
       </button>
       <a routerLink="/tickets" class="missing-link">
-        <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
+        <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to all tasks
       </a>
     </div>
   </div>
@@ -37,9 +37,13 @@
   <div class="detail-page">
     <header class="detail-topbar">
       <nav class="crumbs" aria-label="Breadcrumb">
-        <a routerLink="/tickets" class="crumb-link">Tickets</a>
+        <a routerLink="/tickets" class="crumb-link">All tasks</a>
+        @if (t.project; as project) {
+          <i class="pi pi-angle-right crumb-sep" aria-hidden="true"></i>
+          <a [routerLink]="['/projects', project.id, 'tasks']" class="crumb-link">{{ project.name }}</a>
+        }
         <i class="pi pi-angle-right crumb-sep" aria-hidden="true"></i>
-        <span class="crumb-num">#{{ t.ticketNumber }}</span>
+        <span class="crumb-num">{{ ticketKey(t) }}</span>
         <span class="crumb-title" [title]="t.title">{{ t.title }}</span>
       </nav>
     </header>
@@ -65,7 +69,7 @@
           [value]="t.description ?? ''"
           [upload]="uploadAttachment"
           placeholder="Add description…"
-          ariaLabel="Ticket description"
+          ariaLabel="Task description"
           (contentSave)="onDescriptionSave($event)"
         />
 
@@ -133,14 +137,30 @@
           <div class="aside-row aside-row--top">
             <span class="aside-key">Project</span>
             <button class="aside-edit aside-edit--wrap" type="button" (click)="projectPop.toggle($event)" aria-haspopup="true">
-              @if (t.project) {
+              @if (t.project; as project) {
                 <span class="project-val">
-                  <span class="project-name">{{ t.project.customerName }}</span>
-                  <span class="project-wo">{{ t.project.workOrderNumber }}</span>
+                  <span class="project-name">{{ project.name }}</span>
+                  <span class="project-wo">{{ project.key }}</span>
                 </span>
               } @else {
                 <span class="edit-val muted">Set project</span>
               }
+              <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="aside-row aside-row--top">
+            <span class="aside-key">Work order</span>
+            <button class="aside-edit aside-edit--wrap" type="button" (click)="workOrderPop.toggle($event)" aria-haspopup="true">
+              @if (t.workOrder; as workOrder) {
+                <span class="project-val">
+                  <span class="project-name">{{ workOrder.customerName }}</span>
+                  <span class="project-wo">{{ workOrder.workOrderNumber }}</span>
+                </span>
+              } @else {
+                <span class="edit-val muted">Set work order</span>
+              }
+              <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
             </button>
           </div>
 
@@ -177,7 +197,7 @@
           @if (isOverdue()) {
             <p class="aside-overdue-note" role="status">
               <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-              This ticket is overdue.
+              This task is overdue.
             </p>
           }
 
@@ -197,21 +217,21 @@
                   <a
                     class="link-row"
                     [routerLink]="['/tickets', lt.id]"
-                    [title]="'#' + lt.ticketNumber + ' · ' + lt.title"
+                    [title]="ticketKey(lt) + ' · ' + lt.title"
                   >
                     <span
                       class="status-dot"
                       [style.background-color]="safeStatusColor(lt.ticketStatus?.color)"
                       aria-hidden="true"
                     ></span>
-                    <span class="link-num">#{{ lt.ticketNumber }}</span>
+                    <span class="link-num">{{ ticketKey(lt) }}</span>
                     <span class="link-title">{{ lt.title }}</span>
                   </a>
                   <button
                     class="link-remove"
                     type="button"
                     (click)="unlink(lt)"
-                    [attr.aria-label]="'Remove relation to ticket #' + lt.ticketNumber"
+                    [attr.aria-label]="'Remove relation to task ' + ticketKey(lt)"
                   >
                     <i class="pi pi-times" aria-hidden="true"></i>
                   </button>
@@ -223,6 +243,25 @@
           <button class="aside-add" type="button" (click)="linkPop.toggle($event)" aria-haspopup="true">
             <i class="pi pi-plus" aria-hidden="true"></i>
             <span>{{ linkedTickets().length ? 'Add another' : 'Add a relation' }}</span>
+          </button>
+        </section>
+
+        <section class="aside-group">
+          <h2 class="aside-label">Actions</h2>
+          @if (t.isArchived) {
+            <button class="aside-action" type="button" (click)="restoreTicket()">
+              <i class="pi pi-replay" aria-hidden="true"></i>
+              <span>Restore task</span>
+            </button>
+          } @else {
+            <button class="aside-action" type="button" (click)="archiveTicket()">
+              <i class="pi pi-archive" aria-hidden="true"></i>
+              <span>Archive task</span>
+            </button>
+          }
+          <button class="aside-action aside-action--danger" type="button" (click)="deleteTicket()">
+            <i class="pi pi-trash" aria-hidden="true"></i>
+            <span>Delete task</span>
           </button>
         </section>
       </aside>
@@ -315,26 +354,48 @@
       <input type="text" placeholder="Search projects…" aria-label="Search projects" [value]="projectSearch()" (input)="projectSearch.set($any($event.target).value)" />
     </div>
     <ul class="pick-list pick-list--scroll" role="menu">
-      @if (ticket()?.projectId) {
+      @for (project of filteredProjects(); track project.id) {
         <li>
-          <button class="pick-opt pick-clear" type="button" (click)="clearProject(); projectPop.hide()">
-            <i class="pi pi-times" aria-hidden="true"></i>
-            <span class="pick-label">Clear project</span>
-          </button>
-        </li>
-      }
-      @for (p of filteredProjects(); track p.id) {
-        <li>
-          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.projectId === p.id" (click)="setProject(p); projectPop.hide()">
+          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.projectId === project.id" (click)="setProject(project); projectPop.hide()">
             <span class="pick-stack">
-              <span class="pick-label">{{ p.customerName }}</span>
-              <span class="pick-sub">{{ p.workOrderNumber }}</span>
+              <span class="pick-label">{{ project.name }}</span>
+              <span class="pick-sub">{{ project.key }}</span>
             </span>
-            @if (ticket()?.projectId === p.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+            @if (ticket()?.projectId === project.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
           </button>
         </li>
       } @empty {
         <li class="pick-empty">No projects</li>
+      }
+    </ul>
+  </p-popover>
+
+  <p-popover #workOrderPop styleClass="detail-pop" (onHide)="workOrderSearch.set('')">
+    <div class="pick-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input type="text" placeholder="Search work orders…" aria-label="Search work orders" [value]="workOrderSearch()" (input)="workOrderSearch.set($any($event.target).value)" />
+    </div>
+    <ul class="pick-list pick-list--scroll" role="menu">
+      @if (ticket()?.workOrderId) {
+        <li>
+          <button class="pick-opt pick-clear" type="button" (click)="clearWorkOrder(); workOrderPop.hide()">
+            <i class="pi pi-times" aria-hidden="true"></i>
+            <span class="pick-label">Clear work order</span>
+          </button>
+        </li>
+      }
+      @for (wo of filteredWorkOrders(); track wo.id) {
+        <li>
+          <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.workOrderId === wo.id" (click)="setWorkOrder(wo); workOrderPop.hide()">
+            <span class="pick-stack">
+              <span class="pick-label">{{ wo.customerName }}</span>
+              <span class="pick-sub">{{ wo.workOrderNumber }}</span>
+            </span>
+            @if (ticket()?.workOrderId === wo.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
+          </button>
+        </li>
+      } @empty {
+        <li class="pick-empty">No work orders</li>
       }
     </ul>
   </p-popover>
@@ -388,8 +449,8 @@
       <i class="pi pi-search" aria-hidden="true"></i>
       <input
         type="text"
-        placeholder="Search tickets…"
-        aria-label="Search tickets to relate"
+        placeholder="Search tasks…"
+        aria-label="Search tasks to relate"
         [value]="linkSearch()"
         (input)="linkSearch.set($any($event.target).value)"
       />
@@ -401,23 +462,23 @@
             <span class="status-dot" [style.background-color]="safeStatusColor(t.ticketStatus?.color)" aria-hidden="true"></span>
             <span class="pick-stack">
               <span class="pick-label">{{ t.title }}</span>
-              <span class="pick-sub">#{{ t.ticketNumber }}</span>
+              <span class="pick-sub">{{ ticketKey(t) }}</span>
             </span>
           </button>
         </li>
       } @empty {
         
-        <li class="pick-empty">{{ linkSearch().trim() ? 'No tickets found' : 'Search to add a relation' }}</li>
+        <li class="pick-empty">{{ linkSearch().trim() ? 'No tasks found' : 'Search to add a relation' }}</li>
       }
     </ul>
   </p-popover>
 } @else {
   <div class="detail-missing">
     <div class="missing-icon" aria-hidden="true"><i class="pi pi-inbox"></i></div>
-    <p class="missing-title">Ticket not found</p>
+    <p class="missing-title">Task not found</p>
     <p class="missing-body">It may have been removed, or the link is out of date.</p>
     <a routerLink="/tickets" class="missing-link">
-      <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
+      <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to all tasks
     </a>
   </div>
 }

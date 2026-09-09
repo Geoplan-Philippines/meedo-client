@@ -1,0 +1,228 @@
+<p-toast />
+
+<div class="project-detail">
+  @if (isLoading()) {
+    <div class="detail-loading">Loading project…</div>
+  } @else if (project(); as p) {
+    <header class="detail-header">
+      <div class="detail-header-main">
+        <a routerLink="/projects" class="back-link">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+          Projects
+        </a>
+
+        <div class="title-row">
+          <span class="project-key" [class.project-key--internal]="p.isInternal">{{ p.key }}</span>
+          <div class="title-stack">
+            <h1 class="project-title">{{ p.name }}</h1>
+            <div class="meta-row">
+              <span class="state-pill" [style.--state-color]="stateColor(p.state)">
+                <i class="pi" [ngClass]="stateIcon(p.state)" aria-hidden="true"></i>
+                {{ stateLabel(p.state) }}
+              </span>
+              <span class="meta-dot" aria-hidden="true">·</span>
+              <span>{{ priorityLabel(p.priority) }}</span>
+              <span class="meta-dot" aria-hidden="true">·</span>
+              <span>{{ taskCount() }} tasks</span>
+              @if (p.isInternal) {
+                <span class="meta-dot" aria-hidden="true">·</span>
+                <span class="internal-tag">Internal</span>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button pButton type="button" label="Edit project" icon="pi pi-pencil" severity="secondary" (click)="openEditDialog()"></button>
+    </header>
+
+    <section class="detail-meta">
+      <div class="meta-card">
+        <span class="meta-label">Lead</span>
+        <span class="meta-value">
+          @if (p.lead) {
+            <span class="lead-cell">
+              <span class="avatar avatar-sm" [class]="leadAvatarClass()">{{ leadInitials() }}</span>
+              {{ leadName() }}
+            </span>
+          } @else {
+            <span class="muted">Unassigned</span>
+          }
+        </span>
+      </div>
+      <div class="meta-card">
+        <span class="meta-label">Members</span>
+        <span class="meta-value">{{ memberCount() }}</span>
+      </div>
+      <div class="meta-card">
+        <span class="meta-label">Start</span>
+        <span class="meta-value">
+          @if (p.startDate) {
+            {{ p.startDate | date: 'MMM d, y' }}
+          } @else {
+            <span class="muted">Not set</span>
+          }
+        </span>
+      </div>
+      <div class="meta-card">
+        <span class="meta-label">Target</span>
+        <span class="meta-value" [class.overdue]="isOverdue(p)">
+          @if (p.targetDate) {
+            {{ p.targetDate | date: 'MMM d, y' }}
+          } @else {
+            <span class="muted">Not set</span>
+          }
+        </span>
+      </div>
+      @if (p.workOrder) {
+        <div class="meta-card meta-card--wide">
+          <span class="meta-label">Work order</span>
+          <span class="meta-value">{{ p.workOrder.customerName }} · {{ p.workOrder.workOrderNumber }}</span>
+        </div>
+      }
+      @if (p.description) {
+        <div class="meta-card meta-card--wide">
+          <span class="meta-label">Description</span>
+          <span class="meta-value meta-value--wrap">{{ p.description }}</span>
+        </div>
+      }
+    </section>
+
+    <nav class="detail-tabs" aria-label="Project sections">
+      <a
+        routerLink="tasks"
+        routerLinkActive="detail-tab--active"
+        class="detail-tab"
+        [routerLinkActiveOptions]="{ exact: false }"
+      >
+        Tasks
+      </a>
+    </nav>
+
+    <div class="detail-content">
+      <router-outlet />
+    </div>
+  } @else {
+    <div class="detail-loading">
+      @if (loadError() === 'forbidden') {
+        Couldn't load this project — your session may not have an active organization.
+      } @else if (loadError() === 'error') {
+        Couldn't load this project. Check that the backend is running, then try again.
+      } @else {
+        Project not found.
+      }
+      <a routerLink="/projects" class="back-link detail-error-link">Back to projects</a>
+    </div>
+  }
+</div>
+
+<p-dialog
+  header="Edit project"
+  [visible]="editDialogVisible()"
+  (visibleChange)="editDialogVisible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '32rem', maxWidth: '95vw' }"
+>
+  <form [formGroup]="editForm" class="project-form" (ngSubmit)="saveProject()">
+    <div class="form-field">
+      <label class="form-label" for="edit-project-name">Name</label>
+      <input id="edit-project-name" pInputText formControlName="name" class="w-full" />
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="edit-project-description">Description</label>
+      <textarea id="edit-project-description" pTextarea formControlName="description" rows="3" class="w-full"></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="edit-project-state">Status</label>
+        <p-select
+          inputId="edit-project-state"
+          formControlName="state"
+          [options]="states"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="edit-project-priority">Priority</label>
+        <p-select
+          inputId="edit-project-priority"
+          formControlName="priority"
+          [options]="priorities"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full"
+          [showClear]="true"
+          appendTo="body"
+        />
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="edit-project-lead">Project lead</label>
+      <p-select
+        inputId="edit-project-lead"
+        formControlName="leadMemberId"
+        [options]="members()"
+        optionLabel="displayName"
+        optionValue="id"
+        placeholder="Unassigned"
+        class="w-full"
+        [loading]="isLoadingDropdowns()"
+        [showClear]="true"
+        appendTo="body"
+      />
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="edit-project-members">Members</label>
+      <p-multiSelect
+        inputId="edit-project-members"
+        formControlName="memberIds"
+        [options]="members()"
+        optionLabel="displayName"
+        optionValue="id"
+        class="w-full"
+        [loading]="isLoadingDropdowns()"
+        appendTo="body"
+        display="chip"
+      />
+    </div>
+
+    <div class="form-row">
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="edit-project-start">Start date</label>
+        <p-datePicker inputId="edit-project-start" formControlName="startDate" class="w-full" appendTo="body" />
+      </div>
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="edit-project-target">Target date</label>
+        <p-datePicker inputId="edit-project-target" formControlName="targetDate" class="w-full" appendTo="body" />
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="edit-project-work-order">Work order</label>
+      <p-select
+        inputId="edit-project-work-order"
+        formControlName="workOrderId"
+        [options]="workOrders()"
+        optionLabel="displayName"
+        optionValue="id"
+        placeholder="None"
+        class="w-full"
+        [showClear]="true"
+        appendTo="body"
+      />
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <button pButton type="button" label="Cancel" severity="secondary" (click)="closeEditDialog()"></button>
+    <button pButton type="button" label="Save changes" [loading]="isSaving()" (click)="saveProject()"></button>
+  </ng-template>
+</p-dialog>

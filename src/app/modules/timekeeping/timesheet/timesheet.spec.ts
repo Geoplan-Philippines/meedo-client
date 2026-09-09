@@ -59,7 +59,7 @@ describe('Timesheet', () => {
                 id: 'entry-1',
                 organizationId: 'org-1',
                 userId: 'user-1',
-                projectId: payload.projectId,
+                workOrderId: payload.workOrderId,
                 workDate: payload.workDate,
                 hours: payload.hours,
                 location: payload.location ?? 'OFC - DW',

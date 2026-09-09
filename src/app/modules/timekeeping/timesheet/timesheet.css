@@ -777,8 +777,8 @@ button.grid-cell--value.grid-cell--future:hover {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
-.activity-item--success .activity-dot { background: #16a34a; box-shadow: 0 0 0 4px #dcfce7; }
-.activity-item--warning .activity-dot { background: #f97316; box-shadow: 0 0 0 4px #ffedd5; }
+.activity-item--success .activity-dot { background: var(--color-success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-muted-success) 40%, transparent); }
+.activity-item--warning .activity-dot { background: var(--color-warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-muted-warning) 40%, transparent); }
 
 @media (max-width: 768px) {
   .timesheet-page {

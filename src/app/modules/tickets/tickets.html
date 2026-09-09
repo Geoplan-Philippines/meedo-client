@@ -1,17 +1,26 @@
 <p-toast />
 
-<div class="tickets-page">
+<div class="tickets-page" [class.tickets-page--scoped]="isProjectScoped()">
 
+  @if (!isProjectScoped()) {
   <header class="page-header">
     <div>
-      <h1 class="page-title">Tickets</h1>
-      <p class="page-subtitle">Manage and track your support tickets</p>
+      <h1 class="page-title">All tasks</h1>
+      <p class="page-subtitle">Tasks across every project</p>
     </div>
     <button class="add-btn" type="button" (click)="openCreateDialog()">
       <i class="pi pi-plus" aria-hidden="true"></i>
-      <span>Create Ticket</span>
+      <span>Create task</span>
     </button>
   </header>
+  } @else {
+  <div class="scoped-toolbar">
+    <button class="add-btn add-btn--compact" type="button" (click)="openCreateDialog()">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      <span>New task</span>
+    </button>
+  </div>
+  }
 
   <div class="table-card">
     <div class="view-tabs" role="tablist" aria-label="Ticket views">
@@ -141,13 +150,13 @@
         [paginator]="true"
         [rows]="rows()"
         [showCurrentPageReport]="true"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} tickets"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} tasks"
         [rowHover]="true"
         (onLazyLoad)="onLazyLoad($event)"
       >
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="title" scope="col" style="width: 28%">
+            <th pSortableColumn="title" scope="col" style="width: 22%">
               <div class="th-content">Title <p-sortIcon field="title" /></div>
             </th>
             <th scope="col" style="width: 14%">
@@ -156,13 +165,18 @@
             <th pSortableColumn="priority" scope="col" style="width: 14%">
               <div class="th-content">Priority <p-sortIcon field="priority" /></div>
             </th>
-            <th scope="col" class="hide-lg" style="width: 16%">
+            @if (!isProjectScoped()) {
+            <th scope="col" class="hide-lg" style="width: 14%">
               <div class="th-content">Project</div>
             </th>
-            <th scope="col" class="hide-md" style="width: 14%">
+            }
+            <th scope="col" class="hide-lg" style="width: 12%">
+              <div class="th-content">Work order</div>
+            </th>
+            <th scope="col" class="hide-md" style="width: 12%">
               <div class="th-content">Assignees</div>
             </th>
-            <th pSortableColumn="dueDate" scope="col" style="width: 14%">
+            <th pSortableColumn="dueDate" scope="col" style="width: 12%">
               <div class="th-content">Due Date <p-sortIcon field="dueDate" /></div>
             </th>
           </tr>
@@ -174,10 +188,10 @@
               <button
                 class="ticket-title-btn"
                 type="button"
-                [attr.aria-label]="'Open ticket #' + ticket.ticketNumber + ': ' + ticket.title"
+                [attr.aria-label]="'Open task ' + ticketKey(ticket) + ': ' + ticket.title"
               >
                 <span class="ticket-title" [title]="ticket.title">{{ ticket.title }}</span>
-                <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
+                <span class="ticket-number">{{ ticketKey(ticket) }}</span>
               </button>
             </td>
             <td>
@@ -200,11 +214,23 @@
                 {{ ticket.priority | titlecase }}
               </span>
             </td>
+            @if (!isProjectScoped()) {
             <td class="hide-lg">
               @if (ticket.project; as project) {
                 <span class="project-cell">
-                  <span class="project-customer" [title]="project.customerName">{{ project.customerName }}</span>
-                  <span class="project-wo">{{ project.workOrderNumber }}</span>
+                  <span class="project-customer" [title]="project.name">{{ project.name }}</span>
+                  <span class="project-wo">{{ project.key }}</span>
+                </span>
+              } @else {
+                <span class="muted" aria-hidden="true">—</span>
+              }
+            </td>
+            }
+            <td class="hide-lg">
+              @if (ticket.workOrder; as workOrder) {
+                <span class="project-cell">
+                  <span class="project-customer" [title]="workOrder.customerName">{{ workOrder.customerName }}</span>
+                  <span class="project-wo">{{ workOrder.workOrderNumber }}</span>
                 </span>
               } @else {
                 <span class="muted" aria-hidden="true">—</span>
@@ -237,17 +263,17 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="6">
+            <td [attr.colspan]="isProjectScoped() ? 6 : 7">
               <div class="empty-state">
                 <div class="empty-icon" aria-hidden="true">
                   <i class="pi pi-ticket"></i>
                 </div>
-                <p class="empty-title">No tickets found</p>
+                <p class="empty-title">No tasks found</p>
                 <p class="empty-body">
                   @if (searchTerm()) {
-                    No tickets match "{{ searchTerm() }}". Try different keywords.
+                    No tasks match "{{ searchTerm() }}". Try different keywords.
                   } @else {
-                    Get started by creating your first ticket.
+                    Get started by creating your first task.
                   }
                 </p>
               </div>
@@ -364,16 +390,31 @@
         }
       </button>
 
+
+      @if (!isProjectScoped()) {
       <button
         type="button"
         class="compose-pill"
         [class.compose-pill--set]="selectedProject()"
         (click)="projectPop.toggle($event)"
         aria-haspopup="true"
-        [attr.aria-label]="'Project: ' + (selectedProject()?.displayName ?? 'not set')"
+        [attr.aria-label]="'Project: ' + (selectedProject()?.name ?? 'not set')"
+      >
+        <i class="pi pi-folder pill-icon" aria-hidden="true"></i>
+        <span class="pill-label">{{ selectedProject()?.name ?? 'Project' }}</span>
+      </button>
+      }
+
+      <button
+        type="button"
+        class="compose-pill"
+        [class.compose-pill--set]="selectedWorkOrder()"
+        (click)="workOrderPop.toggle($event)"
+        aria-haspopup="true"
+        [attr.aria-label]="'Work order: ' + (selectedWorkOrder()?.displayName ?? 'not set')"
       >
         <i class="pi pi-box pill-icon" aria-hidden="true"></i>
-        <span class="pill-label">{{ selectedProject()?.customerName ?? 'Project' }}</span>
+        <span class="pill-label">{{ selectedWorkOrder()?.customerName ?? 'Work order' }}</span>
       </button>
 
       <button
@@ -412,7 +453,7 @@
         [disabled]="isSaving()"
       />
       <p-button
-        label="Create ticket"
+        label="Create task"
         (onClick)="saveTicket()"
         [loading]="isSaving()"
         [disabled]="!canCreate()"
@@ -541,13 +582,14 @@
   </div>
 </p-popover>
 
+
 <p-popover #projectPop styleClass="filter-popover" (onHide)="projectSearch.set('')">
   <div class="filter-menu">
     <div class="picker-search">
       <i class="pi pi-search" aria-hidden="true"></i>
       <input
         type="text"
-        placeholder="Search projects…"
+        placeholder="Search projects"
         aria-label="Search projects"
         [value]="projectSearch()"
         (input)="projectSearch.set($any($event.target).value)"
@@ -564,8 +606,8 @@
             (click)="setProjectValue(project.id); projectPop.hide()"
           >
             <span class="option-stack">
-              <span class="option-label">{{ project.customerName }}</span>
-              <span class="option-sub">{{ project.workOrderNumber }}</span>
+              <span class="option-label">{{ project.name }}</span>
+              <span class="option-sub">{{ project.key }}</span>
             </span>
             @if (selectedProject()?.id === project.id) {
               <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
@@ -574,6 +616,44 @@
         </li>
       } @empty {
         <li class="filter-empty">No projects found</li>
+      }
+    </ul>
+  </div>
+</p-popover>
+
+<p-popover #workOrderPop styleClass="filter-popover" (onHide)="workOrderSearch.set('')">
+  <div class="filter-menu">
+    <div class="picker-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        type="text"
+        placeholder="Search work orders…"
+        aria-label="Search work orders"
+        [value]="workOrderSearch()"
+        (input)="workOrderSearch.set($any($event.target).value)"
+      />
+    </div>
+    <ul class="filter-list filter-list--scroll" role="menu">
+      @for (workOrder of filteredWorkOrders(); track workOrder.id) {
+        <li>
+          <button
+            class="filter-option"
+            type="button"
+            role="menuitemradio"
+            [attr.aria-checked]="selectedWorkOrder()?.id === workOrder.id"
+            (click)="setWorkOrderValue(workOrder.id); workOrderPop.hide()"
+          >
+            <span class="option-stack">
+              <span class="option-label">{{ workOrder.customerName }}</span>
+              <span class="option-sub">{{ workOrder.workOrderNumber }}</span>
+            </span>
+            @if (selectedWorkOrder()?.id === workOrder.id) {
+              <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="filter-empty">No work orders found</li>
       }
     </ul>
   </div>
@@ -697,7 +777,15 @@
     <div class="form-row">
       <div class="form-field form-field--flex">
         <label class="form-label" for="edit-ticket-project">Project</label>
-        <p-select inputId="edit-ticket-project" formControlName="projectId" [options]="projects()" optionLabel="displayName" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+        <p-select inputId="edit-ticket-project" formControlName="projectId" [options]="projects()" optionLabel="name" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="name,key" appendTo="body">
+          <ng-template let-project pTemplate="item">
+            <span>{{ project.name }} <span class="muted">({{ project.key }})</span></span>
+          </ng-template>
+        </p-select>
+      </div>
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="edit-ticket-work-order">Work order</label>
+        <p-select inputId="edit-ticket-work-order" formControlName="workOrderId" [options]="workOrders()" optionLabel="displayName" optionValue="id" placeholder="Select work order" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
       </div>
       <div class="form-field form-field--flex">
         <label class="form-label" for="edit-ticket-team">Team</label>

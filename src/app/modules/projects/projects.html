@@ -1,0 +1,221 @@
+<p-toast />
+
+<div class="projects-page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">Projects</h1>
+      <p class="page-subtitle">Plan work and track tasks by project</p>
+    </div>
+    <button class="add-btn" type="button" (click)="openCreateDialog()">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      <span>New project</span>
+    </button>
+  </header>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="search-box">
+        <i class="pi pi-search search-icon" aria-hidden="true"></i>
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Search projects…"
+          aria-label="Search projects"
+          [formControl]="searchControl"
+        />
+      </div>
+    </div>
+
+    <p-table
+      #dt
+      [value]="projects()"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="rows()"
+      [totalRecords]="totalRecords()"
+      [loading]="isLoading()"
+      [rowsPerPageOptions]="[10, 20, 50]"
+      (onLazyLoad)="onLazyLoad($event)"
+      styleClass="projects-table"
+      [tableStyle]="{ 'min-width': '56rem' }"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="name" style="width: 38%">Project</th>
+          <th pSortableColumn="state" style="width: 12%">Status</th>
+          <th pSortableColumn="priority" style="width: 12%">Priority</th>
+          <th style="width: 16%">Lead</th>
+          <th style="width: 10%">Tasks</th>
+          <th pSortableColumn="targetDate" style="width: 12%">Target</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-project>
+        <tr class="project-row" (click)="openProject(project)">
+          <td>
+            <div class="project-cell">
+              <span class="project-key" [class.project-key--internal]="project.isInternal">{{ project.key }}</span>
+              <div class="project-meta">
+                <span class="project-name">{{ project.name }}</span>
+                @if (project.isInternal) {
+                  <span class="project-tag">Internal</span>
+                }
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="state-pill" [style.--state-color]="stateColor(project.state)">
+              <i class="pi" [ngClass]="stateIcon(project.state)" aria-hidden="true"></i>
+              {{ stateLabel(project.state) }}
+            </span>
+          </td>
+          <td>
+            <span class="priority-label" [class.muted]="!project.priority">
+              {{ priorityLabel(project.priority) }}
+            </span>
+          </td>
+          <td>
+            @if (project.lead) {
+              <span class="lead-cell">
+                <span class="avatar avatar-sm" [class]="leadAvatarClass(project)">{{ leadInitials(project) }}</span>
+                <span class="lead-name">{{ leadName(project) }}</span>
+              </span>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+          <td>
+            <span class="task-count">{{ project._count.tickets }}</span>
+          </td>
+          <td>
+            @if (project.targetDate) {
+              <span [class.overdue]="isOverdue(project)">{{ project.targetDate | date: 'MMM d, y' }}</span>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="pi pi-folder-open" aria-hidden="true"></i>
+              <p>No projects yet</p>
+              <button class="link-btn" type="button" (click)="openCreateDialog()">Create your first project</button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
+
+<p-dialog
+  header="New project"
+  [visible]="createDialogVisible()"
+  (visibleChange)="createDialogVisible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '32rem', maxWidth: '95vw' }"
+  styleClass="project-dialog"
+>
+  <form [formGroup]="createForm" class="project-form" (ngSubmit)="saveProject()">
+    <div class="form-field">
+      <label class="form-label" for="project-name">Name <span class="req">*</span></label>
+      <input id="project-name" pInputText formControlName="name" class="w-full" placeholder="e.g. Field Operations" />
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="project-description">Description</label>
+      <textarea
+        id="project-description"
+        pTextarea
+        formControlName="description"
+        rows="3"
+        class="w-full"
+        placeholder="What is this project about?"
+      ></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="project-lead">Project lead</label>
+        <p-select
+          inputId="project-lead"
+          formControlName="leadMemberId"
+          [options]="members()"
+          optionLabel="displayName"
+          optionValue="id"
+          placeholder="Optional"
+          class="w-full"
+          [loading]="isLoadingDropdowns()"
+          [showClear]="true"
+          appendTo="body"
+        />
+      </div>
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="project-priority">Priority</label>
+        <p-select
+          inputId="project-priority"
+          formControlName="priority"
+          [options]="priorities"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Optional"
+          class="w-full"
+          [showClear]="true"
+          appendTo="body"
+        />
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="project-members">Members</label>
+      <p-multiSelect
+        inputId="project-members"
+        formControlName="memberIds"
+        [options]="members()"
+        optionLabel="displayName"
+        optionValue="id"
+        placeholder="Optional"
+        class="w-full"
+        [loading]="isLoadingDropdowns()"
+        appendTo="body"
+        display="chip"
+      />
+    </div>
+
+    <div class="form-row">
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="project-start">Start date</label>
+        <p-datePicker inputId="project-start" formControlName="startDate" class="w-full" appendTo="body" />
+      </div>
+      <div class="form-field form-field--flex">
+        <label class="form-label" for="project-target">Target date</label>
+        <p-datePicker inputId="project-target" formControlName="targetDate" class="w-full" appendTo="body" />
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="project-work-order">Work order</label>
+      <p-select
+        inputId="project-work-order"
+        formControlName="workOrderId"
+        [options]="workOrders()"
+        optionLabel="displayName"
+        optionValue="id"
+        placeholder="Optional client work order"
+        class="w-full"
+        [showClear]="true"
+        appendTo="body"
+      />
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <button pButton type="button" label="Cancel" severity="secondary" (click)="closeCreateDialog()"></button>
+    <button pButton type="button" label="Create project" [loading]="isSaving()" (click)="saveProject()"></button>
+  </ng-template>
+</p-dialog>

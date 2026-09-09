@@ -23,6 +23,7 @@ import {
   visibleAssignees as visibleAssigneesUtil,
   extraAssigneeCount as extraAssigneeCountUtil,
   safeStatusColor as safeStatusColorUtil,
+  ticketKey as ticketKeyUtil,
   startOfToday,
 } from '../utils/ticket.utils';
 
@@ -84,6 +85,7 @@ export class Dashboard implements OnInit {
       { key: 'active', label: 'Active', value: views?.active ?? 0, tone: 'default' },
       { key: 'backlog', label: 'Backlog', value: views?.backlog ?? 0, tone: 'default' },
       { key: 'urgent', label: 'Urgent', value: stats?.urgent ?? 0, tone: 'attention' },
+      { key: 'high', label: 'High', value: stats?.high ?? 0, tone: 'attention' },
       { key: 'overdue', label: 'Overdue', value: stats?.overdue ?? 0, tone: 'attention' },
     ];
   });
@@ -209,6 +211,10 @@ export class Dashboard implements OnInit {
 
   safeStatusColor(color?: string | null): string {
     return safeStatusColorUtil(color, 'var(--color-muted)');
+  }
+
+  ticketKey(ticket: Ticket): string {
+    return ticketKeyUtil(ticket);
   }
 
   statusColorOf(ticket: Ticket): string {

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -20,7 +20,7 @@ import { TimesheetService } from '../services/timesheet.service';
 
 @Component({
   selector: 'app-timesheet-review',
-  imports: [CommonModule, FormsModule, ButtonModule, TextareaModule, ToastModule, TooltipModule],
+  imports: [DatePipe, DecimalPipe, FormsModule, ButtonModule, TextareaModule, ToastModule, TooltipModule],
   providers: [MessageService],
   templateUrl: './timesheet-review.html',
   styleUrl: './timesheet-review.css',
@@ -294,11 +294,11 @@ export class TimesheetReview implements OnInit {
   }
 
   projectLabel(entry: TimesheetEntry): string {
-    return entry.project?.customerName || entry.project?.client?.customerName || '—';
+    return entry.workOrder?.customerName || entry.workOrder?.client?.customerName || '—';
   }
 
   workOrderLabel(entry: TimesheetEntry): string {
-    return entry.project?.workOrderNumber ?? '—';
+    return entry.workOrder?.workOrderNumber ?? '—';
   }
 
   getInitials(name: string): string {

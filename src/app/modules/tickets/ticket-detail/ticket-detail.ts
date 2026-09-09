@@ -24,7 +24,8 @@ import { TicketsService } from '../services/tickets.service';
 import { TicketAttachmentsService } from '../services/attachments.service';
 import { TicketCategoriesService } from '../services/ticket-categories.service';
 import { StatusesService } from '../services/statuses.service';
-import { ProjectsService } from '../services/projects.service';
+import { WorkOrdersService } from '../services/work-orders.service';
+import { ProjectsService } from '../../projects/services/projects.service';
 import { MembersService } from '../services/members.service';
 import { TeamsService } from '../../settings/teams/services/teams.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -33,7 +34,8 @@ import { MarkdownEditor } from '../../../shared/ui/markdown-editor/markdown-edit
 
 import { Ticket, TicketRelation, UpdateTicketPayload } from '../models/ticket.model';
 import { Status } from '../models/status.model';
-import { Project } from '../models/projects.model';
+import { Project } from '../../projects/models/project.model';
+import { WorkOrder } from '../models/work-order.model';
 import { OrgMember } from '../models/members.model';
 import { TicketCategory } from '../models/ticket-categories.model';
 import { Team } from '../../settings/teams/models/teams.model';
@@ -43,6 +45,7 @@ import {
   initialsFrom,
   toAssigneeAvatar,
   safeStatusColor as safeStatusColorUtil,
+  ticketKey as ticketKeyUtil,
   startOfToday,
   serializeDueDate,
 } from '../utils/ticket.utils';
@@ -75,6 +78,7 @@ export class TicketDetail {
   private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
+  private readonly workOrdersService = inject(WorkOrdersService);
   private readonly projectsService = inject(ProjectsService);
   private readonly membersService = inject(MembersService);
   private readonly teamsService = inject(TeamsService);
@@ -90,12 +94,14 @@ export class TicketDetail {
 
   readonly statuses = signal<Status[]>([]);
   readonly categories = signal<TicketCategory[]>([]);
+  readonly workOrders = signal<WorkOrder[]>([]);
   readonly projects = signal<Project[]>([]);
   readonly teams = signal<Team[]>([]);
   readonly members = signal<OrgMember[]>([]);
 
   readonly assigneeSearch = signal('');
   readonly projectSearch = signal('');
+  readonly workOrderSearch = signal('');
   readonly linkSearch = signal('');
   readonly linkResults = signal<Ticket[]>([]);
 
@@ -152,7 +158,15 @@ export class TicketDetail {
   readonly filteredProjects = computed(() => {
     const query = this.projectSearch().trim().toLowerCase();
     const list = this.projects();
-    return query ? list.filter((project) => project.displayName.toLowerCase().includes(query)) : list;
+    return query
+      ? list.filter((project) => `${project.name} ${project.key}`.toLowerCase().includes(query))
+      : list;
+  });
+
+  readonly filteredWorkOrders = computed(() => {
+    const query = this.workOrderSearch().trim().toLowerCase();
+    const list = this.workOrders();
+    return query ? list.filter((workOrder) => workOrder.displayName.toLowerCase().includes(query)) : list;
   });
 
   readonly categoryName = computed(() => {
@@ -249,7 +263,10 @@ export class TicketDetail {
     forkJoin({
       statuses: this.statusesService.getAll(),
       categories: this.categoriesService.getAll(),
-      projects: this.projectsService.getAll(),
+      workOrders: this.workOrdersService.getAll(),
+      projects: this.projectsService
+        .getAll({ page: 1, limit: 50, sortField: 'name', sortOrder: 'asc' })
+        .pipe(map((res) => res.data ?? [])),
       teams: organizationId ? this.teamsService.getTeams(organizationId) : of([] as Team[]),
       members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
@@ -258,6 +275,7 @@ export class TicketDetail {
         next: (res) => {
           this.statuses.set(res.statuses);
           this.categories.set(res.categories);
+          this.workOrders.set(res.workOrders);
           this.projects.set(res.projects);
           this.teams.set(res.teams as Team[]);
           this.members.set(res.members);
@@ -328,18 +346,52 @@ export class TicketDetail {
     this.applyPatch({ teamId: team.id }, { teamId: team.id });
   }
 
+  /** Moving projects reallocates the task number — merge the server response on success. */
   setProject(project: Project): void {
+    const previous = this.ticket();
+    if (!previous || previous.projectId === project.id) return;
+
+    this.ticket.set({
+      ...previous,
+      projectId: project.id,
+      project: {
+        id: project.id,
+        name: project.name,
+        key: project.key,
+        state: project.state,
+        isInternal: project.isInternal,
+      },
+    });
+
+    this.ticketsService
+      .updateTicket(previous.id, { projectId: project.id })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => this.ticket.set(updated),
+        error: (err: unknown) => {
+          console.error('Error updating project:', err);
+          this.ticket.set(previous);
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save project' });
+        },
+      });
+  }
+
+  setWorkOrder(workOrder: WorkOrder): void {
     this.applyPatch(
-      { projectId: project.id },
+      { workOrderId: workOrder.id },
       {
-        projectId: project.id,
-        project: { id: project.id, customerName: project.customerName, workOrderNumber: project.workOrderNumber },
+        workOrderId: workOrder.id,
+        workOrder: {
+          id: workOrder.id,
+          customerName: workOrder.customerName,
+          workOrderNumber: workOrder.workOrderNumber,
+        },
       },
     );
   }
 
-  clearProject(): void {
-    this.applyPatch({ projectId: null }, { projectId: undefined, project: null });
+  clearWorkOrder(): void {
+    this.applyPatch({ workOrderId: null }, { workOrderId: undefined, workOrder: null });
   }
 
   setDueDate(date: Date | null): void {
@@ -399,7 +451,8 @@ export class TicketDetail {
       ...existing,
       {
         id: target.id,
-        ticketNumber: target.ticketNumber,
+        number: target.number,
+        project: target.project ? { key: target.project.key } : null,
         title: target.title,
         ticketStatus: target.ticketStatus ?? null,
       },
@@ -478,7 +531,63 @@ export class TicketDetail {
   /** Upload handler for the description editor (paste / drop / attach). Arrow keeps `this`. */
   readonly uploadAttachment = (file: File) => this.attachmentsService.upload(file);
 
+  // ─── Archive / Restore / Delete ─────────────────────────
+  archiveTicket(): void {
+    const t = this.ticket();
+    if (!t) return;
+    this.ticketsService
+      .archiveTicket(t.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.ticket.set({ ...t, isArchived: true });
+          this.messageService.add({ severity: 'success', summary: 'Archived', detail: 'Task archived.' });
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to archive task.' });
+        },
+      });
+  }
+
+  restoreTicket(): void {
+    const t = this.ticket();
+    if (!t) return;
+    this.ticketsService
+      .restoreTicket(t.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.ticket.set({ ...t, isArchived: false });
+          this.messageService.add({ severity: 'success', summary: 'Restored', detail: 'Task restored.' });
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to restore task.' });
+        },
+      });
+  }
+
+  deleteTicket(): void {
+    const t = this.ticket();
+    if (!t) return;
+    this.ticketsService
+      .deleteTicket(t.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Task permanently deleted.' });
+          this.router.navigate(['/tickets']);
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete task.' });
+        },
+      });
+  }
+
   // ─── Helpers ────────────────────────────────────────────
+  ticketKey(ticket: Ticket | TicketRelation): string {
+    return ticketKeyUtil(ticket);
+  }
+
   safeStatusColor(color?: string | null): string {
     return safeStatusColorUtil(color);
   }

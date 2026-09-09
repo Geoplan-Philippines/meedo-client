@@ -1,20 +1,17 @@
 import { Routes } from '@angular/router';
-import { Tickets } from './tickets';
-import { Dashboard } from './dashboard/dashboard';
-import { TicketDetail } from './ticket-detail/ticket-detail';
 
 export const ticketsRoutes: Routes = [
   {
     path: '',
-    component: Tickets,
+    loadComponent: () => import('./tickets').then(m => m.Tickets),
   },
   {
     path: 'dashboard',
-    component: Dashboard,
+    loadComponent: () => import('./dashboard/dashboard').then(m => m.Dashboard),
   },
   {
     // Keep last so 'dashboard' isn't captured by :id.
     path: ':id',
-    component: TicketDetail,
+    loadComponent: () => import('./ticket-detail/ticket-detail').then(m => m.TicketDetail),
   },
 ];

@@ -6,7 +6,7 @@ export interface OrgMember {
   displayName: string;
   user: {
     id: string;
-    name: string;
+    name: string | null;
     email: string;
     image: string | null;
   };

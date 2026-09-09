@@ -1,5 +1,12 @@
-import { Ticket, TicketAssignee } from '../models/ticket.model';
+import { Ticket, TicketAssignee, TicketRelation } from '../models/ticket.model';
 import { getAvatarClass } from '../../../shared/utils/avatar.utils';
+
+/** Human-facing task identifier, e.g. "ENG-12". Mirrors the server's `formatTicketKey`.
+ *  Falls back to a bare number when the project relation wasn't loaded. */
+export function ticketKey(ticket: Pick<Ticket, 'number' | 'project'> | TicketRelation): string {
+  const key = ticket.project?.key;
+  return key ? `${key}-${ticket.number}` : `#${ticket.number}`;
+}
 
 /** View-model for a rendered assignee avatar (initials + colour class + name). */
 export interface AssigneeAvatar {

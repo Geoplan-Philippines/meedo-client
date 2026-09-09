@@ -74,7 +74,7 @@ function endAfterStart(group: AbstractControl): ValidationErrors | null {
     TooltipModule,
   ],
   templateUrl: './shifts.html',
-  styleUrl: './shifts.css',
+  styleUrls: ['./shifts.css', '../shared/attendance-time.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Shifts implements OnInit {

@@ -8,6 +8,20 @@
   gap: 1.5rem;
 }
 
+.tickets-page--scoped {
+  padding: 1rem 2.5rem 2rem;
+  gap: 1rem;
+}
+
+.scoped-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.add-btn--compact {
+  padding: 0.5rem 1rem;
+}
+
 /* ─── Header ───────────────────────────────────────────── */
 .page-header {
   display: flex;

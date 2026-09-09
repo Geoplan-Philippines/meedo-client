@@ -166,7 +166,7 @@
                 <span class="prio-dot" [style.background]="priorityColor(t.priority)" aria-hidden="true"></span>
                 <span class="attn-main">
                   <span class="attn-title">{{ t.title }}</span>
-                  <span class="attn-number">#{{ t.ticketNumber }}</span>
+                  <span class="attn-number">{{ ticketKey(t) }}</span>
                 </span>
                 @if (t.ticketStatus) {
                   <span class="attn-status">

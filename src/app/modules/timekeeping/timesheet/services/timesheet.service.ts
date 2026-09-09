@@ -182,7 +182,7 @@ export class TimesheetService {
       .set('periodEnd', filters.periodEnd);
 
     if (filters.employee?.trim()) params = params.set('employee', filters.employee.trim());
-    if (filters.projectId) params = params.set('projectId', filters.projectId);
+    if (filters.workOrderId) params = params.set('workOrderId', filters.workOrderId);
     if (filters.tag?.trim()) params = params.set('tag', filters.tag.trim());
     if (filters.status) params = params.set('status', filters.status);
 

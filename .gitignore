@@ -44,3 +44,7 @@ __screenshots__/
 Thumbs.db
 
 .gemini
+
+# Local project context (not for repo)
+PROJECT_STATUS.md
+CHANGELOG.md

@@ -5,6 +5,7 @@ import {
   OnInit,
   computed,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
@@ -30,13 +31,15 @@ import { TicketsService } from './services/tickets.service';
 import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { StatusesService } from './services/statuses.service';
-import { ProjectsService } from './services/projects.service';
+import { WorkOrdersService } from './services/work-orders.service';
+import { ProjectsService } from '../projects/services/projects.service';
+import { Project } from '../projects/models/project.model';
 import { TeamsService } from '../settings/teams/services/teams.service';
 import { MembersService } from './services/members.service';
 import { AuthService } from '../../core/auth/auth.service';
 
 import { OrgMember } from './models/members.model';
-import { Project } from './models/projects.model';
+import { WorkOrder } from './models/work-order.model';
 import { Status } from './models/status.model';
 import { TicketCategory } from './models/ticket-categories.model';
 import {
@@ -55,6 +58,7 @@ import {
   visibleAssignees as visibleAssigneesUtil,
   extraAssigneeCount as extraAssigneeCountUtil,
   safeStatusColor as safeStatusColorUtil,
+  ticketKey as ticketKeyUtil,
   startOfToday,
   serializeDueDate,
 } from './utils/ticket.utils';
@@ -84,10 +88,15 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Tickets implements OnInit {
+  /** Scopes the list to one project (Tasks tab). Undefined on /tickets. */
+  readonly projectId = input<string | undefined>(undefined);
+  readonly isProjectScoped = computed(() => !!this.projectId());
+
   private readonly ticketsService = inject(TicketsService);
   private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
+  private readonly workOrdersService = inject(WorkOrdersService);
   private readonly projectsService = inject(ProjectsService);
   private readonly teamsService = inject(TeamsService);
   private readonly membersService = inject(MembersService);
@@ -166,7 +175,10 @@ export class Tickets implements OnInit {
 
   readonly categories = signal<TicketCategory[]>([]);
   readonly statuses = signal<Status[]>([]);
+  readonly workOrders = signal<WorkOrder[]>([]);
   readonly projects = signal<Project[]>([]);
+  /** Catch-all project for unscoped creates — resolved from /projects/internal. */
+  private readonly internalProjectId = signal<string | null>(null);
   readonly teams = signal<Team[]>([]);
   readonly members = signal<OrgMember[]>([]);
 
@@ -184,7 +196,8 @@ export class Tickets implements OnInit {
   readonly editTicketForm = this.buildTicketForm();
 
   // ─── Compose modal (Linear-style create) ───────────────
-  /** Local filters for the longer picker lists (project / assignee). */
+  /** Local filters for the longer picker lists (work order / assignee). */
+  readonly workOrderSearch = signal('');
   readonly projectSearch = signal('');
   readonly assigneeSearch = signal('');
 
@@ -208,6 +221,11 @@ export class Tickets implements OnInit {
   readonly selectedCategory = computed(() => {
     const id = this.composeValue().categoryId;
     return id ? this.categories().find((category) => category.id === id) ?? null : null;
+  });
+
+  readonly selectedWorkOrder = computed(() => {
+    const id = this.composeValue().workOrderId;
+    return id ? this.workOrders().find((workOrder) => workOrder.id === id) ?? null : null;
   });
 
   readonly selectedProject = computed(() => {
@@ -242,10 +260,18 @@ export class Tickets implements OnInit {
   /** Markdown mirrored into the compose editor (reset clears it; the editor writes back on save). */
   readonly composeDescription = computed(() => this.composeValue().description ?? '');
 
+  readonly filteredWorkOrders = computed(() => {
+    const query = this.workOrderSearch().trim().toLowerCase();
+    const list = this.workOrders();
+    return query ? list.filter((workOrder) => workOrder.displayName.toLowerCase().includes(query)) : list;
+  });
+
   readonly filteredProjects = computed(() => {
     const query = this.projectSearch().trim().toLowerCase();
     const list = this.projects();
-    return query ? list.filter((project) => project.displayName.toLowerCase().includes(query)) : list;
+    return query
+      ? list.filter((project) => `${project.name} ${project.key}`.toLowerCase().includes(query))
+      : list;
   });
 
   /**
@@ -305,6 +331,8 @@ export class Tickets implements OnInit {
   }
 
   ngOnInit(): void {
+    if (!this.projectId()) this.loadInternalProject();
+    this.loadProjects();
     this.loadDropdowns();
     this.refreshFacets();
     this.openEditFromQueryParam();
@@ -343,6 +371,7 @@ export class Tickets implements OnInit {
       dueDate: new FormControl<Date | null>(null),
       ticketStatusId: new FormControl('', { nonNullable: true }),
       categoryId: new FormControl('', { nonNullable: true }),
+      workOrderId: new FormControl('', { nonNullable: true }),
       projectId: new FormControl('', { nonNullable: true }),
       teamId: new FormControl('', { nonNullable: true }),
       assigneeIds: new FormControl<string[]>([], { nonNullable: true }),
@@ -375,6 +404,7 @@ export class Tickets implements OnInit {
         limit: this.rows(),
         search: this.searchControl.value.trim() || undefined,
         view: this.view(),
+        projectId: this.projectId(),
         ticketStatusId: this.selectedStatusIds().length ? this.selectedStatusIds() : undefined,
         priority: this.selectedPriorities().length ? this.selectedPriorities() : undefined,
         teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
@@ -412,7 +442,7 @@ export class Tickets implements OnInit {
 
   private refreshFacets(): void {
     this.ticketsService
-      .getFacets({ view: this.view(), search: this.searchControl.value.trim() || undefined })
+      .getFacets({ view: this.view(), search: this.searchControl.value.trim() || undefined, projectId: this.projectId() })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (facets) => this.facets.set(facets),
@@ -519,6 +549,44 @@ export class Tickets implements OnInit {
     }
   }
 
+
+  private loadProjects(): void {
+    this.projectsService
+      .getAll({ page: 1, limit: 50, sortField: 'name', sortOrder: 'asc' })
+      .pipe(
+        map((res) => res.data ?? []),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (list) => this.projects.set(list),
+        error: (err: unknown) => {
+          console.error('Error loading projects:', err);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to load projects for the picker',
+          });
+        },
+      });
+  }
+
+  private mergeProject(project: Project): void {
+    this.projects.update((list) => (list.some((row) => row.id === project.id) ? list : [...list, project]));
+  }
+
+  private loadInternalProject(): void {
+    this.projectsService
+      .getInternal()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (project) => {
+          this.internalProjectId.set(project.id);
+          this.mergeProject(project);
+        },
+        error: (err: unknown) => console.error('Error loading internal project:', err),
+      });
+  }
+
   loadDropdowns(): void {
     this.isLoadingDropdowns.set(true);
 
@@ -527,7 +595,7 @@ export class Tickets implements OnInit {
     forkJoin({
       categories: this.categoriesService.getAll(),
       statuses: this.statusesService.getAll(),
-      projects: this.projectsService.getAll(),
+      workOrders: this.workOrdersService.getAll(),
       teams: organizationId ? this.teamsService.getTeams(organizationId) : of([] as Team[]),
       members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
@@ -536,7 +604,7 @@ export class Tickets implements OnInit {
         next: (res) => {
           this.categories.set(res.categories);
           this.statuses.set(res.statuses);
-          this.projects.set(res.projects);
+          this.workOrders.set(res.workOrders);
           this.teams.set(res.teams as Team[]);
           this.members.set(res.members);
           this.isLoadingDropdowns.set(false);
@@ -577,8 +645,13 @@ export class Tickets implements OnInit {
     return safeStatusColorUtil(color);
   }
 
+  ticketKey(ticket: Ticket): string {
+    return ticketKeyUtil(ticket);
+  }
+
   openCreateDialog(): void {
     this.resetCreateForm();
+    this.loadProjects();
     this.createDialogVisible.set(true);
   }
 
@@ -602,10 +675,12 @@ export class Tickets implements OnInit {
       dueDate: null,
       ticketStatusId: '',
       categoryId: '',
-      projectId: '',
+      workOrderId: '',
+      projectId: this.projectId() ?? this.internalProjectId() ?? '',
       teamId: '',
       assigneeIds: [],
     });
+    this.workOrderSearch.set('');
     this.projectSearch.set('');
     this.assigneeSearch.set('');
   }
@@ -628,7 +703,23 @@ export class Tickets implements OnInit {
 
   setProjectValue(id: string): void {
     const next = this.composeValue().projectId === id ? '' : id;
-    this.ticketForm.controls.projectId.setValue(next);
+    this.ticketForm.controls.projectId.setValue(next || this.internalProjectId() || '');
+  }
+
+  setWorkOrderValue(id: string): void {
+    const next = this.composeValue().workOrderId === id ? '' : id;
+    this.ticketForm.controls.workOrderId.setValue(next);
+    if (!next || this.isProjectScoped()) return;
+    this.projectsService
+      .getForWorkOrder(next)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (project) => {
+          this.mergeProject(project);
+          this.ticketForm.controls.projectId.setValue(project.id);
+        },
+        error: (err: unknown) => console.error('Error resolving project for work order:', err),
+      });
   }
 
   setTeamValue(id: string): void {
@@ -677,6 +768,7 @@ export class Tickets implements OnInit {
   }
 
   openEditDialog(ticket: Ticket): void {
+    this.loadProjects();
     this.selectedTicket.set(ticket);
     this.editTicketForm.reset({
       title: ticket.title,
@@ -685,7 +777,8 @@ export class Tickets implements OnInit {
       dueDate: ticket.dueDate ? new Date(ticket.dueDate) : null,
       ticketStatusId: ticket.ticketStatusId ?? '',
       categoryId: ticket.categoryId ?? '',
-      projectId: ticket.projectId ?? '',
+      workOrderId: ticket.workOrderId ?? '',
+      projectId: ticket.projectId,
       teamId: ticket.teamId ?? '',
       assigneeIds: (ticket.assignees ?? []).map(a => a.memberId),
     });
@@ -716,7 +809,8 @@ export class Tickets implements OnInit {
       dueDate: formValue.dueDate ? serializeDueDate(formValue.dueDate) : null,
       ticketStatusId: formValue.ticketStatusId || null,
       categoryId: formValue.categoryId || null,
-      projectId: formValue.projectId || null,
+      workOrderId: formValue.workOrderId || null,
+      projectId: formValue.projectId || undefined,
       teamId: formValue.teamId || null,
       assigneeIds: formValue.assigneeIds,
     };
@@ -744,17 +838,28 @@ export class Tickets implements OnInit {
       return;
     }
 
-    this.isSaving.set(true);
     const formValue = this.ticketForm.getRawValue();
+    const projectId = this.projectId() ?? (formValue.projectId || this.internalProjectId());
+    if (!projectId) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No project available to file this task against',
+      });
+      return;
+    }
+
+    this.isSaving.set(true);
 
     const payload: CreateTicketPayload = {
+      projectId,
       title: formValue.title.trim(),
       description: formValue.description.trim() || undefined,
       priority: formValue.priority,
       dueDate: formValue.dueDate ? serializeDueDate(formValue.dueDate) : undefined,
       ticketStatusId: formValue.ticketStatusId || undefined,
       categoryId: formValue.categoryId || undefined,
-      projectId: formValue.projectId || undefined,
+      workOrderId: formValue.workOrderId || undefined,
       teamId: formValue.teamId || undefined,
       assigneeIds: formValue.assigneeIds,
     };

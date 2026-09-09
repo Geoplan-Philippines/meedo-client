@@ -27,6 +27,7 @@ export class TicketsService {
 
     if (params.search) httpParams = httpParams.set('search', params.search);
     if (params.view) httpParams = httpParams.set('view', params.view);
+    if (params.projectId) httpParams = httpParams.set('projectId', params.projectId);
     // Multi-select facets go out as repeated params (?ticketStatusId=a&ticketStatusId=b).
     for (const id of params.ticketStatusId ?? []) httpParams = httpParams.append('ticketStatusId', id);
     for (const priority of params.priority ?? []) httpParams = httpParams.append('priority', priority);
@@ -44,6 +45,7 @@ export class TicketsService {
     let httpParams = new HttpParams();
     if (params.view) httpParams = httpParams.set('view', params.view);
     if (params.search) httpParams = httpParams.set('search', params.search);
+    if (params.projectId) httpParams = httpParams.set('projectId', params.projectId);
 
     return this.http
       .get<ApiResponse<TicketFacets>>(`${this.baseUrl}/facets`, {
@@ -75,5 +77,21 @@ export class TicketsService {
     return this.http
       .patch<ApiResponse<Ticket>>(`${this.baseUrl}/${id}`, payload, { withCredentials: true })
       .pipe(map(res => res.data));
+  }
+
+  archiveTicket(id: string) {
+    return this.http
+      .post<ApiResponse<Ticket>>(`${this.baseUrl}/${id}/archive`, {}, { withCredentials: true })
+      .pipe(map(res => res.data));
+  }
+
+  restoreTicket(id: string) {
+    return this.http
+      .post<ApiResponse<Ticket>>(`${this.baseUrl}/${id}/restore`, {}, { withCredentials: true })
+      .pipe(map(res => res.data));
+  }
+
+  deleteTicket(id: string) {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`, { withCredentials: true });
   }
 }

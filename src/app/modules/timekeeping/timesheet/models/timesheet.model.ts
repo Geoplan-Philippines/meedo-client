@@ -48,8 +48,8 @@ export interface TimesheetEntry {
   id: string;
   organizationId: string;
   userId: string;
-  projectId: string;
-  project?: TimesheetProject;
+  workOrderId: string;
+  workOrder?: TimesheetProject;
   user?: TimesheetUser;
   workDate: string;
   hours: number;
@@ -73,7 +73,7 @@ export interface TimesheetEntry {
 }
 
 export interface TimesheetEntryPayload {
-  projectId: string;
+  workOrderId: string;
   workDate: string;
   hours: number;
   location?: string;
@@ -151,7 +151,7 @@ export interface TimesheetSummaryFilters {
   periodStart: string;
   periodEnd: string;
   employee?: string;
-  projectId?: string;
+  workOrderId?: string;
   tag?: string;
   status?: TimesheetEntryStatus;
 }

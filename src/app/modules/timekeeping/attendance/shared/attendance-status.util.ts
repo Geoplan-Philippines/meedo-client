@@ -23,7 +23,7 @@ export const ATTENDANCE_STATUS_TONE: Record<AttendanceStatus, string> = {
   upcoming: 'bg-secondary text-secondary-foreground',
   rest_day: 'bg-muted text-body/70',
   holiday: 'bg-secondary text-secondary-foreground',
-  no_schedule: 'bg-muted text-body/60',
+  no_schedule: 'bg-muted text-white/60',
 };
 
 /** "1 hr" / "7.5 hrs" for an hours value, or a dash when unknown. */

@@ -1,7 +1,7 @@
 export interface TicketCategory {
   id: string;
   name: string;
-  description?: string;
+  description: string | null;
   organizationId: string;
   createdAt: string;
   updatedAt: string;

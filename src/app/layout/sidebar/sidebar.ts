@@ -47,10 +47,11 @@ export class Sidebar {
 
   sections = computed<NavSection[]>(() => [
     {
-      title: 'Tickets',
+      title: 'Projects',
       items: [
         { label: 'Dashboard', route: '/tickets/dashboard', icon: 'pi-chart-line' },
-        { label: 'Tickets', route: '/tickets', icon: 'pi-list' },
+        { label: 'Projects', route: '/projects', icon: 'pi-folder' },
+        { label: 'All tasks', route: '/tickets', icon: 'pi-list' },
       ],
     },
     {
@@ -80,9 +81,10 @@ export class Sidebar {
   );
 
   // Longest-prefix-wins active matching.
-  // - On /tickets         → "Tickets" lit (only match).
+  // - On /projects        → "Projects" lit.
+  // - On /projects/:id    → "Projects" lit (parent — no more-specific nav item).
   // - On /tickets/dashboard → "Dashboard" lit (longer prefix beats "/tickets").
-  // - On /tickets/:id     → "Tickets" lit (parent — no more-specific nav item).
+  // - On /tickets         → "All tasks" lit.
   isActive(route: string): boolean {
     const url = this.currentUrl().split('?')[0].split('#')[0];
     const matches = (r: string) => url === r || url.startsWith(r + '/');

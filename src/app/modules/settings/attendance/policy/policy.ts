@@ -39,7 +39,7 @@ const TIMEZONE_OPTIONS = [
     ToggleSwitchModule,
   ],
   templateUrl: './policy.html',
-  styleUrl: './policy.css',
+  styleUrls: ['./policy.css', '../shared/attendance-time.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Policy implements OnInit {

@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CanDeactivateFn } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -110,7 +110,6 @@ function stripHtml(value: string): string {
 @Component({
   selector: 'app-timesheet',
   imports: [
-    CommonModule,
     FormsModule,
     ButtonModule,
     DatePickerModule,
@@ -118,6 +117,7 @@ function stripHtml(value: string): string {
     ToastModule,
     ConfirmDialogModule,
     DatePipe,
+    DecimalPipe,
     RichTextEditor,
   ],
   providers: [MessageService, ConfirmationService],
@@ -592,7 +592,7 @@ export class Timesheet implements OnInit {
       localId: entry.id,
       entryId: entry.id,
       date: entry.workDate.slice(0, 10),
-      projectId: entry.projectId,
+      projectId: entry.workOrderId,
       hours: entry.hours,
       workType: entry.workType,
       location: entry.location,
@@ -610,7 +610,7 @@ export class Timesheet implements OnInit {
 
   private rowToPayload(row: CellRowState, projectId: string, date: string): TimesheetEntryPayload {
     return {
-      projectId,
+      workOrderId: projectId,
       workDate: date,
       hours: Number(row.hours) || 0,
       workType: row.workType,

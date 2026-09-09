@@ -5,14 +5,21 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 export const routes: Routes = [
   { 
     path: '', 
-    loadComponent: () => 
-      import('./modules/home/home').then(m => m.Home) 
+    redirectTo:'timekeeping',
+    pathMatch:'full'
   },
   {
     path: 'auth',
     canActivate: [guestGuard],
     loadChildren: () =>
       import('./modules/auth/auth.routes').then((m) => m.authRoutes),
+  },
+  {
+    path: 'projects',
+    component: MainLayout,
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/projects/projects.routes').then((m) => m.projectsRoutes),
   },
   {
     path: 'tickets',

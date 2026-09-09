@@ -1,5 +1,5 @@
 import { APP_INITIALIZER, ApplicationConfig, inject, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withRouterConfig } from '@angular/router';
 
 import { providePrimeNG } from 'primeng/config';
 
@@ -12,7 +12,14 @@ import { AuthService } from './core/auth/auth.service';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      // Route params bind straight to component inputs (a project's Tasks tab
+      // reads `projectId` off the parent route), so `always` is required to let
+      // child components see their parent's params.
+      withComponentInputBinding(),
+      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+    ),
     provideHttpClient(withInterceptors([authInterceptor])),
     {
       provide: APP_INITIALIZER,

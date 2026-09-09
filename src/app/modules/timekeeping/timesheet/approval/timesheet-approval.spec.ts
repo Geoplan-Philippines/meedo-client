@@ -33,7 +33,7 @@ const summary: TimesheetSummary = {
           id: 'entry-1',
           organizationId: 'org-1',
           userId: 'user-1',
-          projectId: 'project-1',
+          workOrderId: 'work-order-1',
           workDate: '2026-06-22',
           hours: 8,
           location: 'OFC - DW',

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -27,7 +27,8 @@ import { TimesheetService } from '../services/timesheet.service';
 @Component({
   selector: 'app-timesheet-approval',
   imports: [
-    CommonModule,
+    DatePipe,
+    DecimalPipe,
     FormsModule,
     TableModule,
     ButtonModule,
@@ -427,9 +428,9 @@ export class TimesheetApproval implements OnInit {
   }
 
   projectLabel(entry: TimesheetEntry): string {
-    if (!entry.project) return '—';
-    const customer = entry.project.customerName?.trim() || entry.project.client?.customerName?.trim();
-    const workOrder = entry.project.workOrderNumber?.trim() || '';
+    if (!entry.workOrder) return '—';
+    const customer = entry.workOrder.customerName?.trim() || entry.workOrder.client?.customerName?.trim();
+    const workOrder = entry.workOrder.workOrderNumber?.trim() || '';
     return customer ? `${customer} — ${workOrder}` : (workOrder || '—');
   }
 
@@ -473,7 +474,7 @@ export class TimesheetApproval implements OnInit {
     return {
       periodStart: this.periodStart(),
       periodEnd: this.periodEnd(),
-      projectId: this.projectFilter() ?? undefined,
+      workOrderId: this.projectFilter() ?? undefined,
     };
   }
 }
