@@ -331,8 +331,12 @@ export class Tickets implements OnInit {
   }
 
   ngOnInit(): void {
-    if (!this.projectId()) this.loadInternalProject();
-    this.loadProjects();
+    // Project-scoped: the compose project pill is hidden and the ticket's project
+    // is fixed to the route, so skip loading the picker list and internal project.
+    if (!this.isProjectScoped()) {
+      this.loadInternalProject();
+      this.loadProjects();
+    }
     this.loadDropdowns();
     this.refreshFacets();
     this.openEditFromQueryParam();
@@ -651,7 +655,7 @@ export class Tickets implements OnInit {
 
   openCreateDialog(): void {
     this.resetCreateForm();
-    this.loadProjects();
+    if (!this.isProjectScoped()) this.loadProjects();
     this.createDialogVisible.set(true);
   }
 

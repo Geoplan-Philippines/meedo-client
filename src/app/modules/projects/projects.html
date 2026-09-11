@@ -51,7 +51,15 @@
       </ng-template>
 
       <ng-template pTemplate="body" let-project>
-        <tr class="project-row" (click)="openProject(project)">
+        <tr
+          class="project-row"
+          tabindex="0"
+          role="button"
+          [attr.aria-label]="'Open project ' + project.name"
+          (click)="openProject(project)"
+          (keydown.enter)="openProject(project)"
+          (keydown.space)="openProject(project); $event.preventDefault()"
+        >
           <td>
             <div class="project-cell">
               <span class="project-key" [class.project-key--internal]="project.isInternal">{{ project.key }}</span>
@@ -65,7 +73,7 @@
           </td>
           <td>
             <span class="state-pill" [style.--state-color]="stateColor(project.state)">
-              <i class="pi" [ngClass]="stateIcon(project.state)" aria-hidden="true"></i>
+              <i class="pi" [class]="stateIcon(project.state)" aria-hidden="true"></i>
               {{ stateLabel(project.state) }}
             </span>
           </td>

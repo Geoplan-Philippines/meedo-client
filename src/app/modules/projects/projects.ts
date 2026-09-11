@@ -3,14 +3,12 @@ import {
   Component,
   DestroyRef,
   OnInit,
-  computed,
   inject,
-  input,
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { DatePipe, NgClass } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -59,7 +57,6 @@ import {
     DatePickerModule,
     ToastModule,
     DatePipe,
-    NgClass,
     ReactiveFormsModule,
   ],
   providers: [MessageService],
