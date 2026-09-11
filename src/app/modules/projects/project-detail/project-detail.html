@@ -17,7 +17,7 @@
             <h1 class="project-title">{{ p.name }}</h1>
             <div class="meta-row">
               <span class="state-pill" [style.--state-color]="stateColor(p.state)">
-                <i class="pi" [class]="stateIcon(p.state)" aria-hidden="true"></i>
+                <i class="pi" [ngClass]="stateIcon(p.state)" aria-hidden="true"></i>
                 {{ stateLabel(p.state) }}
               </span>
               <span class="meta-dot" aria-hidden="true">·</span>
