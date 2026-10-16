@@ -34,7 +34,8 @@ export interface Ticket {
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate?: string;
   assignees?: TicketAssignee[];
-  ticketStatusId?: string;
+  ticketStatusId?: string | null;
+  team?: { id: string; name: string } | null;
   categoryId?: string;
   projectId?: string;
   teamId?: string;
@@ -59,6 +60,7 @@ export interface Ticket {
 export type TicketView = 'backlog' | 'active' | 'closed' | 'all';
 
 export interface TicketListParams {
+  noStatus?: boolean;
   page: number;
   limit: number;
   search?: string;
@@ -74,6 +76,7 @@ export interface TicketListParams {
 }
 
 export interface TicketFacetsParams {
+  priority?: string[];
   view?: TicketView;
   teamId?: string[];
   categoryId?: string;
@@ -84,6 +87,7 @@ export interface TicketFacetsParams {
 
 /** Counts powering the view tabs and the filter-menu badges. */
 export interface TicketFacets {
+  noStatusCount?: number;
   views: Record<TicketView, number>;
   statuses: { ticketStatusId: string; count: number }[];
   priorities: { priority: string; count: number }[];

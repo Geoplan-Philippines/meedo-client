@@ -44,7 +44,7 @@ describe('TicketsService query parameters', () => {
       req.flush({ data: [], meta: { total: 0, page: 2, limit: 20, lastPage: 0 } });
     });
 
-    it(`serializes only allowed facet context with includeArchived=${includeArchived}`, () => {
+    it(`serializes facet context including board priority with includeArchived=${includeArchived}`, () => {
       // Extra runtime properties must never leak into the strictly validated facets endpoint.
       const params: TicketFacetsParams & { ticketStatusId: string[]; priority: string[] } = {
         view: 'active', search: 'inspection', teamId: ['team-1', 'team-2'],
@@ -62,8 +62,9 @@ describe('TicketsService query parameters', () => {
       expect(req.request.params.get('view')).toBe('active');
       expect(req.request.params.get('search')).toBe('inspection');
       expect(req.request.params.keys().sort()).toEqual([
-        'assigneeId', 'categoryId', 'includeArchived', 'search', 'teamId', 'view',
+        'assigneeId', 'categoryId', 'includeArchived', 'priority', 'search', 'teamId', 'view',
       ]);
+      expect(req.request.params.getAll('priority')).toEqual(['HIGH']);
       req.flush({ data: { views: { all: 0, active: 0, backlog: 0, closed: 0 }, statuses: [], priorities: [] } });
     });
   }
@@ -77,5 +78,14 @@ describe('TicketsService query parameters', () => {
     const facets = http.expectOne((req) => req.url === `${url}/facets`);
     expect(facets.request.params.keys()).toEqual([]);
     facets.flush({ data: { views: { all: 0, active: 0, backlog: 0, closed: 0 }, statuses: [], priorities: [] } });
+  });
+
+  it('serializes no-status board requests through the existing list endpoint', () => {
+    service.getAll({ page: 1, limit: 20, noStatus: true, sortField: 'board' }).subscribe();
+    const req = http.expectOne(request => request.url === url);
+    expect(req.request.params.get('noStatus')).toBe('true');
+    expect(req.request.params.get('sortField')).toBe('board');
+    expect(req.request.params.has('ticketStatusId')).toBe(false);
+    req.flush({ data: [], meta: { total: 0, page: 1, limit: 20, lastPage: 0 } });
   });
 });

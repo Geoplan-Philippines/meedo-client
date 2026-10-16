@@ -27,6 +27,7 @@ import { PopoverModule } from 'primeng/popover';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from './services/tickets.service';
+import { TicketsBoard } from './tickets-board/tickets-board';
 import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { StatusesService } from './services/statuses.service';
@@ -77,6 +78,7 @@ import {
     FormsModule,
     ReactiveFormsModule,
     MarkdownEditor,
+    TicketsBoard,
   ],
   providers: [MessageService],
   templateUrl: './tickets.html',
@@ -101,6 +103,21 @@ export class Tickets implements OnInit {
 
   // List state (server-side pagination / sort / filter)
   readonly tickets = signal<Ticket[]>([]);
+  readonly layout = toSignal(this.route.queryParamMap.pipe(map(params => params.get('view') === 'board' ? 'board' : 'list')), {
+    initialValue: this.route.snapshot.queryParamMap.get('view') === 'board' ? 'board' : 'list',
+  });
+  readonly boardRevision = signal(0);
+  readonly boardFilters = computed(() => ({
+    page: 1, limit: 20, view: this.view(), search: this.searchTerm() || undefined,
+    teamId: this.selectedTeamIds(), ticketStatusId: this.selectedStatusIds(),
+    priority: this.selectedPriorities(), assigneeId: this.assigneeFilter(),
+  }));
+
+  setLayout(layout: 'list' | 'board'): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { view: layout === 'board' ? 'board' : null }, queryParamsHandling: 'merge' });
+  }
+
+  onBoardMove(): void { this.refreshFacets(); }
   readonly totalRecords = signal(0);
   readonly rows = signal(10);
   readonly isLoading = signal(false);
@@ -328,7 +345,7 @@ export class Tickets implements OnInit {
   private openCreateFromQueryParam(): void {
     if (!this.route.snapshot.queryParamMap.has('new')) return;
     // Strip the param so a refresh doesn't reopen the composer.
-    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    this.router.navigate([], { relativeTo: this.route, queryParams: { new: null }, queryParamsHandling: 'merge', replaceUrl: true });
     this.openCreateDialog();
   }
 
@@ -337,7 +354,7 @@ export class Tickets implements OnInit {
     const editId = this.route.snapshot.queryParamMap.get('edit');
     if (!editId) return;
     // Strip the param so a refresh doesn't reopen the editor.
-    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    this.router.navigate([], { relativeTo: this.route, queryParams: { edit: null }, queryParamsHandling: 'merge', replaceUrl: true });
     this.ticketsService
       .getById(editId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -415,6 +432,7 @@ export class Tickets implements OnInit {
   private applyFilters(): void {
     this.searchTerm.set(this.searchControl.value.trim());
     this.first = 0;
+    if (this.layout() === 'board') return;
     const table = this.table();
     if (table) {
       table.reset();
@@ -542,6 +560,8 @@ export class Tickets implements OnInit {
   }
 
   private refreshList(resetToFirstPage: boolean): void {
+    this.boardRevision.update(revision => revision + 1);
+    if (this.layout() === 'board') return;
     const table = this.table();
     if (resetToFirstPage && table) {
       table.reset();

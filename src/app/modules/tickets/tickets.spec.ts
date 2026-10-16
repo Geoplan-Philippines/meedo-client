@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of, Subject } from 'rxjs';
 import { vi } from 'vitest';
 
@@ -75,6 +75,34 @@ describe('Tickets', () => {
     const button = fixture.nativeElement.querySelector('.my-issues-toggle') as HTMLButtonElement;
     expect(button.textContent).toContain('My issues');
     expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('switches List / Board in the URL, preserves other params, and follows navigation', async () => {
+    const router = TestBed.inject(Router);
+    expect(component.layout()).toBe('list');
+    await router.navigateByUrl('/?keep=1');
+    const boardButton = Array.from(fixture.nativeElement.querySelectorAll('[aria-label="Ticket layout"] button'))
+      .find((element: any) => element.textContent.includes('Board')) as HTMLElement;
+    boardButton.click();
+    await fixture.whenStable();
+    expect(router.parseUrl(router.url).queryParams).toEqual({ keep: '1', view: 'board' });
+    expect(component.layout()).toBe('board');
+    expect(fixture.nativeElement.querySelector('app-tickets-board')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('p-table')).toBeNull();
+    component.setLayout('list');
+    await fixture.whenStable();
+    expect(router.parseUrl(router.url).queryParams).toEqual({ keep: '1' });
+    expect(fixture.nativeElement.querySelector('p-table')).toBeTruthy();
+    await router.navigateByUrl('/?view=board');
+    await fixture.whenStable();
+    expect(component.layout()).toBe('board');
+    fixture.destroy();
+    fixture = TestBed.createComponent(Tickets);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.layout()).toBe('board');
+    expect(fixture.nativeElement.querySelector('app-tickets-board')).toBeTruthy();
   });
 
   it('toggles My issues for both requests, preserves filters, and resets the table to page 1', async () => {

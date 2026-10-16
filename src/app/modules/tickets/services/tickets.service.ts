@@ -26,6 +26,7 @@ export class TicketsService {
       .set('limit', params.limit);
 
     if (params.search) httpParams = httpParams.set('search', params.search);
+    if (params.noStatus) httpParams = httpParams.set('noStatus', true);
     if (params.view) httpParams = httpParams.set('view', params.view);
     // Multi-select facets go out as repeated params (?ticketStatusId=a&ticketStatusId=b).
     for (const id of params.ticketStatusId ?? []) httpParams = httpParams.append('ticketStatusId', id);
@@ -45,6 +46,7 @@ export class TicketsService {
 
   getFacets(params: TicketFacetsParams) {
     let httpParams = new HttpParams();
+    for (const priority of params.priority ?? []) httpParams = httpParams.append('priority', priority);
     if (params.view) httpParams = httpParams.set('view', params.view);
     if (params.search) httpParams = httpParams.set('search', params.search);
 
