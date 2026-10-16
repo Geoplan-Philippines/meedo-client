@@ -82,6 +82,47 @@
   max-width: 400px;
 }
 
+.my-issues-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: transparent;
+  color: var(--color-body);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.my-issues-toggle:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.my-issues-toggle--active,
+.my-issues-toggle--active:hover {
+  background: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+  font-weight: 600;
+}
+
+.my-issues-toggle:active {
+  background: var(--color-secondary);
+}
+
+.my-issues-toggle:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-issues-toggle { transition: none; }
+}
+
 .search-icon {
   position: absolute;
   left: 0.875rem;

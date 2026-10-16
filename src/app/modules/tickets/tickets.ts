@@ -110,6 +110,7 @@ export class Tickets implements OnInit {
   private sortField: string | null = 'createdAt';
   private sortOrder: 'asc' | 'desc' | null = 'desc';
   private ticketsRequestId = 0;
+  private facetsRequestId = 0;
 
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly searchTerm = signal('');
@@ -169,6 +170,17 @@ export class Tickets implements OnInit {
   readonly projects = signal<Project[]>([]);
   readonly teams = signal<Team[]>([]);
   readonly members = signal<OrgMember[]>([]);
+  readonly myIssues = signal(false);
+  readonly currentMemberId = computed(() => {
+    const userId = this.authService.currentUser()?.id;
+    const organizationId = this.authService.organizationId();
+    return this.members().find(
+      (member) => member.userId === userId && member.organizationId === organizationId,
+    )?.id ?? null;
+  });
+  readonly assigneeFilter = computed(() =>
+    this.myIssues() ? this.currentMemberId() ?? undefined : undefined,
+  );
 
   // Start of today, computed once — used to flag overdue due dates in the list.
   private readonly today = startOfToday();
@@ -378,6 +390,7 @@ export class Tickets implements OnInit {
         ticketStatusId: this.selectedStatusIds().length ? this.selectedStatusIds() : undefined,
         priority: this.selectedPriorities().length ? this.selectedPriorities() : undefined,
         teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
+        assigneeId: this.assigneeFilter(),
         sortField: this.sortField || undefined,
         sortOrder: this.sortOrder || undefined,
       })
@@ -401,21 +414,29 @@ export class Tickets implements OnInit {
 
   private applyFilters(): void {
     this.searchTerm.set(this.searchControl.value.trim());
+    this.first = 0;
     const table = this.table();
     if (table) {
       table.reset();
     } else {
-      this.first = 0;
       this.fetchTickets();
     }
   }
 
   private refreshFacets(): void {
+    const requestId = ++this.facetsRequestId;
     this.ticketsService
-      .getFacets({ view: this.view(), search: this.searchControl.value.trim() || undefined })
+      .getFacets({
+        view: this.view(),
+        search: this.searchControl.value.trim() || undefined,
+        teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
+        assigneeId: this.assigneeFilter(),
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (facets) => this.facets.set(facets),
+        next: (facets) => {
+          if (requestId === this.facetsRequestId) this.facets.set(facets);
+        },
         error: (err: unknown) => console.error('Error loading ticket facets:', err),
       });
   }
@@ -491,6 +512,14 @@ export class Tickets implements OnInit {
     this.selectedTeamIds.update((ids) =>
       ids.includes(id) ? ids.filter((existing) => existing !== id) : [...ids, id],
     );
+    this.refreshFacets();
+    this.applyFilters();
+  }
+
+  toggleMyIssues(): void {
+    if (!this.currentMemberId()) return;
+    this.myIssues.update((enabled) => !enabled);
+    this.refreshFacets();
     this.applyFilters();
   }
 
@@ -500,6 +529,7 @@ export class Tickets implements OnInit {
 
   removeTeam(id: string): void {
     this.selectedTeamIds.update((ids) => ids.filter((existing) => existing !== id));
+    this.refreshFacets();
     this.applyFilters();
   }
 
@@ -507,6 +537,7 @@ export class Tickets implements OnInit {
     this.selectedStatusIds.set([]);
     this.selectedPriorities.set([]);
     this.selectedTeamIds.set([]);
+    this.refreshFacets();
     this.applyFilters();
   }
 
@@ -728,6 +759,7 @@ export class Tickets implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Ticket updated' });
           this.editDialogVisible.set(false);
           this.isUpdating.set(false);
+          this.refreshFacets();
           this.refreshList(false);
         },
         error: (err: unknown) => {
@@ -766,6 +798,7 @@ export class Tickets implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Ticket created' });
           this.createDialogVisible.set(false);
           this.isSaving.set(false);
+          this.refreshFacets();
           this.refreshList(true);
         },
         error: (err: unknown) => {

@@ -66,13 +66,20 @@ export interface TicketListParams {
   ticketStatusId?: string[];
   priority?: string[];
   teamId?: string[];
+  categoryId?: string;
+  assigneeId?: string;
+  includeArchived?: boolean;
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
 }
 
 export interface TicketFacetsParams {
   view?: TicketView;
+  teamId?: string[];
+  categoryId?: string;
+  assigneeId?: string;
   search?: string;
+  includeArchived?: boolean;
 }
 
 /** Counts powering the view tabs and the filter-menu badges. */

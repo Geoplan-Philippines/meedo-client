@@ -31,6 +31,9 @@ export class TicketsService {
     for (const id of params.ticketStatusId ?? []) httpParams = httpParams.append('ticketStatusId', id);
     for (const priority of params.priority ?? []) httpParams = httpParams.append('priority', priority);
     for (const id of params.teamId ?? []) httpParams = httpParams.append('teamId', id);
+    if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
+    if (params.assigneeId) httpParams = httpParams.set('assigneeId', params.assigneeId);
+    if (params.includeArchived !== undefined) httpParams = httpParams.set('includeArchived', params.includeArchived);
     if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
     if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
 
@@ -44,6 +47,11 @@ export class TicketsService {
     let httpParams = new HttpParams();
     if (params.view) httpParams = httpParams.set('view', params.view);
     if (params.search) httpParams = httpParams.set('search', params.search);
+
+    for (const id of params.teamId ?? []) httpParams = httpParams.append('teamId', id);
+    if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
+    if (params.assigneeId) httpParams = httpParams.set('assigneeId', params.assigneeId);
+    if (params.includeArchived !== undefined) httpParams = httpParams.set('includeArchived', params.includeArchived);
 
     return this.http
       .get<ApiResponse<TicketFacets>>(`${this.baseUrl}/facets`, {

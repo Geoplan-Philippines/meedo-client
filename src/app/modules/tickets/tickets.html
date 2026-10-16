@@ -72,6 +72,18 @@
           [formControl]="searchControl"
         />
       </div>
+      @if (currentMemberId()) {
+        <button
+          class="my-issues-toggle"
+          type="button"
+          [class.my-issues-toggle--active]="myIssues()"
+          [attr.aria-pressed]="myIssues()"
+          (click)="toggleMyIssues()"
+        >
+          <i class="pi pi-user" aria-hidden="true"></i>
+          <span>My issues</span>
+        </button>
+      }
       <button
         class="filter-btn"
         type="button"
