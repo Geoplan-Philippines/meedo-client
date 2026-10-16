@@ -21,9 +21,13 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
 import { NodeSelection } from '@tiptap/pm/state';
+import { Slice } from '@tiptap/pm/model';
+import { EditorView } from '@tiptap/pm/view';
 import { Markdown } from 'tiptap-markdown';
 
 import { FileAttachment } from './attachment-node';
+import { InputFeedback } from '../input-feedback/input-feedback';
+import { fitPastedContent, markdownLengthLimit, markdownSource } from './markdown-limit';
 
 /** Result the host's upload handler must resolve with for one uploaded file. */
 export interface UploadedAttachment {
@@ -104,6 +108,7 @@ interface SlashItem {
  */
 @Component({
   selector: 'app-markdown-editor',
+  imports: [InputFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './markdown-editor.css',
   host: { class: 'md-editor' },
@@ -117,6 +122,10 @@ interface SlashItem {
       (drop)="onShellDrop($event)"
     >
       <div #host class="md-host"></div>
+      @if (maxLength(); as limit) {
+        <app-input-feedback [feedbackId]="feedbackId" label="Description" [value]="markdownValue()" [maxLength]="limit" />
+        <p [id]="noticeId" class="md-limit-notice" aria-live="polite" aria-atomic="true">{{ limitNotice() }}</p>
+      }
 
       @if (dragActive()) {
         <div class="md-dropzone" aria-hidden="true">
@@ -269,6 +278,11 @@ export class MarkdownEditor implements AfterViewInit {
   readonly value = input('');
   readonly placeholder = input('Write something…');
   readonly ariaLabel = input('');
+  /** Optional serialized Markdown limit; callers supply their domain's shared constant. */
+  readonly maxLength = input<number | null>(null);
+  readonly contentChange = output<string>();
+  protected readonly markdownValue = signal('');
+  protected readonly limitNotice = signal('');
   /**
    * Host-provided uploader. When set, the editor accepts pasted / dropped / picked
    * files: images render inline, other types become download chips. Left unset the
@@ -307,6 +321,8 @@ export class MarkdownEditor implements AfterViewInit {
   private static nextId = 0;
   /** Unique per instance so multiple editors on a page don't share ARIA ids. */
   protected readonly menuId = `md-slash-${MarkdownEditor.nextId++}`;
+  protected readonly feedbackId = `${this.menuId}-feedback`;
+  protected readonly noticeId = `${this.menuId}-limit-notice`;
 
   protected readonly slashOpen = signal(false);
   protected readonly slashQuery = signal('');
@@ -376,6 +392,8 @@ export class MarkdownEditor implements AfterViewInit {
       this.lastKnownValue = next;
       if (!editor.isFocused) {
         editor.commands.setContent(next, { emitUpdate: false });
+        this.markdownValue.set(this.readMarkdown());
+        this.limitNotice.set('');
       }
     });
 
@@ -415,13 +433,15 @@ export class MarkdownEditor implements AfterViewInit {
           'aria-expanded': 'false',
           'aria-controls': this.menuId,
           ...(this.ariaLabel() ? { 'aria-label': this.ariaLabel() } : {}),
+          ...(this.maxLength() !== null ? { 'aria-describedby': `${this.feedbackId} ${this.noticeId}` } : {}),
         },
         handleKeyDown: (_view, event) => this.onEditorKeyDown(event),
-        handlePaste: (_view, event) => this.onEditorPaste(event),
+        handlePaste: (view, event, slice) => this.onEditorPaste(view, event, slice),
         handleDrop: (view, event) => this.onEditorDrop(view, event as DragEvent),
         handleClick: (_view, _pos, event) => this.onEditorClickOpenLink(event),
       },
       extensions: [
+        markdownLengthLimit(() => this.maxLength(), () => this.limitNotice.set('Limit reached. Content cannot exceed the character limit.')),
         StarterKit.configure({
           heading: { levels: [1, 2, 3] },
           // Pasted/typed URLs autolink. openOnClick stays false because this editor is
@@ -462,6 +482,9 @@ export class MarkdownEditor implements AfterViewInit {
         }),
       ],
       onUpdate: () => {
+        const markdown = this.readMarkdown();
+        this.markdownValue.set(markdown);
+        this.contentChange.emit(markdown);
         this.scheduleSave();
         this.updateSlashState();
         this.updateFormatBar();
@@ -477,6 +500,7 @@ export class MarkdownEditor implements AfterViewInit {
       },
     });
     this.lastKnownValue = this.value();
+    this.markdownValue.set(this.readMarkdown());
   }
 
   /**
@@ -499,12 +523,20 @@ export class MarkdownEditor implements AfterViewInit {
 
   // ─── Attachments ────────────────────────────────────────
   /** ProseMirror paste hook — intercepts pasted files (images and others). */
-  private onEditorPaste(event: ClipboardEvent): boolean {
-    if (!this.upload()) return false;
-    const files = extractFiles(event.clipboardData);
-    if (!files.length) return false;
+  private onEditorPaste(view: EditorView, event: ClipboardEvent, slice: Slice): boolean {
+    if (this.upload()) {
+      const files = extractFiles(event.clipboardData);
+      if (files.length) {
+        event.preventDefault();
+        this.handleFiles(files, null);
+        return true;
+      }
+    }
+    const max = this.maxLength(), editor = this.editor;
+    if (max === null || !editor || markdownSource(editor, view.state.tr.replaceSelection(slice).doc).length <= max) return false;
     event.preventDefault();
-    this.handleFiles(files, null);
+    view.dispatch(fitPastedContent(view.state, slice, max, doc => markdownSource(editor, doc)));
+    this.limitNotice.set(`Pasted content was trimmed to fit the ${max}-character limit.`);
     return true;
   }
 
@@ -901,6 +933,7 @@ export class MarkdownEditor implements AfterViewInit {
 
   private emitSave(): void {
     const markdown = this.readMarkdown();
+    if (this.maxLength() !== null && markdown.length > this.maxLength()!) return;
     this.lastKnownValue = markdown;
     this.contentSave.emit(markdown);
   }

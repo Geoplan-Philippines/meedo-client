@@ -27,13 +27,15 @@ import { ActivityService } from '../services/activity.service';
 import { TicketComment } from '../models/ticket-comment.model';
 import { TicketActivity, TicketActivityType } from '../models/ticket-activity.model';
 import { THREAD_PAGE_SIZE, TICKET_COMMENT_MAX_LENGTH } from '../tickets.constants';
+import { trimmedRequired } from '../utils/ticket-validation';
+import { InputFeedback } from '../../../shared/ui/input-feedback/input-feedback';
 import { getAvatarClass } from '../../../shared/utils/avatar.utils';
 import { LinkifyPipe } from '../../../shared/pipes/linkify';
 import { initialsFrom, relativeTime } from '../utils/ticket.utils';
 
 @Component({
   selector: 'app-ticket-thread',
-  imports: [ButtonModule, TextareaModule, SkeletonModule, ConfirmDialogModule, DatePipe, NgTemplateOutlet, ReactiveFormsModule, LinkifyPipe],
+  imports: [ButtonModule, TextareaModule, SkeletonModule, ConfirmDialogModule, DatePipe, NgTemplateOutlet, ReactiveFormsModule, LinkifyPipe, InputFeedback],
   // Own ConfirmationService instance drives this component's <p-confirmDialog>;
   // MessageService is intentionally inherited from the parent (see below).
   providers: [ConfirmationService],
@@ -52,6 +54,7 @@ export class TicketThread {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly ticketId = input.required<string>();
+  readonly commentMaxLength = TICKET_COMMENT_MAX_LENGTH;
 
   readonly comments = signal<TicketComment[]>([]);
   readonly activities = signal<TicketActivity[]>([]);
@@ -82,15 +85,15 @@ export class TicketThread {
 
   readonly commentControl = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.maxLength(TICKET_COMMENT_MAX_LENGTH)],
+    validators: [trimmedRequired, Validators.maxLength(TICKET_COMMENT_MAX_LENGTH)],
   });
   readonly editCommentControl = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.maxLength(TICKET_COMMENT_MAX_LENGTH)],
+    validators: [trimmedRequired, Validators.maxLength(TICKET_COMMENT_MAX_LENGTH)],
   });
   readonly replyControl = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.maxLength(TICKET_COMMENT_MAX_LENGTH)],
+    validators: [trimmedRequired, Validators.maxLength(TICKET_COMMENT_MAX_LENGTH)],
   });
 
   private readonly replyBox = viewChild<ElementRef<HTMLTextAreaElement>>('replyBox');
@@ -206,6 +209,7 @@ export class TicketThread {
   }
 
   postComment(): void {
+    if (this.isPostingComment()) return;
     if (this.commentControl.invalid) {
       this.commentControl.markAsTouched();
       return;
@@ -243,6 +247,7 @@ export class TicketThread {
   }
 
   postReply(parent: TicketComment): void {
+    if (this.isPostingReply()) return;
     if (this.replyControl.invalid) {
       this.replyControl.markAsTouched();
       return;
@@ -279,6 +284,7 @@ export class TicketThread {
   }
 
   saveEditComment(comment: TicketComment): void {
+    if (this.isSavingComment()) return;
     if (this.editCommentControl.invalid) {
       this.editCommentControl.markAsTouched();
       return;

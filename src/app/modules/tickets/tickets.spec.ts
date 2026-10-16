@@ -14,6 +14,7 @@ import { StatusesService } from './services/statuses.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { TicketsService } from './services/tickets.service';
 import { Tickets } from './tickets';
+import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from './tickets.constants';
 
 const member: OrgMember = {
   id: 'org-member-id', userId: 'session-user-id', organizationId: 'org-id',
@@ -75,6 +76,55 @@ describe('Tickets', () => {
     const button = fixture.nativeElement.querySelector('.my-issues-toggle') as HTMLButtonElement;
     expect(button.textContent).toContain('My issues');
     expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('rejects whitespace-only titles and over-limit fields in both create and edit submission paths', () => {
+    component.openEditDialog(ticket);
+    for (const form of [component.ticketForm, component.editTicketForm]) {
+      form.controls.title.setValue(' \t\n ');
+      expect(form.controls.title.hasError('required')).toBe(true);
+    }
+    component.saveTicket(); component.updateTicket();
+    expect(service.createTicket).not.toHaveBeenCalled();
+    expect(service.updateTicket).not.toHaveBeenCalled();
+    for (const form of [component.ticketForm, component.editTicketForm]) {
+      form.controls.title.setValue('x'.repeat(TICKET_TITLE_MAX_LENGTH + 1));
+      expect(form.invalid).toBe(true);
+      form.controls.title.setValue('Title');
+      form.controls.description.setValue('x'.repeat(TICKET_DESCRIPTION_MAX_LENGTH + 1));
+      expect(form.invalid).toBe(true);
+    }
+    component.saveTicket(); component.updateTicket();
+    expect(service.createTicket).not.toHaveBeenCalled();
+    expect(service.updateTicket).not.toHaveBeenCalled();
+  });
+
+  it('accepts the exact limits and trims valid create/edit payloads', () => {
+    const title = 'x'.repeat(TICKET_TITLE_MAX_LENGTH);
+    const description = 'd'.repeat(TICKET_DESCRIPTION_MAX_LENGTH);
+    component.ticketForm.patchValue({ title, description });
+    expect(component.canCreate()).toBe(true);
+    component.saveTicket();
+    expect(service.createTicket).toHaveBeenCalledWith(expect.objectContaining({ title, description }));
+    component.openEditDialog(ticket);
+    component.editTicketForm.patchValue({ title: '  Edited title  ', description: '  Description  ' });
+    component.updateTicket();
+    expect(service.updateTicket).toHaveBeenCalledWith(ticket.id, expect.objectContaining({ title: 'Edited title', description: 'Description' }));
+  });
+
+  it('wires create/edit native limits, counters, and whitespace errors to their inputs', async () => {
+    component.openCreateDialog();
+    component.ticketForm.controls.title.setValue(' '.repeat(3));
+    fixture.detectChanges(); await fixture.whenStable();
+    const title = fixture.nativeElement.querySelector('.compose-title') as HTMLInputElement;
+    expect(title.maxLength).toBe(TICKET_TITLE_MAX_LENGTH);
+    expect(title.getAttribute('aria-describedby')).toBe('create-title-feedback');
+    expect(fixture.nativeElement.querySelector('#create-title-feedback').textContent).toContain('Title cannot be blank');
+    expect(component.canCreate()).toBe(false);
+    component.closeCreateDialog(); component.openEditDialog(ticket);
+    fixture.detectChanges(); await fixture.whenStable();
+    expect((fixture.nativeElement.querySelector('#edit-ticket-title') as HTMLInputElement).maxLength).toBe(TICKET_TITLE_MAX_LENGTH);
+    expect((fixture.nativeElement.querySelector('#edit-ticket-description') as HTMLTextAreaElement).maxLength).toBe(TICKET_DESCRIPTION_MAX_LENGTH);
   });
 
   it('switches List / Board in the URL, preserves other params, and follows navigation', async () => {

@@ -28,6 +28,9 @@ import { MessageService } from 'primeng/api';
 
 import { TicketsService } from './services/tickets.service';
 import { TicketsBoard } from './tickets-board/tickets-board';
+import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
+import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from './tickets.constants';
+import { trimmedRequired } from './utils/ticket-validation';
 import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { StatusesService } from './services/statuses.service';
@@ -79,6 +82,7 @@ import {
     ReactiveFormsModule,
     MarkdownEditor,
     TicketsBoard,
+    InputFeedback,
   ],
   providers: [MessageService],
   templateUrl: './tickets.html',
@@ -223,7 +227,12 @@ export class Tickets implements OnInit {
     initialValue: this.ticketForm.getRawValue(),
   });
 
-  readonly canCreate = computed(() => !!this.composeValue().title?.trim());
+  readonly titleMaxLength = TICKET_TITLE_MAX_LENGTH;
+  readonly descriptionMaxLength = TICKET_DESCRIPTION_MAX_LENGTH;
+  readonly canCreate = computed(() => {
+    this.composeValue();
+    return this.ticketForm.valid;
+  });
 
   readonly selectedStatus = computed(() => {
     const id = this.composeValue().ticketStatusId;
@@ -366,8 +375,8 @@ export class Tickets implements OnInit {
 
   private buildTicketForm() {
     return new FormGroup({
-      title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-      description: new FormControl('', { nonNullable: true }),
+      title: new FormControl('', { nonNullable: true, validators: [trimmedRequired, Validators.maxLength(TICKET_TITLE_MAX_LENGTH)] }),
+      description: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(TICKET_DESCRIPTION_MAX_LENGTH)] }),
       priority: new FormControl<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('MEDIUM', { nonNullable: true }),
       dueDate: new FormControl<Date | null>(null),
       ticketStatusId: new FormControl('', { nonNullable: true }),
@@ -748,6 +757,7 @@ export class Tickets implements OnInit {
   }
 
   updateTicket(): void {
+    if (this.isUpdating()) return;
     if (this.editTicketForm.invalid) {
       this.editTicketForm.markAllAsTouched();
       return;
@@ -791,6 +801,7 @@ export class Tickets implements OnInit {
   }
 
   saveTicket(): void {
+    if (this.isSaving()) return;
     if (this.ticketForm.invalid) {
       this.ticketForm.markAllAsTouched();
       return;

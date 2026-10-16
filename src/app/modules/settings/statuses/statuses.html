@@ -173,17 +173,6 @@
                   tooltipPosition="top"
                   (onClick)="openEdit(status)"
                 />
-                <p-button
-                  icon="pi pi-trash"
-                  severity="danger"
-                  text
-                  rounded
-                  size="small"
-                  [ariaLabel]="'Delete ' + status.name"
-                  pTooltip="Delete"
-                  tooltipPosition="top"
-                  (onClick)="askDelete(status)"
-                />
               </div>
             </td>
           </tr>
@@ -261,32 +250,5 @@
       [loading]="isSaving()"
       [disabled]="form.invalid"
     />
-  </ng-template>
-</p-dialog>
-
-<p-dialog
-  [visible]="!!statusToDelete()"
-  (visibleChange)="$event ? null : cancelDelete()"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [closable]="!isDeleting()"
-  [style]="{ width: '440px' }"
-  header="Delete status"
->
-  <div class="flex flex-col gap-3 text-sm text-body">
-    <p>
-      Delete <strong class="text-heading">{{ statusToDelete()?.name }}</strong>? This can't be undone.
-    </p>
-    @if (statusToDelete() && !statusToDelete()!.isArchived) {
-      <p class="rounded-base border border-border bg-muted/50 p-3 text-body/80">
-        <i class="pi pi-info-circle mr-1" aria-hidden="true"></i>
-        Prefer to keep it for reference? <button type="button" class="text-primary hover:underline font-medium" (click)="archiveFromDelete()">Archive instead</button> to hide it from active use without losing it.
-      </p>
-    }
-  </div>
-  <ng-template pTemplate="footer">
-    <p-button label="Cancel" severity="secondary" text (onClick)="cancelDelete()" [disabled]="isDeleting()" />
-    <p-button label="Delete" severity="danger" (onClick)="confirmDelete()" [loading]="isDeleting()" />
   </ng-template>
 </p-dialog>

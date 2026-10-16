@@ -75,7 +75,7 @@ export class Statuses implements OnInit {
   /** Built-in, locked statuses — the fixed baseline (sourced from the API now). */
   readonly systemStatuses = computed(() => this.statuses().filter((s) => s.isSystem));
 
-  /** Team-defined statuses that can be edited, archived, or deleted. */
+  /** Team-defined statuses that can be edited or archived. */
   readonly customStatuses = computed(() => this.statuses().filter((s) => !s.isSystem));
 
   readonly visibleStatuses = computed(() => {
@@ -88,8 +88,6 @@ export class Statuses implements OnInit {
   readonly editingStatus = signal<Status | null>(null);
   readonly isSaving = signal(false);
 
-  readonly statusToDelete = signal<Status | null>(null);
-  readonly isDeleting = signal(false);
 
   readonly archivingId = signal<string | null>(null);
 
@@ -251,37 +249,4 @@ export class Statuses implements OnInit {
     this.toggleArchive$.next(status);
   }
 
-  askDelete(status: Status): void {
-    this.statusToDelete.set(status);
-  }
-
-  cancelDelete(): void {
-    if (this.isDeleting()) return;
-    this.statusToDelete.set(null);
-  }
-
-  archiveFromDelete(): void {
-    const target = this.statusToDelete();
-    if (!target || this.isDeleting()) return;
-    this.statusToDelete.set(null);
-    this.quickToggleArchive(target);
-  }
-
-  confirmDelete(): void {
-    const target = this.statusToDelete();
-    if (!target || this.isDeleting()) return;
-    this.isDeleting.set(true);
-    this.error.set(null);
-    this.statusesService.delete(target.id).subscribe({
-      next: () => {
-        this.statuses.update((list) => list.filter((s) => s.id !== target.id));
-        this.isDeleting.set(false);
-        this.statusToDelete.set(null);
-      },
-      error: () => {
-        this.isDeleting.set(false);
-        this.error.set('Failed to delete status. Please try again.');
-      },
-    });
-  }
 }

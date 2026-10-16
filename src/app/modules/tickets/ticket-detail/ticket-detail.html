@@ -46,18 +46,7 @@
 
     <div class="detail-body">
       <main class="detail-main">
-        <!-- Editable in place; commits on blur / Enter, reverts on Escape (stays an <h1> for a11y). -->
-        <h1
-          #titleEl
-          class="detail-title"
-          contenteditable="plaintext-only"
-          [textContent]="t.title"
-          spellcheck="false"
-          enterkeyhint="done"
-          (keydown.enter)="onTitleEnter($event, titleEl)"
-          (keydown.escape)="onTitleEscape(titleEl)"
-          (blur)="commitTitle(titleEl)"
-        ></h1>
+        <app-ticket-title-editor [value]="t.title" (titleSave)="commitTitle($event)" />
 
         <!-- Linear-style: always-on WYSIWYG markdown, autosaves on pause/blur. -->
         <app-markdown-editor
@@ -66,6 +55,7 @@
           [upload]="uploadAttachment"
           placeholder="Add description…"
           ariaLabel="Ticket description"
+          [maxLength]="descriptionMaxLength"
           (contentSave)="onDescriptionSave($event)"
         />
 

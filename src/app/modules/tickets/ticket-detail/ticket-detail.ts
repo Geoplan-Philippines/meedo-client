@@ -30,6 +30,8 @@ import { TeamsService } from '../../settings/teams/services/teams.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { TicketThread } from '../ticket-thread/ticket-thread';
 import { MarkdownEditor } from '../../../shared/ui/markdown-editor/markdown-editor';
+import { TicketTitleEditor } from '../ticket-title-editor/ticket-title-editor';
+import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from '../tickets.constants';
 
 import { Ticket, TicketRelation, UpdateTicketPayload } from '../models/ticket.model';
 import { Status } from '../models/status.model';
@@ -62,6 +64,7 @@ type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
     DatePickerModule,
     TicketThread,
     MarkdownEditor,
+    TicketTitleEditor,
   ],
   providers: [MessageService],
   templateUrl: './ticket-detail.html',
@@ -83,6 +86,7 @@ export class TicketDetail {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly ticket = signal<Ticket | null>(null);
+  readonly descriptionMaxLength = TICKET_DESCRIPTION_MAX_LENGTH;
   /** loading → skeleton · ready → content · not-found → 404 · error → load failed (retryable). */
   readonly loadState = signal<'loading' | 'ready' | 'not-found' | 'error'>('loading');
   readonly loadErrorStatus = signal<number | null>(null);
@@ -416,28 +420,13 @@ export class TicketDetail {
   }
 
   // ─── Title inline edit (optimistic + PATCH) ─────────────
-  /** Enter commits the title (single line) rather than inserting a newline. */
-  onTitleEnter(event: Event, el: HTMLElement): void {
-    event.preventDefault();
-    el.blur(); // blur triggers commitTitle
-  }
-
-  /** Escape discards the edit and restores the saved title. */
-  onTitleEscape(el: HTMLElement): void {
-    el.textContent = this.ticket()?.title ?? '';
-    el.blur();
-  }
-
-  commitTitle(el: HTMLElement): void {
+  commitTitle(title: string): void {
     const previous = this.ticket();
     if (!previous) return;
-    const next = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const next = title.replace(/\s+/g, ' ').trim();
 
-    // Title is required — a blank or unchanged value just snaps back (also normalises whitespace).
-    if (!next || next === previous.title) {
-      el.textContent = previous.title;
-      return;
-    }
+    // Guard programmatic calls as well as the bounded inline editor.
+    if (!next || title.length > TICKET_TITLE_MAX_LENGTH || next === previous.title) return;
 
     this.ticket.set({ ...previous, title: next });
     this.ticketsService
@@ -455,6 +444,7 @@ export class TicketDetail {
 
   // ─── Description autosave (WYSIWYG markdown) ────────────
   onDescriptionSave(markdown: string): void {
+    if (markdown.length > TICKET_DESCRIPTION_MAX_LENGTH) return;
     const previous = this.ticket();
     if (!previous) return;
     const current = previous.description ?? '';

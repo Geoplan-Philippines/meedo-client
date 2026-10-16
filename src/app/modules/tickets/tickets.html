@@ -301,6 +301,9 @@
       type="text"
       class="compose-title"
       formControlName="title"
+      [maxLength]="titleMaxLength"
+      aria-describedby="create-title-feedback"
+      [attr.aria-invalid]="ticketForm.controls.title.invalid && (ticketForm.controls.title.dirty || ticketForm.controls.title.touched)"
       placeholder="Ticket title"
       aria-label="Ticket title"
       aria-required="true"
@@ -308,6 +311,8 @@
       enterkeyhint="next"
     />
 
+    <app-input-feedback feedbackId="create-title-feedback" label="Title" [required]="true"
+      [value]="ticketForm.controls.title.value" [maxLength]="titleMaxLength" [showRequired]="ticketForm.controls.title.touched" />
     <!-- Markdown body — WYSIWYG editor; type "/" for a block menu -->
     <app-markdown-editor
       class="compose-body"
@@ -315,7 +320,8 @@
       [upload]="uploadAttachment"
       placeholder="Add description…"
       ariaLabel="Ticket description"
-      (contentSave)="onComposeDescription($event)"
+      [maxLength]="descriptionMaxLength"
+      (contentChange)="onComposeDescription($event)"
     />
 
     <!-- Minimalist pill selectors -->
@@ -682,15 +688,18 @@
 
     <div class="form-field">
       <label class="form-label" for="edit-ticket-title">Title <span class="required" aria-hidden="true">*</span></label>
-      <input id="edit-ticket-title" pInputText formControlName="title" placeholder="Enter ticket title" class="w-full" aria-required="true" />
-      @if (editTicketForm.get('title')?.invalid && editTicketForm.get('title')?.touched) {
-        <small class="form-error" role="alert">Title is required.</small>
-      }
+      <input id="edit-ticket-title" pInputText formControlName="title" placeholder="Enter ticket title" class="w-full" aria-required="true"
+        [maxLength]="titleMaxLength" aria-describedby="edit-title-feedback" [attr.aria-invalid]="editTicketForm.controls.title.invalid && (editTicketForm.controls.title.dirty || editTicketForm.controls.title.touched)" />
+      <app-input-feedback feedbackId="edit-title-feedback" label="Title" [required]="true"
+        [value]="editTicketForm.controls.title.value" [maxLength]="titleMaxLength" [showRequired]="editTicketForm.controls.title.touched" />
     </div>
 
     <div class="form-field">
       <label class="form-label" for="edit-ticket-description">Description</label>
-      <textarea id="edit-ticket-description" pTextarea formControlName="description" placeholder="Enter ticket description" rows="3" class="w-full"></textarea>
+      <textarea id="edit-ticket-description" pTextarea formControlName="description" placeholder="Enter ticket description" rows="3" class="w-full"
+        [maxLength]="descriptionMaxLength" aria-describedby="edit-description-feedback"></textarea>
+      <app-input-feedback feedbackId="edit-description-feedback" label="Description"
+        [value]="editTicketForm.controls.description.value" [maxLength]="descriptionMaxLength" />
     </div>
 
     <div class="form-row">
@@ -746,6 +755,7 @@
       icon="pi pi-check"
       (onClick)="updateTicket()"
       [loading]="isUpdating()"
+      [disabled]="editTicketForm.invalid || isUpdating()"
     />
   </ng-template>
 </p-dialog>

@@ -48,10 +48,13 @@
           </div>
 
           @if (editingCommentId() === comment.id) {
-            <textarea pTextarea [formControl]="editCommentControl" rows="2" [autoResize]="true" class="w-full mt-1" aria-label="Edit comment" (keydown)="onEditCommentKeydown($event, comment)"></textarea>
+            <textarea pTextarea [formControl]="editCommentControl" rows="2" [autoResize]="true" class="w-full mt-1" aria-label="Edit comment" (keydown)="onEditCommentKeydown($event, comment)"
+              [maxLength]="commentMaxLength" [attr.aria-describedby]="'edit-comment-feedback-' + comment.id" [attr.aria-invalid]="editCommentControl.invalid"></textarea>
+            <app-input-feedback [feedbackId]="'edit-comment-feedback-' + comment.id" label="Comment" [required]="true"
+              [value]="editCommentControl.value" [maxLength]="commentMaxLength" [showRequired]="editCommentControl.touched" />
             <div class="flex justify-end gap-2 mt-2">
               <p-button label="Cancel" severity="secondary" [text]="true" size="small" (onClick)="cancelEditComment()" [disabled]="isSavingComment()" />
-              <p-button label="Save" icon="pi pi-check" size="small" (onClick)="saveEditComment(comment)" [loading]="isSavingComment()" />
+              <p-button label="Save" icon="pi pi-check" size="small" (onClick)="saveEditComment(comment)" [loading]="isSavingComment()" [disabled]="editCommentControl.invalid || isSavingComment()" />
             </div>
           } @else {
             <!-- Segments wrapped in inline elements so template indentation never
@@ -87,12 +90,15 @@
                 <div class="c-row">
                   <span class="avatar" [class]="avatarClass(currentUserName())" aria-hidden="true">{{ initials(currentUserName()) }}</span>
                   <div class="c-body">
-                    <textarea #replyBox pTextarea [formControl]="replyControl" rows="1" [autoResize]="true" class="w-full" placeholder="Write a reply…" aria-label="Write a reply" (keydown)="onReplyKeydown($event, comment)"></textarea>
+                    <textarea #replyBox pTextarea [formControl]="replyControl" rows="1" [autoResize]="true" class="w-full" placeholder="Write a reply…" aria-label="Write a reply" (keydown)="onReplyKeydown($event, comment)"
+                      [maxLength]="commentMaxLength" [attr.aria-describedby]="'reply-feedback-' + comment.id" [attr.aria-invalid]="replyControl.invalid && (replyControl.dirty || replyControl.touched)"></textarea>
+                    <app-input-feedback [feedbackId]="'reply-feedback-' + comment.id" label="Reply" [required]="true"
+                      [value]="replyControl.value" [maxLength]="commentMaxLength" [showRequired]="replyControl.touched" />
                     <div class="flex items-center justify-between gap-2 mt-2">
                       <span class="text-muted text-xs">Enter to send · Esc to cancel</span>
                       <div class="flex items-center gap-2">
                         <p-button label="Cancel" severity="secondary" [text]="true" size="small" (onClick)="cancelReply()" [disabled]="isPostingReply()" />
-                        <p-button icon="pi pi-arrow-up" [rounded]="true" size="small" ariaLabel="Send reply" (onClick)="postReply(comment)" [loading]="isPostingReply()" [disabled]="!replyControl.value.trim() || isPostingReply()" />
+                        <p-button icon="pi pi-arrow-up" [rounded]="true" size="small" ariaLabel="Send reply" (onClick)="postReply(comment)" [loading]="isPostingReply()" [disabled]="replyControl.invalid || isPostingReply()" />
                       </div>
                     </div>
                   </div>
@@ -124,10 +130,13 @@
     <div class="composer">
       <span class="avatar" [class]="avatarClass(currentUserName())" aria-hidden="true">{{ initials(currentUserName()) }}</span>
       <div class="c-body">
-        <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Leave a comment…" rows="1" [autoResize]="true" class="w-full" aria-label="Add a comment" (keydown)="onCommentKeydown($event)"></textarea>
+        <textarea id="ticket-comment" pTextarea [formControl]="commentControl" placeholder="Leave a comment…" rows="1" [autoResize]="true" class="w-full" aria-label="Add a comment" (keydown)="onCommentKeydown($event)"
+          [maxLength]="commentMaxLength" [attr.aria-describedby]="'comment-feedback-' + ticketId()" [attr.aria-invalid]="commentControl.invalid && (commentControl.dirty || commentControl.touched)"></textarea>
+        <app-input-feedback [feedbackId]="'comment-feedback-' + ticketId()" label="Comment" [required]="true"
+          [value]="commentControl.value" [maxLength]="commentMaxLength" [showRequired]="commentControl.touched" />
         <div class="flex items-center justify-between gap-2 mt-2">
           <span class="text-muted text-xs">Enter to send · Shift+Enter for a new line</span>
-          <p-button icon="pi pi-arrow-up" [rounded]="true" size="small" ariaLabel="Post comment" (onClick)="postComment()" [loading]="isPostingComment()" [disabled]="!commentControl.value.trim() || isPostingComment()" />
+          <p-button icon="pi pi-arrow-up" [rounded]="true" size="small" ariaLabel="Post comment" (onClick)="postComment()" [loading]="isPostingComment()" [disabled]="commentControl.invalid || isPostingComment()" />
         </div>
       </div>
     </div>
