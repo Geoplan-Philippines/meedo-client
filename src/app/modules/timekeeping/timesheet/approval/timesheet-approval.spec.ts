@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { vi } from 'vitest';
 
 import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
 import { TimesheetApproval } from './timesheet-approval';
@@ -125,6 +126,89 @@ describe('TimesheetApproval', () => {
     component.periodLock.set({ ...lock, isLocked: true });
 
     component.toggleAllSubmitted(true);
+
+    expect(component.selectedCount()).toBe(0);
+  });
+
+  it('blocks individual and employee selections while locked', () => {
+    const employee = summary.employees[0];
+    component.periodLock.set({ ...lock, isLocked: true });
+
+    component.toggleEntry(employee.entries[0], true);
+    component.toggleEmployeeSubmitted(employee, true);
+
+    expect(component.selectedCount()).toBe(0);
+  });
+
+  it('disables selection controls and retains the locked indication', async () => {
+    const controls = () => Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    );
+    expect(controls().length).toBe(2);
+    expect(controls().every((control) => !control.disabled)).toBe(true);
+
+    component.periodLock.set({ ...lock, isLocked: true });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(controls().every((control) => control.disabled)).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Period is locked"]')).toBeTruthy();
+  });
+
+  it('clears existing selection and closes rejection when a lock arrives', async () => {
+    component.toggleAllSubmitted(true);
+    component.openRejectDialog();
+    expect(component.selectedCount()).toBe(1);
+    expect(component.showRejectDialog()).toBe(true);
+
+    component.periodLock.set({ ...lock, isLocked: true });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.selectedCount()).toBe(0);
+    expect(component.showRejectDialog()).toBe(false);
+  });
+
+  it('does not dispatch bulk or employee decisions while locked, even with a stale selection', () => {
+    const service = TestBed.inject(TimesheetService);
+    const approve = vi.spyOn(service, 'bulkApprove');
+    const reject = vi.spyOn(service, 'bulkReject');
+    component.periodLock.set({ ...lock, isLocked: true });
+    component.selectedEntryIds.set(new Set(['entry-1']));
+    component.rejectReason.set('Correction');
+
+    component.approveSelected();
+    component.rejectSelected();
+    component.approveEmployee(summary.employees[0]);
+    component.rejectEmployee(summary.employees[0]);
+    component.openRejectDialog();
+
+    expect(approve).not.toHaveBeenCalled();
+    expect(reject).not.toHaveBeenCalled();
+    expect(component.showRejectDialog()).toBe(false);
+  });
+
+  it('permits individual and employee selection again after unlocking', async () => {
+    component.periodLock.set({ ...lock, isLocked: true });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.periodLock.set(lock);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.toggleEntry(summary.employees[0].entries[0], true);
+    expect(component.selectedCount()).toBe(1);
+    component.toggleAllSubmitted(false);
+    component.toggleEmployeeSubmitted(summary.employees[0], true);
+    expect(component.selectedCount()).toBe(1);
+  });
+
+  it('uses the summary lock state when no period-lock response is available', () => {
+    component.periodLock.set(null);
+    component.summary.set({ ...summary, isLocked: true });
+
+    component.toggleAllSubmitted(true);
+    component.toggleEntry(summary.employees[0].entries[0], true);
 
     expect(component.selectedCount()).toBe(0);
   });

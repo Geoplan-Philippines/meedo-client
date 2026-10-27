@@ -89,8 +89,8 @@
     <div class="bulk-bar" role="status" aria-live="polite">
       <span class="bulk-count">{{ selectedCount() }} row(s) selected</span>
       <div class="bulk-actions">
-        <button pButton type="button" size="small" icon="pi pi-check" label="Approve" (click)="approveSelected()" [loading]="isApproving()"></button>
-        <button pButton type="button" size="small" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject" (click)="openRejectDialog()" [disabled]="isApproving()"></button>
+        <button pButton type="button" size="small" icon="pi pi-check" label="Approve" (click)="approveSelected()" [loading]="isApproving()" [disabled]="isPeriodLocked()"></button>
+        <button pButton type="button" size="small" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject" (click)="openRejectDialog()" [disabled]="isApproving() || isPeriodLocked()"></button>
         <button pButton type="button" size="small" severity="secondary" [text]="true" label="Clear selection" (click)="toggleAllSubmitted(false)"></button>
       </div>
     </div>
@@ -187,7 +187,7 @@
                   type="checkbox"
                   [checked]="selectedCount() > 0 && selectedCount() === submittedEntryIds().length"
                   (change)="toggleAllSubmitted($any($event.target).checked)"
-                  [disabled]="submittedEntryIds().length === 0"
+                  [disabled]="isPeriodLocked() || submittedEntryIds().length === 0"
                   aria-label="Select all submitted entries"
                 />
               </th>
@@ -221,7 +221,7 @@
                   [checked]="employeeAllSubmittedSelected(employee)"
                   [indeterminate]="employeeSomeSubmittedSelected(employee)"
                   (change)="toggleEmployeeSubmitted(employee, $any($event.target).checked)"
-                  [disabled]="employeeSubmittedCount(employee) === 0"
+                  [disabled]="isPeriodLocked() || employeeSubmittedCount(employee) === 0"
                   [attr.aria-label]="'Select submitted entries for ' + employee.employeeName"
                 />
               </td>
@@ -436,6 +436,7 @@
               label="Approve Timesheet"
               (click)="approveEmployee(emp)"
               [loading]="isApproving()"
+              [disabled]="isPeriodLocked()"
             ></button>
             <button
               pButton
@@ -445,7 +446,7 @@
               icon="pi pi-times"
               label="Reject Timesheet"
               (click)="rejectEmployee(emp)"
-              [disabled]="isApproving()"
+              [disabled]="isApproving() || isPeriodLocked()"
             ></button>
           } @else {
             <div class="footer-info">
@@ -497,7 +498,7 @@
         <textarea pTextarea rows="4" [ngModel]="rejectReason()" (ngModelChange)="rejectReason.set($event)" placeholder="Reason for rejection…" class="dialog-textarea"></textarea>
         <div class="dialog-actions">
           <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="cancelReject()" [disabled]="isRejecting()"></button>
-          <button pButton type="button" severity="danger" icon="pi pi-times" label="Reject rows" (click)="rejectSelected()" [loading]="isRejecting()"></button>
+          <button pButton type="button" severity="danger" icon="pi pi-times" label="Reject rows" (click)="rejectSelected()" [loading]="isRejecting()" [disabled]="isPeriodLocked()"></button>
         </div>
       </div>
     </div>

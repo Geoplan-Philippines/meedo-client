@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
@@ -133,6 +133,15 @@ export class TimesheetApproval implements OnInit {
       .map(e => e.id),
   );
 
+  constructor() {
+    effect(() => {
+      if (this.isPeriodLocked()) {
+        this.selectedEntryIds.set(new Set());
+        this.showRejectDialog.set(false);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.loadData();
   }
@@ -226,6 +235,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleEntry(entry: TimesheetEntry, checked: boolean): void {
+    if (checked && this.isPeriodLocked()) return;
     if (!isActionable(entry.status)) return;
     this.selectedEntryIds.update(ids => {
       const next = new Set(ids);
@@ -239,7 +249,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleAllSubmitted(checked: boolean): void {
-    this.selectedEntryIds.set(checked ? new Set(this.submittedEntryIds()) : new Set());
+    this.selectedEntryIds.set(checked && !this.isPeriodLocked() ? new Set(this.submittedEntryIds()) : new Set());
   }
 
   employeeAllSubmittedSelected(employee: TimesheetSummaryEmployee): boolean {
@@ -254,6 +264,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleEmployeeSubmitted(employee: TimesheetSummaryEmployee, checked: boolean): void {
+    if (checked && this.isPeriodLocked()) return;
     const ids = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     this.selectedEntryIds.update(set => {
       const next = new Set(set);
@@ -263,6 +274,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   approveSelected(): void {
+    if (this.isPeriodLocked()) return;
     const entryIds = [...this.selectedEntryIds()];
     if (entryIds.length === 0) return;
 
@@ -282,6 +294,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   approveEmployee(employee: TimesheetSummaryEmployee): void {
+    if (this.isPeriodLocked()) return;
     const entryIds = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     if (entryIds.length === 0) return;
     this.selectedEntryIds.set(new Set(entryIds));
@@ -289,6 +302,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   rejectEmployee(employee: TimesheetSummaryEmployee): void {
+    if (this.isPeriodLocked()) return;
     const entryIds = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     if (entryIds.length === 0) return;
     this.selectedEntryIds.set(new Set(entryIds));
@@ -300,6 +314,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   openRejectDialog(): void {
+    if (this.isPeriodLocked()) return;
     if (this.selectedCount() === 0) return;
     this.rejectReason.set('');
     this.showRejectDialog.set(true);
@@ -311,6 +326,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   rejectSelected(): void {
+    if (this.isPeriodLocked()) return;
     const reason = this.rejectReason().trim();
     if (!reason) {
       this.messageService.add({ severity: 'warn', summary: 'Reason required', detail: 'Please enter a rejection reason.' });
