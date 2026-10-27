@@ -48,12 +48,34 @@ export interface Ticket {
     color: string | null;
   } | null;
   project?: {
-  id: string;
-  customerName: string;
-  workOrderNumber: string;
-} | null;
+    id: string;
+    customerName: string;
+    workOrderNumber: string;
+    displayName?: string | null;
+    quoteSubject?: string | null;
+    isArchived?: boolean;
+    client?: { customerName: string; displayName?: string | null } | null;
+  } | null;
   /** Other tickets this one is linked to (symmetric — the server keeps both sides in sync). */
   relatedTickets?: TicketRelation[];
+  /** SLA state calculated by the server on read; null when no policy applies. */
+  sla?: TicketSla | null;
+}
+
+export type SlaState = 'ok' | 'at_risk' | 'breached' | 'met';
+
+export interface SlaTarget {
+  dueAt: string;
+  state: SlaState;
+}
+
+export interface TicketSla {
+  policyId: string;
+  policyName: string;
+  /** project = policy for the ticket's project; organization = org-wide default. */
+  scope: 'project' | 'organization';
+  response: SlaTarget;
+  resolution: SlaTarget;
 }
 
 /** Board views, separated as tabs. `all` applies no status-category filter. */
@@ -69,6 +91,8 @@ export interface TicketListParams {
   priority?: string[];
   teamId?: string[];
   categoryId?: string;
+  /** Only tickets on this project (set by the /clients/:clientId/projects/:projectId/tickets route). */
+  projectId?: string;
   assigneeId?: string;
   includeArchived?: boolean;
   sortField?: string;
@@ -80,6 +104,7 @@ export interface TicketFacetsParams {
   view?: TicketView;
   teamId?: string[];
   categoryId?: string;
+  projectId?: string;
   assigneeId?: string;
   search?: string;
   includeArchived?: boolean;

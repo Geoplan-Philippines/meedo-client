@@ -12,7 +12,7 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { forkJoin, of, debounceTime, distinctUntilChanged, finalize, catchError, map, switchMap } from 'rxjs';
+import { forkJoin, of, debounceTime, distinctUntilChanged, finalize, catchError, map, skip, switchMap } from 'rxjs';
 
 import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -29,12 +29,15 @@ import { MessageService } from 'primeng/api';
 import { TicketsService } from './services/tickets.service';
 import { TicketsBoard } from './tickets-board/tickets-board';
 import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
+import { ArchivedTag } from '../../shared/ui/archived-tag/archived-tag';
+import { WorkspaceBreadcrumb } from '../clients/workspace-breadcrumb/workspace-breadcrumb';
+import { projectDisplayName } from '../../shared/utils/display-name.utils';
 import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from './tickets.constants';
 import { trimmedRequired } from './utils/ticket-validation';
 import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { StatusesService } from './services/statuses.service';
-import { ProjectsService } from './services/projects.service';
+import { ProjectsService, filterProjects, withCurrentProject } from './services/projects.service';
 import { TeamsService } from '../settings/teams/services/teams.service';
 import { MembersService } from './services/members.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -83,6 +86,8 @@ import {
     MarkdownEditor,
     TicketsBoard,
     InputFeedback,
+    ArchivedTag,
+    WorkspaceBreadcrumb,
   ],
   providers: [MessageService],
   templateUrl: './tickets.html',
@@ -110,11 +115,20 @@ export class Tickets implements OnInit {
   readonly layout = toSignal(this.route.queryParamMap.pipe(map(params => params.get('view') === 'board' ? 'board' : 'list')), {
     initialValue: this.route.snapshot.queryParamMap.get('view') === 'board' ? 'board' : 'list',
   });
+  /** Set on /clients/:clientId/projects/:projectId/tickets: the list, board and counts show one project. */
+  readonly scopeProjectId = toSignal(this.route.paramMap.pipe(map(params => params.get('projectId'))), {
+    initialValue: this.route.snapshot.paramMap.get('projectId'),
+  });
+  readonly scopeClientId = toSignal(this.route.paramMap.pipe(map(params => params.get('clientId'))), {
+    initialValue: this.route.snapshot.paramMap.get('clientId'),
+  });
+
   readonly boardRevision = signal(0);
   readonly boardFilters = computed(() => ({
     page: 1, limit: 20, view: this.view(), search: this.searchTerm() || undefined,
     teamId: this.selectedTeamIds(), ticketStatusId: this.selectedStatusIds(),
     priority: this.selectedPriorities(), assigneeId: this.assigneeFilter(),
+    projectId: this.scopeProjectId() ?? undefined,
   }));
 
   setLayout(layout: 'list' | 'board'): void {
@@ -280,11 +294,12 @@ export class Tickets implements OnInit {
   /** Markdown mirrored into the compose editor (reset clears it; the editor writes back on save). */
   readonly composeDescription = computed(() => this.composeValue().description ?? '');
 
-  readonly filteredProjects = computed(() => {
-    const query = this.projectSearch().trim().toLowerCase();
-    const list = this.projects();
-    return query ? list.filter((project) => project.displayName.toLowerCase().includes(query)) : list;
-  });
+  readonly projectMatches = computed(() => filterProjects(this.projects(), this.projectSearch()));
+
+  /** Edit dialog options: active projects plus the ticket's archived project, if it has one. */
+  readonly editProjectOptions = computed(() =>
+    withCurrentProject(this.projects(), this.selectedTicket()?.project),
+  );
 
   /**
    * Auth-user IDs belonging to the currently selected compose team.
@@ -335,6 +350,14 @@ export class Tickets implements OnInit {
   constructor() {
     this.searchControl.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.refreshFacets();
+        this.applyFilters();
+      });
+
+    // Moving between projects in the sidebar reuses this component; reload for the new scope.
+    toObservable(this.scopeProjectId)
+      .pipe(distinctUntilChanged(), skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.refreshFacets();
         this.applyFilters();
@@ -417,6 +440,7 @@ export class Tickets implements OnInit {
         priority: this.selectedPriorities().length ? this.selectedPriorities() : undefined,
         teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
         assigneeId: this.assigneeFilter(),
+        projectId: this.scopeProjectId() ?? undefined,
         sortField: this.sortField || undefined,
         sortOrder: this.sortOrder || undefined,
       })
@@ -458,6 +482,7 @@ export class Tickets implements OnInit {
         search: this.searchControl.value.trim() || undefined,
         teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
         assigneeId: this.assigneeFilter(),
+        projectId: this.scopeProjectId() ?? undefined,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -609,6 +634,10 @@ export class Tickets implements OnInit {
       });
   }
 
+  projectName(project: NonNullable<Ticket['project']>): string {
+    return projectDisplayName(project);
+  }
+
   getMemberNames(ticket: Ticket): string {
     const assignees = ticket.assignees ?? [];
     if (!assignees.length) return '—';
@@ -662,7 +691,8 @@ export class Tickets implements OnInit {
       dueDate: null,
       ticketStatusId: '',
       categoryId: '',
-      projectId: '',
+      // New tickets on a project's page start on that project.
+      projectId: this.scopeProjectId() ?? '',
       teamId: '',
       assigneeIds: [],
     });

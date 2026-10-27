@@ -33,6 +33,7 @@ export class TicketsService {
     for (const priority of params.priority ?? []) httpParams = httpParams.append('priority', priority);
     for (const id of params.teamId ?? []) httpParams = httpParams.append('teamId', id);
     if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
+    if (params.projectId) httpParams = httpParams.set('projectId', params.projectId);
     if (params.assigneeId) httpParams = httpParams.set('assigneeId', params.assigneeId);
     if (params.includeArchived !== undefined) httpParams = httpParams.set('includeArchived', params.includeArchived);
     if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
@@ -52,6 +53,7 @@ export class TicketsService {
 
     for (const id of params.teamId ?? []) httpParams = httpParams.append('teamId', id);
     if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
+    if (params.projectId) httpParams = httpParams.set('projectId', params.projectId);
     if (params.assigneeId) httpParams = httpParams.set('assigneeId', params.assigneeId);
     if (params.includeArchived !== undefined) httpParams = httpParams.set('includeArchived', params.includeArchived);
 

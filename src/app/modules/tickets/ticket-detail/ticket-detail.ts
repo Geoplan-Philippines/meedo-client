@@ -24,7 +24,10 @@ import { TicketsService } from '../services/tickets.service';
 import { TicketAttachmentsService } from '../services/attachments.service';
 import { TicketCategoriesService } from '../services/ticket-categories.service';
 import { StatusesService } from '../services/statuses.service';
-import { ProjectsService } from '../services/projects.service';
+import { ProjectsService, filterProjects, withCurrentProject } from '../services/projects.service';
+import { SlaBadge } from '../sla-badge/sla-badge';
+import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
+import { projectDisplayName } from '../../../shared/utils/display-name.utils';
 import { MembersService } from '../services/members.service';
 import { TeamsService } from '../../settings/teams/services/teams.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -65,6 +68,8 @@ type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
     TicketThread,
     MarkdownEditor,
     TicketTitleEditor,
+    SlaBadge,
+    ArchivedTag,
   ],
   providers: [MessageService],
   templateUrl: './ticket-detail.html',
@@ -153,11 +158,10 @@ export class TicketDetail {
     return list;
   });
 
-  readonly filteredProjects = computed(() => {
-    const query = this.projectSearch().trim().toLowerCase();
-    const list = this.projects();
-    return query ? list.filter((project) => project.displayName.toLowerCase().includes(query)) : list;
-  });
+  /** Active projects plus the ticket's own project when the sync archived it (shown tagged). */
+  readonly projectMatches = computed(() =>
+    filterProjects(withCurrentProject(this.projects(), this.ticket()?.project), this.projectSearch()),
+  );
 
   readonly categoryName = computed(() => {
     const id = this.ticket()?.categoryId;
@@ -337,9 +341,21 @@ export class TicketDetail {
       { projectId: project.id },
       {
         projectId: project.id,
-        project: { id: project.id, customerName: project.customerName, workOrderNumber: project.workOrderNumber },
+        project: {
+          id: project.id,
+          customerName: project.customerName,
+          workOrderNumber: project.workOrderNumber,
+          displayName: project.displayName,
+          quoteSubject: project.quoteSubject,
+          isArchived: project.isArchived,
+          client: project.client,
+        },
       },
     );
+  }
+
+  projectName(project: NonNullable<Ticket['project']>): string {
+    return projectDisplayName(project);
   }
 
   clearProject(): void {

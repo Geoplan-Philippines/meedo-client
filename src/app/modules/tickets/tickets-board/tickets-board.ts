@@ -9,6 +9,7 @@ import { Status } from '../models/status.model';
 import { Ticket, TicketFacets, TicketListParams } from '../models/ticket.model';
 import { TicketsService } from '../services/tickets.service';
 import { extraAssigneeCount, safeStatusColor, visibleAssignees } from '../utils/ticket.utils';
+import { SlaBadge } from '../sla-badge/sla-badge';
 
 export interface BoardColumn {
   id: string | null;
@@ -44,7 +45,7 @@ export function columnRequest(filters: TicketListParams, id: string | null, page
 @Component({
   selector: 'app-tickets-board',
   standalone: true,
-  imports: [CdkDrag, CdkDropList, CdkDropListGroup, TitleCasePipe, TagModule, AvatarModule],
+  imports: [CdkDrag, CdkDropList, CdkDropListGroup, TitleCasePipe, TagModule, AvatarModule, SlaBadge],
   templateUrl: './tickets-board.html',
   styleUrl: './tickets-board.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,8 +81,8 @@ export class TicketsBoard {
   reload(): void {
     const generation = ++this.generation;
     this.pages.set({}); this.facets.set(null); this.loading.set(true); this.failed.set(false);
-    const { view, search, teamId, categoryId, assigneeId, includeArchived, priority } = this.filters();
-    this.service.getFacets({ view, search, teamId, categoryId, assigneeId, includeArchived, priority })
+    const { view, search, teamId, categoryId, projectId, assigneeId, includeArchived, priority } = this.filters();
+    this.service.getFacets({ view, search, teamId, categoryId, projectId, assigneeId, includeArchived, priority })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: facets => {
           if (generation !== this.generation) return;

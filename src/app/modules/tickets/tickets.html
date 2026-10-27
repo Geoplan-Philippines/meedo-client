@@ -2,6 +2,10 @@
 
 <div class="tickets-page">
 
+  @if (scopeProjectId()) {
+    <app-workspace-breadcrumb [clientId]="scopeClientId()" [projectId]="scopeProjectId()" [tickets]="true" />
+  }
+
   <header class="page-header">
     <div>
       <h1 class="page-title">Tickets</h1>
@@ -223,7 +227,7 @@
             <td class="hide-lg">
               @if (ticket.project; as project) {
                 <span class="project-cell">
-                  <span class="project-customer" [title]="project.customerName">{{ project.customerName }}</span>
+                  <span class="project-customer" [title]="projectName(project)">{{ projectName(project) }}</span>
                   <span class="project-wo">{{ project.workOrderNumber }}</span>
                 </span>
               } @else {
@@ -581,7 +585,7 @@
       />
     </div>
     <ul class="filter-list filter-list--scroll" role="menu">
-      @for (project of filteredProjects(); track project.id) {
+      @for (project of projectMatches().items; track project.id) {
         <li>
           <button
             class="filter-option"
@@ -591,8 +595,8 @@
             (click)="setProjectValue(project.id); projectPop.hide()"
           >
             <span class="option-stack">
-              <span class="option-label">{{ project.customerName }}</span>
-              <span class="option-sub">{{ project.workOrderNumber }}</span>
+              <span class="option-label">{{ project.name }}</span>
+              <span class="option-sub">{{ project.clientName || 'No client' }} · {{ project.workOrderNumber }}</span>
             </span>
             @if (selectedProject()?.id === project.id) {
               <i class="pi pi-check opt-check-trail" aria-hidden="true"></i>
@@ -603,6 +607,11 @@
         <li class="filter-empty">No projects found</li>
       }
     </ul>
+    @if (projectMatches().total > projectMatches().items.length) {
+      <p class="filter-empty" aria-live="polite">
+        Showing {{ projectMatches().items.length }} of {{ projectMatches().total }}. Type to narrow.
+      </p>
+    }
   </div>
 </p-popover>
 
@@ -727,7 +736,23 @@
     <div class="form-row">
       <div class="form-field form-field--flex">
         <label class="form-label" for="edit-ticket-project">Project</label>
-        <p-select inputId="edit-ticket-project" formControlName="projectId" [options]="projects()" optionLabel="displayName" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+        <p-select inputId="edit-ticket-project" formControlName="projectId" [options]="editProjectOptions()" optionLabel="label" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="label" [virtualScroll]="true" [virtualScrollItemSize]="44" [showClear]="true" appendTo="body">
+          <ng-template #selectedItem let-project>
+            <span class="project-option">
+              <span class="project-option__name">{{ project.name }}</span>
+              @if (project.isArchived) { <app-archived-tag /> }
+            </span>
+          </ng-template>
+          <ng-template #item let-project>
+            <span class="project-option">
+              <span class="project-option__text">
+                <span class="project-option__name">{{ project.name }}</span>
+                <span class="project-option__sub">{{ project.clientName || 'No client' }} · {{ project.workOrderNumber }}</span>
+              </span>
+              @if (project.isArchived) { <app-archived-tag /> }
+            </span>
+          </ng-template>
+        </p-select>
       </div>
       <div class="form-field form-field--flex">
         <label class="form-label" for="edit-ticket-team">Team</label>

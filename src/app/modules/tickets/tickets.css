@@ -756,6 +756,37 @@
   text-overflow: ellipsis;
 }
 
+/* Edit-dialog project picker rows (rendered in the overlay, still component-scoped). */
+.project-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.project-option__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.project-option__name {
+  color: var(--color-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-option__sub {
+  font-size: 0.6875rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ─── Assignee Avatars ─────────────────────────────────── */
 .avatar-stack {
   display: inline-flex;

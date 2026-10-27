@@ -1,0 +1,50 @@
+:host {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem 0.375rem;
+  min-width: 0;
+}
+
+.sla-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 100px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.sla-badge .pi {
+  font-size: 0.6875rem;
+}
+
+.sla-badge__due {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Status tokens only (theming rule): ok = info, at risk = warning, breached = destructive, met = success. */
+.sla-badge--ok {
+  background: var(--muted-info);
+  color: var(--muted-info-foreground);
+}
+
+.sla-badge--at_risk {
+  background: var(--muted-warning);
+  color: var(--muted-warning-foreground);
+}
+
+.sla-badge--breached {
+  background: var(--muted-destructive);
+  color: var(--muted-destructive-foreground);
+}
+
+.sla-badge--met {
+  background: var(--muted-success);
+  color: var(--muted-success-foreground);
+}

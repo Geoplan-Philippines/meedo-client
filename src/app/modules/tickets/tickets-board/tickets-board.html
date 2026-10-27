@@ -24,7 +24,10 @@
               <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
               <h3>{{ ticket.title }}</h3>
               <div class="card-meta">
-                <p-tag [value]="ticket.priority | titlecase" icon="pi pi-circle-fill" [class]="'priority priority-' + ticket.priority.toLowerCase()" />
+                <span class="card-tags">
+                  <p-tag [value]="ticket.priority | titlecase" icon="pi pi-circle-fill" [class]="'priority priority-' + ticket.priority.toLowerCase()" />
+                  @if (ticket.sla; as sla) { <app-sla-badge [sla]="sla" /> }
+                </span>
                 <span class="avatars">
                   @for (avatar of avatars(ticket); track $index) {
                     <p-avatar [label]="avatar.initials" [styleClass]="avatar.className" shape="circle" [title]="avatar.name" [attr.aria-label]="avatar.name" />

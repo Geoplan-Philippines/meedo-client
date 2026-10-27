@@ -120,13 +120,26 @@
         <section class="aside-group">
           <h2 class="aside-label">Details</h2>
 
+          @if (t.sla; as sla) {
+            <div class="aside-row aside-row--top">
+              <span class="aside-key">SLA</span>
+              <div class="sla-rows" [attr.title]="sla.policyName + (sla.scope === 'project' ? ' (project policy)' : ' (org default)')">
+                <span class="sla-row"><span class="sla-row-key">Response</span><app-sla-badge [sla]="sla" target="response" /></span>
+                <span class="sla-row"><span class="sla-row-key">Resolution</span><app-sla-badge [sla]="sla" target="resolution" /></span>
+              </div>
+            </div>
+          }
+
           <div class="aside-row aside-row--top">
             <span class="aside-key">Project</span>
             <button class="aside-edit aside-edit--wrap" type="button" (click)="projectPop.toggle($event)" aria-haspopup="true">
               @if (t.project) {
                 <span class="project-val">
-                  <span class="project-name">{{ t.project.customerName }}</span>
-                  <span class="project-wo">{{ t.project.workOrderNumber }}</span>
+                  <span class="project-name">{{ projectName(t.project) }}</span>
+                  <span class="project-wo">
+                    {{ t.project.workOrderNumber }}
+                    @if (t.project.isArchived) { <app-archived-tag /> }
+                  </span>
                 </span>
               } @else {
                 <span class="edit-val muted">Set project</span>
@@ -313,13 +326,14 @@
           </button>
         </li>
       }
-      @for (p of filteredProjects(); track p.id) {
+      @for (p of projectMatches().items; track p.id) {
         <li>
           <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.projectId === p.id" (click)="setProject(p); projectPop.hide()">
             <span class="pick-stack">
-              <span class="pick-label">{{ p.customerName }}</span>
-              <span class="pick-sub">{{ p.workOrderNumber }}</span>
+              <span class="pick-label">{{ p.name }}</span>
+              <span class="pick-sub">{{ p.clientName || 'No client' }} · {{ p.workOrderNumber }}</span>
             </span>
+            @if (p.isArchived) { <app-archived-tag /> }
             @if (ticket()?.projectId === p.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
           </button>
         </li>
@@ -327,6 +341,11 @@
         <li class="pick-empty">No projects</li>
       }
     </ul>
+    @if (projectMatches().total > projectMatches().items.length) {
+      <p class="pick-empty" aria-live="polite">
+        Showing {{ projectMatches().items.length }} of {{ projectMatches().total }}. Type to narrow.
+      </p>
+    }
   </p-popover>
 
   <p-popover #categoryPop styleClass="detail-pop">
