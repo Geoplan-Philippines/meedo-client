@@ -1,0 +1,45 @@
+<button
+  type="button"
+  class="user-toggle flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer w-full min-w-0"
+  [class]="isActive() ? 'bg-secondary text-secondary-foreground font-medium' : 'text-body hover:bg-secondary/60'"
+  [attr.aria-expanded]="workspace.clientsOpen() && !collapsed()"
+  aria-controls="workspace-client-list"
+  [title]="userName()"
+  [attr.aria-label]="userName()"
+  (click)="toggle()"
+>
+  <i class="pi pi-user text-base w-4 text-center shrink-0" [class.opacity-60]="!isActive()" aria-hidden="true"></i>
+  <span class="user-name truncate flex-1 text-left">{{ userName() }}</span>
+  <i class="user-chevron pi text-xs shrink-0" [class.pi-chevron-down]="workspace.clientsOpen()" [class.pi-chevron-right]="!workspace.clientsOpen()" aria-hidden="true"></i>
+</button>
+
+<ul id="workspace-client-list" class="client-list" [hidden]="!workspace.clientsOpen()">
+  @for (client of workspace.clients(); track client.id) {
+    <li>
+      <a
+        class="client-link block min-w-0 truncate rounded-md px-3 py-2 text-sm transition-colors"
+        [class]="activeClientId() === client.id ? 'bg-secondary text-secondary-foreground font-medium' : 'text-body hover:bg-secondary/60'"
+        [routerLink]="links.clientProjects(client.id)"
+        [attr.aria-current]="activeClientId() === client.id ? 'page' : null"
+        [title]="client.name"
+        (click)="navigated.emit()"
+      >{{ client.name }}</a>
+    </li>
+  }
+  @if (workspace.clientsLoading()) {
+    <li class="px-3 py-2 text-xs text-body/70" role="status">Loading clients…</li>
+  } @else if (workspace.clientsError()) {
+    <li class="px-3 py-2 text-xs text-body/70" role="alert">
+      Couldn't load clients. <button type="button" class="underline" (click)="workspace.reloadClients()">Retry</button>
+    </li>
+  }
+  <li>
+    <a
+      routerLink="/clients"
+      class="client-link block rounded-md px-3 py-2 text-sm transition-colors"
+      [class]="isAllClients() ? 'bg-secondary text-secondary-foreground font-medium' : 'text-body hover:bg-secondary/60'"
+      [attr.aria-current]="isAllClients() ? 'page' : null"
+      (click)="navigated.emit()"
+    >See all...</a>
+  </li>
+</ul>

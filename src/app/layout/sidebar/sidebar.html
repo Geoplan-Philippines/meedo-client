@@ -28,6 +28,12 @@
   </button>
 
   <nav class="sidebar-nav flex flex-col gap-6 p-4 min-h-full md:h-full md:overflow-y-auto">
+    <app-client-tree
+      [collapsed]="layoutService.sidebarCollapsed() && desktop()"
+      (expandSidebar)="layoutService.sidebarCollapsed.set(false)"
+      (navigated)="layoutService.closeSidebar()"
+    />
+
     @for (section of sections(); track section.title) {
       <div>
         <h3 class="sidebar-section-title mb-2 px-3 text-[11px] font-medium tracking-wider text-body/60 uppercase">

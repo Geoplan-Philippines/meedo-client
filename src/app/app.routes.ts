@@ -22,6 +22,13 @@ export const routes: Routes = [
       import('./modules/tickets/tickets.routes').then((m) => m.ticketsRoutes),
   },
   {
+    path: 'clients',
+    component: MainLayout,
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/clients/clients.routes').then((m) => m.clientsRoutes),
+  },
+  {
     path: 'timekeeping',
     component: MainLayout,
     canActivate: [authGuard],
