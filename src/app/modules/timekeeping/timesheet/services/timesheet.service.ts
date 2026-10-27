@@ -6,6 +6,7 @@ import { expand, map, reduce } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
+import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 import {
   BulkApproveResult,
   BulkRejectResult,
@@ -69,30 +70,31 @@ export class TimesheetService {
       .pipe(map((response) => response.data));
   }
 
-  getProjects() {
-    return this.fetchProjectsPage(1).pipe(
+  /**
+   * Every project for timesheet pickers. Archived projects are left out unless
+   * `includeArchived` (filters over existing entries need them; new entries cannot use them).
+   */
+  getProjects(includeArchived = false) {
+    return this.fetchProjectsPage(1, includeArchived).pipe(
       expand((response) =>
         response.meta.page < response.meta.lastPage
-          ? this.fetchProjectsPage(response.meta.page + 1)
+          ? this.fetchProjectsPage(response.meta.page + 1, includeArchived)
           : EMPTY,
       ),
       reduce((all, response) => all.concat(response.data), [] as TimesheetProject[]),
       map((projects) =>
         projects.map((project) => {
           const customerName = project.customerName?.trim() || project.client?.customerName?.trim() || '';
-          return {
-            ...project,
-            customerName,
-            displayName: customerName ? `${customerName} — ${project.workOrderNumber}` : project.workOrderNumber,
-          };
+          const label = timesheetProjectLabel({ ...project, customerName });
+          return { ...project, customerName, label: project.isArchived ? `${label} (Archived)` : label };
         }),
       ),
     );
   }
 
-  private fetchProjectsPage(page: number) {
+  private fetchProjectsPage(page: number, includeArchived: boolean) {
     return this.http.get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
-      params: { page, limit: 50 },
+      params: { page, limit: 50, ...(includeArchived ? { includeArchived: true } : {}) },
       withCredentials: true,
     });
   }

@@ -23,6 +23,7 @@ import {
   TimesheetSummaryEmployee,
 } from '../models/timesheet.model';
 import { TimesheetService } from '../services/timesheet.service';
+import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 
 @Component({
   selector: 'app-timesheet-approval',
@@ -167,7 +168,8 @@ export class TimesheetApproval implements OnInit {
 
     forkJoin({
       summary: this.timesheetService.getSummary(this.currentFilters()),
-      projects: this.timesheetService.getProjects(),
+      // Include archived projects so entries already logged against them can still be filtered.
+      projects: this.timesheetService.getProjects(true),
       lock: this.timesheetService.getPeriodLock(this.periodStart(), this.periodEnd()),
       auditLogs: this.timesheetService.getAuditLogs(1, 8, this.periodStart(), this.periodEnd()),
     })
@@ -443,10 +445,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   projectLabel(entry: TimesheetEntry): string {
-    if (!entry.project) return '—';
-    const customer = entry.project.customerName?.trim() || entry.project.client?.customerName?.trim();
-    const workOrder = entry.project.workOrderNumber?.trim() || '';
-    return customer ? `${customer} — ${workOrder}` : (workOrder || '—');
+    return timesheetProjectLabel(entry.project);
   }
 
   approvedBy(entry: TimesheetEntry): string {

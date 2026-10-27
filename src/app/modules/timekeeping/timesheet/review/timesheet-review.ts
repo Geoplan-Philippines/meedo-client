@@ -17,6 +17,7 @@ import {
   TimesheetSummaryEmployee,
 } from '../models/timesheet.model';
 import { TimesheetService } from '../services/timesheet.service';
+import { timesheetProjectName } from '../shared/timesheet-project.util';
 
 @Component({
   selector: 'app-timesheet-review',
@@ -294,7 +295,7 @@ export class TimesheetReview implements OnInit {
   }
 
   projectLabel(entry: TimesheetEntry): string {
-    return entry.project?.customerName || entry.project?.client?.customerName || '—';
+    return timesheetProjectName(entry.project) || '—';
   }
 
   workOrderLabel(entry: TimesheetEntry): string {

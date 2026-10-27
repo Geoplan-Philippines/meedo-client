@@ -226,6 +226,32 @@
 
 .grid-cell-project-name {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Body rows stack the project name over its client and the Archived tag. */
+.grid-row--body .grid-cell--label {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.125rem;
+}
+
+.grid-cell-project-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.grid-cell-project-client {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -19,13 +19,21 @@ export type TimesheetWorkType =
 
 export interface TimesheetProject {
   id: string;
+  /** Shown name from the projects lookup (displayName, else quote subject, else WO number). */
+  name?: string;
+  /** Admin-set name (entry includes); null means the Apptivo name is shown. */
+  displayName?: string | null;
+  quoteSubject?: string | null;
   customerName?: string;
   workOrderNumber: string;
   status: string;
   reportedDate?: string | null;
-  displayName?: string;
+  isArchived?: boolean;
+  /** Picker text built by the client: "Client — Project name · WO number". */
+  label?: string;
   client?: {
     customerName?: string;
+    displayName?: string | null;
   } | null;
 }
 

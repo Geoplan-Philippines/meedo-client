@@ -20,6 +20,13 @@ import {
   TimesheetWorkType,
 } from './models/timesheet.model';
 import { TimesheetService } from './services/timesheet.service';
+import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
+import {
+  timesheetClientName,
+  timesheetProjectLabel,
+  timesheetProjectName,
+  withEntryProjects,
+} from './shared/timesheet-project.util';
 
 interface TimesheetDayEntry {
   localId: string;
@@ -119,6 +126,7 @@ function stripHtml(value: string): string {
     ConfirmDialogModule,
     DatePipe,
     RichTextEditor,
+    ArchivedTag,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './timesheet.html',
@@ -195,8 +203,11 @@ export class Timesheet implements OnInit {
       : [{ title: 'No activity yet', time: 'Draft entries will appear here after saving.', tone: 'info' }];
   });
 
+  /** New rows can only use active projects; archived ones appear only as existing rows. */
   readonly projectOptions = computed(() =>
-    this.projects().map((project) => ({ label: formatProjectLabel(project), value: project.id })),
+    this.projects()
+      .filter((project) => !project.isArchived)
+      .map((project) => ({ label: project.label ?? timesheetProjectLabel(project), value: project.id })),
   );
 
   readonly tableProjectIds = computed(() => {
@@ -246,7 +257,7 @@ export class Timesheet implements OnInit {
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: ({ entries, projects, lock }) => {
-          this.projects.set(projects);
+          this.projects.set(withEntryProjects(projects, entries.data));
           this.entries.set(this.entriesToDayEntries(entries.data));
           this.isLocked.set(lock.isLocked);
           this.lockMessage.set(lock.isLocked ? `This week was locked on ${formatShortDate(new Date(lock.lockedAt ?? Date.now()))}.` : null);
@@ -265,8 +276,15 @@ export class Timesheet implements OnInit {
 
   projectName(projectId: string | null): string {
     if (!projectId) return 'Timesheet';
-    const project = this.projects().find((p) => p.id === projectId);
-    return project?.customerName || project?.client?.customerName || 'Unknown project';
+    return timesheetProjectName(this.projects().find((p) => p.id === projectId)) || 'Unknown project';
+  }
+
+  projectClientName(projectId: string | null): string {
+    return timesheetClientName(this.projects().find((p) => p.id === projectId));
+  }
+
+  projectIsArchived(projectId: string | null): boolean {
+    return this.projects().find((p) => p.id === projectId)?.isArchived ?? false;
   }
 
   projectWorkOrder(projectId: string | null): string {
@@ -688,14 +706,7 @@ function formatStatusLabel(status: TimesheetEntryStatus): string {
 }
 
 function projectNameFromList(projects: TimesheetProject[], projectId: string | null): string {
-  const project = projects.find((p) => p.id === projectId);
-  return project?.customerName || project?.client?.customerName || 'Timesheet';
-}
-
-function formatProjectLabel(project: TimesheetProject): string {
-  const customerName = project.customerName?.trim() || project.client?.customerName?.trim();
-  const workOrder = project.workOrderNumber?.trim() || 'No Work Order';
-  return customerName ? `${customerName} — ${workOrder}` : workOrder;
+  return timesheetProjectName(projects.find((p) => p.id === projectId)) || 'Timesheet';
 }
 
 function trimNumber(value: number): string {

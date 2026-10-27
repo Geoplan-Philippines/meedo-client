@@ -87,7 +87,13 @@
         @for (projectId of tableProjectIds(); track projectId) {
           <div class="grid-row grid-row--body" role="row">
             <span class="grid-cell grid-cell--label" role="rowheader">
-              <span class="grid-cell-project-name">{{ projectName(projectId) }}</span>
+              <span class="grid-cell-project-name" [title]="projectName(projectId)">{{ projectName(projectId) }}</span>
+              @if (projectClientName(projectId) || projectIsArchived(projectId)) {
+                <span class="grid-cell-project-sub">
+                  <span class="grid-cell-project-client">{{ projectClientName(projectId) }}</span>
+                  @if (projectIsArchived(projectId)) { <app-archived-tag /> }
+                </span>
+              }
             </span>
             @for (day of weekDays(); track day.toISOString()) {
               @let cellEntries = entriesForCell(projectId, day);
