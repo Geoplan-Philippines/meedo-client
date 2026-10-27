@@ -19,6 +19,12 @@ export class TeamsService {
     });
   }
 
+  /** Better Auth returns memberships across organizations; narrow to the active one. */
+  getUserTeams(organizationId: string) {
+    return this.http.get<Team[]>(`${this.baseUrl}/list-user-teams`, { withCredentials: true })
+      .pipe(map(teams => teams.filter(team => team.organizationId === organizationId)));
+  }
+
   /**
    * The members assigned to one team, used to scope ticket assignees.
    * Backed by our own endpoint rather than Better Auth's `list-team-members`,

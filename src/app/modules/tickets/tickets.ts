@@ -27,6 +27,7 @@ import { PopoverModule } from 'primeng/popover';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from './services/tickets.service';
+import { TicketDepartmentService } from './services/ticket-department.service';
 import { TicketsBoard } from './tickets-board/tickets-board';
 import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
 import { ArchivedTag } from '../../shared/ui/archived-tag/archived-tag';
@@ -96,6 +97,7 @@ import {
 })
 export class Tickets implements OnInit {
   private readonly ticketsService = inject(TicketsService);
+  private readonly departmentService = inject(TicketDepartmentService);
   private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
@@ -204,6 +206,9 @@ export class Tickets implements OnInit {
   readonly statuses = signal<Status[]>([]);
   readonly projects = signal<Project[]>([]);
   readonly teams = signal<Team[]>([]);
+  readonly departmentAdmin = signal(false);
+  readonly departmentLoaded = signal(false);
+  readonly noDepartments = computed(() => this.departmentLoaded() && !this.departmentAdmin() && this.teams().length === 0);
   readonly members = signal<OrgMember[]>([]);
   readonly myIssues = signal(false);
   readonly currentMemberId = computed(() => {
@@ -245,7 +250,7 @@ export class Tickets implements OnInit {
   readonly descriptionMaxLength = TICKET_DESCRIPTION_MAX_LENGTH;
   readonly canCreate = computed(() => {
     this.composeValue();
-    return this.ticketForm.valid;
+    return this.departmentLoaded() && !this.noDepartments() && this.ticketForm.valid;
   });
 
   readonly selectedStatus = computed(() => {
@@ -613,7 +618,7 @@ export class Tickets implements OnInit {
       categories: this.categoriesService.getAll(),
       statuses: this.statusesService.getAll(),
       projects: this.projectsService.getAll(),
-      teams: organizationId ? this.teamsService.getTeams(organizationId) : of([] as Team[]),
+      department: this.departmentService.load(),
       members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -622,7 +627,13 @@ export class Tickets implements OnInit {
           this.categories.set(res.categories);
           this.statuses.set(res.statuses);
           this.projects.set(res.projects);
-          this.teams.set(res.teams as Team[]);
+          this.teams.set(res.department.teams);
+          this.departmentAdmin.set(res.department.isAdmin);
+          this.departmentLoaded.set(true);
+          for (const form of [this.ticketForm, this.editTicketForm]) {
+            form.controls.teamId.setValidators(res.department.isAdmin ? [] : [Validators.required]);
+            form.controls.teamId.updateValueAndValidity();
+          }
           this.members.set(res.members);
           this.isLoadingDropdowns.set(false);
         },
@@ -722,7 +733,8 @@ export class Tickets implements OnInit {
   }
 
   setTeamValue(id: string): void {
-    const next = this.composeValue().teamId === id ? '' : id;
+    if (!this.departmentAdmin() && !this.teams().some(team => team.id === id)) return;
+    const next = this.departmentAdmin() && this.composeValue().teamId === id ? '' : id;
     this.ticketForm.controls.teamId.setValue(next);
   }
 
@@ -788,6 +800,7 @@ export class Tickets implements OnInit {
 
   updateTicket(): void {
     if (this.isUpdating()) return;
+    if (!this.departmentLoaded() || this.noDepartments()) return;
     if (this.editTicketForm.invalid) {
       this.editTicketForm.markAllAsTouched();
       return;
@@ -832,6 +845,7 @@ export class Tickets implements OnInit {
 
   saveTicket(): void {
     if (this.isSaving()) return;
+    if (!this.departmentLoaded() || this.noDepartments()) return;
     if (this.ticketForm.invalid) {
       this.ticketForm.markAllAsTouched();
       return;

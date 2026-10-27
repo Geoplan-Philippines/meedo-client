@@ -13,6 +13,7 @@ import { ProjectsService } from './services/projects.service';
 import { StatusesService } from './services/statuses.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { TicketsService } from './services/tickets.service';
+import { TicketDepartmentService, TicketDepartmentOptions } from './services/ticket-department.service';
 import { Tickets } from './tickets';
 import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from './tickets.constants';
 
@@ -38,8 +39,10 @@ describe('Tickets', () => {
     createTicket: ReturnType<typeof vi.fn<TicketsService['createTicket']>>;
     updateTicket: ReturnType<typeof vi.fn<TicketsService['updateTicket']>>;
   };
+  let department: TicketDepartmentOptions;
 
   beforeEach(async () => {
+    department = { isAdmin: true, teams: [] };
     service = {
       getAll: vi.fn<TicketsService['getAll']>().mockReturnValue(of({
         statusCode: 200, message: 'Success', data: [],
@@ -54,6 +57,7 @@ describe('Tickets', () => {
       providers: [
         provideRouter([]), provideHttpClient(),
         { provide: TicketsService, useValue: service },
+        { provide: TicketDepartmentService, useValue: { load: () => of(department) } },
         { provide: AuthService, useValue: {
           currentUser: () => ({ id: member.userId }), organizationId: () => member.organizationId,
         } },
@@ -76,6 +80,41 @@ describe('Tickets', () => {
     const button = fixture.nativeElement.querySelector('.my-issues-toggle') as HTMLButtonElement;
     expect(button.textContent).toContain('My issues');
     expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('requires a department for members and never toggles the selected department off', () => {
+    const own = { id: 'own-team', name: 'Own department', organizationId: 'org-id' } as any;
+    department = { isAdmin: false, teams: [own] };
+    component.loadDropdowns();
+    component.ticketForm.controls.title.setValue('Member ticket');
+    expect(component.teams()).toEqual([own]);
+    expect(component.ticketForm.controls.teamId.hasError('required')).toBe(true);
+    component.saveTicket();
+    expect(service.createTicket).not.toHaveBeenCalled();
+    component.setTeamValue('foreign-team');
+    expect(component.ticketForm.controls.teamId.value).toBe('');
+    component.setTeamValue(own.id);
+    component.setTeamValue(own.id);
+    expect(component.ticketForm.controls.teamId.value).toBe(own.id);
+    expect(component.canCreate()).toBe(true);
+    component.openEditDialog({ ...ticket, teamId: own.id });
+    component.editTicketForm.controls.teamId.setValue('');
+    component.updateTicket();
+    expect(service.updateTicket).not.toHaveBeenCalled();
+  });
+
+  it('shows a clear empty state and disables creation for a member with no teams', async () => {
+    department = { isAdmin: false, teams: [] };
+    component.loadDropdowns();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.noDepartments()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('You are not assigned to a department.');
+    expect(fixture.nativeElement.querySelector('.add-btn').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('p-table')).toBeNull();
+    component.ticketForm.controls.title.setValue('Cannot create');
+    component.saveTicket();
+    expect(service.createTicket).not.toHaveBeenCalled();
   });
 
   it('rejects whitespace-only titles and over-limit fields in both create and edit submission paths', () => {

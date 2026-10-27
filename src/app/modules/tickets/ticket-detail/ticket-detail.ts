@@ -21,6 +21,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from '../services/tickets.service';
+import { TicketDepartmentService } from '../services/ticket-department.service';
 import { TicketAttachmentsService } from '../services/attachments.service';
 import { TicketCategoriesService } from '../services/ticket-categories.service';
 import { StatusesService } from '../services/statuses.service';
@@ -80,6 +81,7 @@ export class TicketDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly ticketsService = inject(TicketsService);
+  private readonly departmentService = inject(TicketDepartmentService);
   private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
@@ -258,7 +260,7 @@ export class TicketDetail {
       statuses: this.statusesService.getAll(),
       categories: this.categoriesService.getAll(),
       projects: this.projectsService.getAll(),
-      teams: organizationId ? this.teamsService.getTeams(organizationId) : of([] as Team[]),
+      department: this.departmentService.load(),
       members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -267,7 +269,7 @@ export class TicketDetail {
           this.statuses.set(res.statuses);
           this.categories.set(res.categories);
           this.projects.set(res.projects);
-          this.teams.set(res.teams as Team[]);
+          this.teams.set(res.department.teams);
           this.members.set(res.members);
         },
         error: (err: unknown) => console.error('Error loading ticket options:', err),
@@ -289,8 +291,14 @@ export class TicketDetail {
         },
         error: (err: unknown) => {
           console.error('Error loading ticket:', err);
-          if (hasSeed) return; // still have the seeded copy to show
           const status = err instanceof HttpErrorResponse ? err.status : 0;
+          if (status === 403 || status === 404) {
+            this.ticket.set(null);
+            this.loadErrorStatus.set(status);
+            this.loadState.set('not-found');
+            return;
+          }
+          if (hasSeed) return; // transient errors may keep an already loaded copy
           this.loadErrorStatus.set(status);
           // A real 404 is "not found"; anything else is a load failure the user can retry.
           this.loadState.set(status === 404 ? 'not-found' : 'error');
@@ -333,6 +341,7 @@ export class TicketDetail {
   }
 
   setTeam(team: Team): void {
+    if (!this.teams().some(option => option.id === team.id)) return;
     this.applyPatch({ teamId: team.id }, { teamId: team.id });
   }
 
