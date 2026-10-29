@@ -27,6 +27,7 @@ export interface TicketRelation {
 }
 
 export interface Ticket {
+  createdById?: string | null;
   id: string;
   title: string;
   ticketNumber: number;

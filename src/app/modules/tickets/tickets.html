@@ -11,7 +11,7 @@
       <h1 class="page-title">Tickets</h1>
       <p class="page-subtitle">Manage and track your support tickets</p>
     </div>
-    <button class="add-btn" type="button" (click)="openCreateDialog()" [disabled]="!departmentLoaded() || noDepartments()">
+    <button class="add-btn" type="button" (click)="openCreateDialog()" [disabled]="!departmentLoaded()">
       <i class="pi pi-plus" aria-hidden="true"></i>
       <span>Create Ticket</span>
     </button>
@@ -153,9 +153,10 @@
     @if (noDepartments()) {
       <div role="status">
         <p>You are not assigned to a department.</p>
-        <p>Ask an administrator to assign you to a department to view or create tickets.</p>
+        <p>You can create your own tickets without a department. Existing department tickets still follow your access.</p>
       </div>
-    } @else if (layout() === 'board') {
+    }
+    @if (layout() === 'board') {
       <app-tickets-board [statuses]="statuses()" [filters]="boardFilters()" [revision]="boardRevision()"
         (openTicket)="openDetail($event)" (moved)="onBoardMove()" />
     } @else {
@@ -372,7 +373,7 @@
         [attr.aria-label]="'Team: ' + (selectedTeam()?.name ?? 'not set')"
       >
         <i class="pi pi-users pill-icon" aria-hidden="true"></i>
-        <span class="pill-label">{{ selectedTeam()?.name ?? (departmentAdmin() ? 'Team' : 'Team (required)') }}</span>
+        <span class="pill-label">{{ selectedTeam()?.name ?? 'Team (optional)' }}</span>
       </button>
 
       <button
@@ -760,7 +761,7 @@
         </p-select>
       </div>
       <div class="form-field form-field--flex">
-        <label class="form-label" for="edit-ticket-team">Team{{ departmentAdmin() ? '' : ' (required)' }}</label>
+        <label class="form-label" for="edit-ticket-team">Team (optional)</label>
         <p-select inputId="edit-ticket-team" formControlName="teamId" [options]="teams()" optionLabel="name" optionValue="id" placeholder="Select team" class="w-full" [loading]="isLoadingDropdowns()" appendTo="body" />
       </div>
     </div>

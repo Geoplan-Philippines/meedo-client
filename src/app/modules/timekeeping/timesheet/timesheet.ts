@@ -1,6 +1,7 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CanDeactivateFn } from '@angular/router';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, CanDeactivateFn } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 
@@ -11,7 +12,8 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 
-import { RichTextEditor } from '../../../shared/ui/rich-text-editor';
+import { TimesheetEntryForm, manilaTodayKey } from './entry-form/timesheet-entry-form';
+import { EntryWorkSelection, TimesheetWorkSelector } from './entry-form/timesheet-work-selector';
 import {
   TimesheetEntry,
   TimesheetEntryPayload,
@@ -37,6 +39,10 @@ interface TimesheetDayEntry {
   workType: TimesheetWorkType;
   location: string;
   task: string;
+  ticketId?: string | null;
+  ticket?: TimesheetEntry['ticket'];
+  workMode?: EntryWorkSelection['mode'];
+  projectIdOverride?: string | null;
   isOvertime: boolean;
   isNightDifferential: boolean;
   status: TimesheetEntryStatus;
@@ -59,6 +65,10 @@ interface CellRowState {
   hours: number | null;
   workType: TimesheetWorkType;
   task: string;
+  ticketId?: string | null;
+  ticket?: TimesheetEntry['ticket'];
+  workMode?: EntryWorkSelection['mode'];
+  projectIdOverride?: string | null;
   isOvertime: boolean;
   isNightDifferential: boolean;
   status: TimesheetEntryStatus;
@@ -125,7 +135,8 @@ function stripHtml(value: string): string {
     ToastModule,
     ConfirmDialogModule,
     DatePipe,
-    RichTextEditor,
+    TimesheetEntryForm,
+    TimesheetWorkSelector,
     ArchivedTag,
   ],
   providers: [MessageService, ConfirmationService],
@@ -137,11 +148,18 @@ function stripHtml(value: string): string {
   },
 })
 export class Timesheet implements OnInit {
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  private readonly destroy = inject(DestroyRef);
+  readonly formOpen = signal(false);
+  readonly editingEntry = signal<TimesheetEntry | null>(null);
+  readonly rawEntries = signal<TimesheetEntry[]>([]);
+  readonly pickerProjects = signal<TimesheetProject[]>([]);
+  readonly targetEntryId = signal<string | null>(null);
   private readonly timesheetService = inject(TimesheetService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
 
-  readonly selectedDate = signal<Date>(new Date());
+  readonly selectedDate = signal<Date>(new Date(manilaTodayKey()+'T12:00:00'));
   readonly selectedWeek = computed(() => startOfWeek(this.selectedDate()));
   readonly entries = signal<TimesheetDayEntry[]>([]);
   readonly projects = signal<TimesheetProject[]>([]);
@@ -220,11 +238,17 @@ export class Timesheet implements OnInit {
   readonly hasSubmittableEntries = computed(() => this.entries().some((entry) => entry.status === 'DRAFT'));
   readonly draftCount = computed(() => this.entries().filter((entry) => entry.status === 'DRAFT').length);
 
-  private readonly todayKey = toDateInputValue(new Date());
+  private get todayKey() { return manilaTodayKey(); }
 
   ngOnInit(): void {
-    this.loadWeek();
+    if (this.route) this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroy)).subscribe(params => { const date = params.get('date'); this.targetEntryId.set(params.get('entry')); if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) this.selectedDate.set(new Date(date+'T12:00:00')); this.loadWeek(); });
+    else this.loadWeek();
   }
+
+  openEntryForm(entry: TimesheetEntry | null = null) { this.editingEntry.set(entry); this.formOpen.set(true); }
+  entryFormSaved() { this.formOpen.set(false); this.loadWeek(); }
+  workForRow(row: CellRowState, projectId: string): EntryWorkSelection { return { mode: row.workMode ?? (row.ticketId ? 'ticket' : 'description'), ticketId: row.ticketId ?? null, description: row.task, projectId: row.projectIdOverride !== undefined ? row.projectIdOverride : projectId, ticket: row.ticket }; }
+  setRowWork(row: CellRowState, value: EntryWorkSelection) { this.patchModalRow(row.localId, { task: value.description, ticketId: value.ticketId, ticket: value.ticket, workMode: value.mode, projectIdOverride: value.projectId }); }
 
   isToday(day: Date): boolean {
     return toDateInputValue(day) === this.todayKey;
@@ -257,6 +281,8 @@ export class Timesheet implements OnInit {
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: ({ entries, projects, lock }) => {
+          this.pickerProjects.set(projects);
+          this.rawEntries.set(entries.data);
           this.projects.set(withEntryProjects(projects, entries.data));
           this.entries.set(this.entriesToDayEntries(entries.data));
           this.isLocked.set(lock.isLocked);
@@ -320,7 +346,7 @@ export class Timesheet implements OnInit {
   isEntryReadonly(entry: TimesheetDayEntry): boolean {
     // Draft, rejected, and submitted (pending) entries stay editable; approved, locked, or future-dated entries are read-only.
     const isFuture = entry.date > this.todayKey;
-    return this.isLocked() || isFuture || entry.status === 'APPROVED';
+    return this.isLocked() || isFuture || entry.status === 'APPROVED' || entry.status === 'SUBMITTED';
   }
 
   statusBadgeClass(status: TimesheetEntryStatus): string {
@@ -480,7 +506,7 @@ export class Timesheet implements OnInit {
   }
 
   rowTaskInvalid(row: CellRowState): boolean {
-    return this.entrySaveAttempted() && !stripHtml(row.task);
+    return this.entrySaveAttempted() && (row.workMode === 'ticket' ? !row.ticketId : !stripHtml(row.task) || row.task.trim().length > 1000);
   }
 
   closeCellModal(save: boolean): void {
@@ -493,7 +519,7 @@ export class Timesheet implements OnInit {
     }
 
     const editableRows = modal.rows.filter((row) => !row.readonly);
-    const hasInvalidRow = editableRows.some((row) => this.rowHoursError(row) || !stripHtml(row.task));
+    const hasInvalidRow = editableRows.some((row) => this.rowHoursError(row) || (row.workMode === 'ticket' ? !row.ticketId : !stripHtml(row.task) || row.task.trim().length > 1000));
     if (hasInvalidRow) {
       this.entrySaveAttempted.set(true);
       return;
@@ -614,7 +640,8 @@ export class Timesheet implements OnInit {
       hours: entry.hours,
       workType: entry.workType,
       location: entry.location,
-      task: entry.task,
+      task: entry.description ?? stripHtml(entry.task),
+      ticketId: entry.ticketId, ticket: entry.ticket,
       isOvertime: entry.isOvertime,
       isNightDifferential: entry.isNightDifferential,
       status: entry.status,
@@ -628,12 +655,14 @@ export class Timesheet implements OnInit {
 
   private rowToPayload(row: CellRowState, projectId: string, date: string): TimesheetEntryPayload {
     return {
-      projectId,
+      projectId: row.projectIdOverride !== undefined ? row.projectIdOverride : projectId,
       workDate: date,
       hours: Number(row.hours) || 0,
       workType: row.workType,
       location: locationForWorkType(row.workType),
       task: row.task.trim(),
+      ticketId: row.ticketId ?? null,
+      ...(row.workMode !== 'ticket' ? { description: row.task.trim() } : {}),
       isOvertime: row.isOvertime,
       isNightDifferential: row.isNightDifferential,
     };
@@ -646,6 +675,7 @@ export class Timesheet implements OnInit {
       hours: entry.hours,
       workType: entry.workType,
       task: entry.task,
+      ticketId: entry.ticketId, ticket: entry.ticket,
       isOvertime: entry.isOvertime,
       isNightDifferential: entry.isNightDifferential,
       status: entry.status,

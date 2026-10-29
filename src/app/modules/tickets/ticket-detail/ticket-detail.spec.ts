@@ -31,7 +31,7 @@ describe('TicketDetail department access', () => {
       { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: seed.id })), snapshot: {} } },
       { provide: TicketsService, useValue: { getById: () => response, getAll: () => of({ data: [] }), updateTicket: update } },
       { provide: TicketDepartmentService, useValue: { load: () => of({ isAdmin: false, teams: [own] }) } },
-      { provide: AuthService, useValue: { organizationId: () => 'org', currentUser: () => ({ id: 'u' }) } },
+      { provide: AuthService, useValue: { isAdmin: () => true, organizationId: () => 'org', currentUser: () => ({ id: 'u' }) } },
       { provide: TeamsService, useValue: { listTeamMembers: () => of([]) } },
       { provide: MembersService, useValue: { getMembers: () => of([]) } },
       { provide: ProjectsService, useValue: { getAll: () => of([]) } },

@@ -13,6 +13,7 @@ import {
   SubmitWeekResult,
   TimesheetAuditLog,
   TimesheetEntry,
+  TimesheetTicket,
   TimesheetEntryPayload,
   TimesheetPeriodLock,
   TimesheetProject,
@@ -24,6 +25,14 @@ import {
 export class TimesheetService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/timekeeping/timesheet`;
+
+  getTickets(page = 1, search = '') {
+    return this.http.get<PaginatedApiResponse<TimesheetTicket>>(this.baseUrl + '/tickets', { params: { page, limit: 20, ...(search.trim() ? { search: search.trim() } : {}) }, withCredentials: true });
+  }
+
+  createTicket(title: string, projectId: string | null) {
+    return this.http.post<ApiResponse<TimesheetTicket>>(environment.apiBaseUrl + '/tickets', { title: title.trim(), ...(projectId ? { projectId } : {}) }, { withCredentials: true }).pipe(map(response => response.data));
+  }
 
   getEntries(periodStart: string, periodEnd: string) {
     return this.fetchEntriesPage(periodStart, periodEnd, 1).pipe(

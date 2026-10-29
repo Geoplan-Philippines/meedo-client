@@ -162,7 +162,7 @@ export class TicketDetail {
 
   /** Active projects plus the ticket's own project when the sync archived it (shown tagged). */
   readonly projectMatches = computed(() =>
-    filterProjects(withCurrentProject(this.projects(), this.ticket()?.project), this.projectSearch()),
+    filterProjects(withCurrentProject(this.projects(), this.ticket()?.project, this.authService.isAdmin()), this.projectSearch()),
   );
 
   readonly categoryName = computed(() => {
@@ -307,7 +307,10 @@ export class TicketDetail {
   }
 
   // ─── Inline property edits (optimistic + PATCH) ─────────
+  readonly canEdit = computed(() => this.authService.isAdmin() || this.ticket()?.createdById === this.authService.currentUser()?.id);
+
   private applyPatch(payload: UpdateTicketPayload, optimistic: Partial<Ticket>): void {
+    if (!this.canEdit()) return;
     const previous = this.ticket();
     if (!previous) return;
     this.ticket.set({ ...previous, ...optimistic });

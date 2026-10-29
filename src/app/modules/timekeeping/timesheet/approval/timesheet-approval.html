@@ -401,17 +401,19 @@
                 <tbody>
                   @for (entry of emp.entries; track entry.id) {
                     <tr [class.entry-row--approved]="entry.status === 'APPROVED'" [class.entry-row--rejected]="entry.status === 'REJECTED'">
-                      <td class="entry-date">{{ entry.workDate | date: 'MMM d' }}</td>
+                      <td class="entry-date">{{ entry.workDate | date: 'MMM d':'UTC' }}</td>
                       <td class="entry-task">
+                        @if (entry.ticket) { <span>Ticket #{{ entry.ticket.ticketNumber }}</span> }
                         <span class="entry-project">{{ projectLabel(entry) }}</span>
                         @if (entry.task) {
                           <button type="button" class="task-cell-btn" (click)="openTaskPreview(entry)" aria-label="View full task description">
-                            <div class="entry-task-text" [innerHTML]="entry.task"></div>
+                            <div class="entry-task-text">@if (entry.description) { {{ entry.description }} } @else { <span [innerHTML]="entry.task"></span> }</div>
                           </button>
                         }
                       </td>
                       <td class="entry-hrs">{{ entry.hours | number: '1.1-1' }}</td>
                       <td class="entry-status-cell">
+                        @if (entry.status === 'SUBMITTED' && !isPeriodLocked()) { <button pButton type="button" label="Edit submitted entry" (click)="editEntry(entry)"></button> }
                         <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
                         @if (entry.rejectionReason) {
                           <small class="rejection-note">{{ entry.rejectionReason }}</small>
@@ -505,3 +507,5 @@
   }
 
 </div>
+
+@if (editingEntry(); as entry) { <app-timesheet-entry-form [entry]="entry" [projects]="projects()" (saved)="entrySaved()" (cancelled)="editingEntry.set(null)" /> }

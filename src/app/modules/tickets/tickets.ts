@@ -250,7 +250,7 @@ export class Tickets implements OnInit {
   readonly descriptionMaxLength = TICKET_DESCRIPTION_MAX_LENGTH;
   readonly canCreate = computed(() => {
     this.composeValue();
-    return this.departmentLoaded() && !this.noDepartments() && this.ticketForm.valid;
+    return this.departmentLoaded() && this.ticketForm.valid;
   });
 
   readonly selectedStatus = computed(() => {
@@ -303,7 +303,7 @@ export class Tickets implements OnInit {
 
   /** Edit dialog options: active projects plus the ticket's archived project, if it has one. */
   readonly editProjectOptions = computed(() =>
-    withCurrentProject(this.projects(), this.selectedTicket()?.project),
+    withCurrentProject(this.projects(), this.selectedTicket()?.project, this.authService.isAdmin()),
   );
 
   /**
@@ -631,7 +631,7 @@ export class Tickets implements OnInit {
           this.departmentAdmin.set(res.department.isAdmin);
           this.departmentLoaded.set(true);
           for (const form of [this.ticketForm, this.editTicketForm]) {
-            form.controls.teamId.setValidators(res.department.isAdmin ? [] : [Validators.required]);
+            form.controls.teamId.clearValidators();
             form.controls.teamId.updateValueAndValidity();
           }
           this.members.set(res.members);
@@ -734,7 +734,7 @@ export class Tickets implements OnInit {
 
   setTeamValue(id: string): void {
     if (!this.departmentAdmin() && !this.teams().some(team => team.id === id)) return;
-    const next = this.departmentAdmin() && this.composeValue().teamId === id ? '' : id;
+    const next = this.composeValue().teamId === id ? '' : id;
     this.ticketForm.controls.teamId.setValue(next);
   }
 
@@ -778,8 +778,13 @@ export class Tickets implements OnInit {
     this.router.navigate(['/tickets', ticket.id], { state: { ticket } });
   }
 
+  canEditTicket(ticket: Ticket) { return this.authService.isAdmin() || ticket.createdById === this.authService.currentUser()?.id; }
+
   openEditDialog(ticket: Ticket): void {
+    if (!this.canEditTicket(ticket)) return;
     this.selectedTicket.set(ticket);
+    this.editTicketForm.controls.teamId.setValidators(!this.departmentAdmin() && ticket.teamId ? [Validators.required] : []);
+    this.editTicketForm.controls.teamId.updateValueAndValidity();
     this.editTicketForm.reset({
       title: ticket.title,
       description: ticket.description ?? '',
@@ -800,7 +805,7 @@ export class Tickets implements OnInit {
 
   updateTicket(): void {
     if (this.isUpdating()) return;
-    if (!this.departmentLoaded() || this.noDepartments()) return;
+    if (!this.departmentLoaded()) return;
     if (this.editTicketForm.invalid) {
       this.editTicketForm.markAllAsTouched();
       return;
@@ -822,7 +827,7 @@ export class Tickets implements OnInit {
       categoryId: formValue.categoryId || null,
       projectId: formValue.projectId || null,
       teamId: formValue.teamId || null,
-      assigneeIds: formValue.assigneeIds,
+      assigneeIds: this.departmentAdmin() ? formValue.assigneeIds : undefined,
     };
 
     this.ticketsService.updateTicket(ticket.id, payload)
@@ -845,7 +850,7 @@ export class Tickets implements OnInit {
 
   saveTicket(): void {
     if (this.isSaving()) return;
-    if (!this.departmentLoaded() || this.noDepartments()) return;
+    if (!this.departmentLoaded()) return;
     if (this.ticketForm.invalid) {
       this.ticketForm.markAllAsTouched();
       return;
@@ -863,7 +868,7 @@ export class Tickets implements OnInit {
       categoryId: formValue.categoryId || undefined,
       projectId: formValue.projectId || undefined,
       teamId: formValue.teamId || undefined,
-      assigneeIds: formValue.assigneeIds,
+      assigneeIds: this.departmentAdmin() ? formValue.assigneeIds : undefined,
     };
 
     this.ticketsService.createTicket(payload)

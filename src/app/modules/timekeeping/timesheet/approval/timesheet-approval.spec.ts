@@ -6,6 +6,7 @@ import { PaginatedApiResponse } from '../../../../shared/interface/paginated-res
 import { TimesheetApproval } from './timesheet-approval';
 import { TimesheetAuditLog, TimesheetPeriodLock, TimesheetProject, TimesheetSummary } from '../models/timesheet.model';
 import { TimesheetService } from '../services/timesheet.service';
+import { manilaTodayKey } from '../entry-form/timesheet-entry-form';
 
 const summary: TimesheetSummary = {
   periodStart: '2026-06-22',
@@ -80,6 +81,12 @@ const auditLogs: PaginatedApiResponse<TimesheetAuditLog> = {
 };
 
 describe('TimesheetApproval', () => {
+  it.each([
+    ['2026-10-27T15:59:59Z', '2026-10-27'],
+    ['2026-10-27T16:00:00Z', '2026-10-28'],
+  ])('selects the Manila calendar day near midnight at %s', (instant, day) => {
+    expect(manilaTodayKey(new Date(instant))).toBe(day);
+  });
   let fixture: ComponentFixture<TimesheetApproval>;
   let component: TimesheetApproval;
 

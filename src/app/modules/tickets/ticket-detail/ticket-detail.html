@@ -46,10 +46,10 @@
 
     <div class="detail-body">
       <main class="detail-main">
-        <app-ticket-title-editor [value]="t.title" (titleSave)="commitTitle($event)" />
+        @if (canEdit()) { <app-ticket-title-editor [value]="t.title" (titleSave)="commitTitle($event)" /> } @else { <h1>{{ t.title }}</h1> }
 
         <!-- Linear-style: always-on WYSIWYG markdown, autosaves on pause/blur. -->
-        <app-markdown-editor
+        @if (canEdit()) { <app-markdown-editor
           class="detail-desc"
           [value]="t.description ?? ''"
           [upload]="uploadAttachment"
@@ -57,7 +57,7 @@
           ariaLabel="Ticket description"
           [maxLength]="descriptionMaxLength"
           (contentSave)="onDescriptionSave($event)"
-        />
+        /> } @else { <p>{{ t.description }}</p> }
 
         <div class="detail-thread">
           <app-ticket-thread [ticketId]="t.id" />
@@ -70,7 +70,7 @@
 
           <div class="aside-row">
             <span class="aside-key">Status</span>
-            <button class="aside-edit" type="button" (click)="statusPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="statusPop.toggle($event)" aria-haspopup="true">
               @if (t.ticketStatus) {
                 <span class="status-dot" [style.background-color]="safeStatusColor(t.ticketStatus.color)" aria-hidden="true"></span>
                 <span class="edit-val">{{ t.ticketStatus.name }}</span>
@@ -83,7 +83,7 @@
 
           <div class="aside-row">
             <span class="aside-key">Priority</span>
-            <button class="aside-edit" type="button" (click)="priorityPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="priorityPop.toggle($event)" aria-haspopup="true">
               <span [class]="priorityDotClass(t.priority)" aria-hidden="true"></span>
               <span class="edit-val">{{ t.priority | titlecase }}</span>
               <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
@@ -92,7 +92,7 @@
 
           <div class="aside-row">
             <span class="aside-key">Team</span>
-            <button class="aside-edit" type="button" (click)="teamPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="teamPop.toggle($event)" aria-haspopup="true">
               <span class="edit-val" [class.muted]="!teamName()">{{ teamName() ?? 'Set team' }}</span>
               <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
             </button>
@@ -149,7 +149,7 @@
 
           <div class="aside-row">
             <span class="aside-key">Category</span>
-            <button class="aside-edit" type="button" (click)="categoryPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="categoryPop.toggle($event)" aria-haspopup="true">
               <span class="edit-val" [class.muted]="!categoryName()">{{ categoryName() ?? 'Set category' }}</span>
               <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
             </button>

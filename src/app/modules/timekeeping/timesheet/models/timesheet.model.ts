@@ -56,8 +56,11 @@ export interface TimesheetEntry {
   id: string;
   organizationId: string;
   userId: string;
-  projectId: string;
-  project?: TimesheetProject;
+  projectId: string | null;
+  ticketId?: string | null;
+  description?: string | null;
+  ticket?: { id: string; ticketNumber: number; title: string } | null;
+  project?: TimesheetProject | null;
   user?: TimesheetUser;
   workDate: string;
   hours: number;
@@ -80,13 +83,20 @@ export interface TimesheetEntry {
   updatedAt: string;
 }
 
+export interface TimesheetTicket {
+  id: string; ticketNumber: number; title: string; projectId: string | null;
+  project?: { id: string; displayName?: string | null; quoteSubject?: string | null; workOrderNumber: string } | null;
+}
+
 export interface TimesheetEntryPayload {
-  projectId: string;
+  projectId?: string | null;
+  ticketId?: string | null;
+  description?: string;
   workDate: string;
   hours: number;
   location?: string;
   workType?: TimesheetWorkType;
-  task: string;
+  task?: string;
   projectDescription?: string | null;
   isOvertime?: boolean;
   isNightDifferential?: boolean;

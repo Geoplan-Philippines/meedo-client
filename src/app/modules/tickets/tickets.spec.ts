@@ -59,7 +59,7 @@ describe('Tickets', () => {
         { provide: TicketsService, useValue: service },
         { provide: TicketDepartmentService, useValue: { load: () => of(department) } },
         { provide: AuthService, useValue: {
-          currentUser: () => ({ id: member.userId }), organizationId: () => member.organizationId,
+          isAdmin: () => true, currentUser: () => ({ id: member.userId }), organizationId: () => member.organizationId,
         } },
         { provide: MembersService, useValue: { getMembers: () => of([member]) } },
         { provide: TeamsService, useValue: { getTeams: () => of([]), listTeamMembers: () => of([]) } },
@@ -82,39 +82,21 @@ describe('Tickets', () => {
     expect(button.getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('requires a department for members and never toggles the selected department off', () => {
+  it('lets members create without a department and keeps existing department clearing protected in edit', () => {
     const own = { id: 'own-team', name: 'Own department', organizationId: 'org-id' } as any;
-    department = { isAdmin: false, teams: [own] };
-    component.loadDropdowns();
-    component.ticketForm.controls.title.setValue('Member ticket');
-    expect(component.teams()).toEqual([own]);
-    expect(component.ticketForm.controls.teamId.hasError('required')).toBe(true);
-    component.saveTicket();
-    expect(service.createTicket).not.toHaveBeenCalled();
-    component.setTeamValue('foreign-team');
-    expect(component.ticketForm.controls.teamId.value).toBe('');
-    component.setTeamValue(own.id);
-    component.setTeamValue(own.id);
-    expect(component.ticketForm.controls.teamId.value).toBe(own.id);
-    expect(component.canCreate()).toBe(true);
-    component.openEditDialog({ ...ticket, teamId: own.id });
-    component.editTicketForm.controls.teamId.setValue('');
-    component.updateTicket();
-    expect(service.updateTicket).not.toHaveBeenCalled();
+    department = { isAdmin: false, teams: [own] }; component.loadDropdowns(); component.ticketForm.controls.title.setValue('Example member ticket');
+    expect(component.ticketForm.controls.teamId.hasError('required')).toBe(false);
+    component.saveTicket(); expect(service.createTicket).toHaveBeenCalledWith(expect.objectContaining({ assigneeIds: undefined }));
+    component.setTeamValue('foreign-team'); expect(component.ticketForm.controls.teamId.value).toBe('');
+    component.setTeamValue(own.id); component.setTeamValue(own.id); expect(component.ticketForm.controls.teamId.value).toBe('');
+    component.openEditDialog({ ...ticket, teamId: own.id }); component.editTicketForm.controls.teamId.setValue(''); component.updateTicket(); expect(service.updateTicket).not.toHaveBeenCalled();
   });
 
-  it('shows a clear empty state and disables creation for a member with no teams', async () => {
-    department = { isAdmin: false, teams: [] };
-    component.loadDropdowns();
-    fixture.detectChanges();
-    await fixture.whenStable();
-    expect(component.noDepartments()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('You are not assigned to a department.');
-    expect(fixture.nativeElement.querySelector('.add-btn').disabled).toBe(true);
-    expect(fixture.nativeElement.querySelector('p-table')).toBeNull();
-    component.ticketForm.controls.title.setValue('Cannot create');
-    component.saveTicket();
-    expect(service.createTicket).not.toHaveBeenCalled();
+  it('keeps the department empty state while allowing an independent member ticket', async () => {
+    department = { isAdmin: false, teams: [] }; component.loadDropdowns(); fixture.detectChanges(); await fixture.whenStable();
+    expect(component.noDepartments()).toBe(true); expect(fixture.nativeElement.textContent).toContain('You are not assigned to a department.');
+    expect(fixture.nativeElement.querySelector('.add-btn').disabled).toBe(false);
+    component.ticketForm.controls.title.setValue('Example independent work'); component.saveTicket(); expect(service.createTicket).toHaveBeenCalled();
   });
 
   it('rejects whitespace-only titles and over-limit fields in both create and edit submission paths', () => {

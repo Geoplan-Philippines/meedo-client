@@ -23,12 +23,15 @@ import {
   TimesheetSummaryEmployee,
 } from '../models/timesheet.model';
 import { TimesheetService } from '../services/timesheet.service';
+import { TimesheetEntryForm } from '../entry-form/timesheet-entry-form';
+import { manilaTodayKey } from '../entry-form/timesheet-entry-form';
 import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 
 @Component({
   selector: 'app-timesheet-approval',
   imports: [
     CommonModule,
+    TimesheetEntryForm,
     FormsModule,
     TableModule,
     ButtonModule,
@@ -51,7 +54,7 @@ export class TimesheetApproval implements OnInit {
 
   private readonly approvalTable = viewChild<Table>('approvalTable');
 
-  readonly selectedDate = signal<Date>(new Date());
+  readonly selectedDate = signal<Date>(new Date(manilaTodayKey() + 'T12:00:00'));
   readonly selectedWeek = computed(() => startOfWeek(this.selectedDate()));
   readonly summary = signal<TimesheetSummary | null>(null);
   readonly periodLock = signal<TimesheetPeriodLock | null>(null);
@@ -61,6 +64,9 @@ export class TimesheetApproval implements OnInit {
   readonly selectedEntryIds = signal<Set<string>>(new Set());
   readonly selectedEmployee = signal<TimesheetSummaryEmployee | null>(null);
   readonly activeTab = signal<'SUBMITTED' | 'APPROVED' | 'REJECTED' | null>(null);
+  readonly editingEntry = signal<TimesheetEntry | null>(null);
+  editEntry(entry: TimesheetEntry) { if (!this.isPeriodLocked() && entry.status === 'SUBMITTED') this.editingEntry.set(entry); }
+  entrySaved() { this.editingEntry.set(null); this.loadData(); }
   readonly taskPreviewContent = signal<string | null>(null);
 
   readonly isLoading = signal(false);
