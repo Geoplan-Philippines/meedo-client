@@ -3,6 +3,10 @@ import { MainLayout } from './layout/main-layout/main-layout';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
+  {
+    path: 'notifications', component: MainLayout, canActivate: [authGuard],
+    loadChildren: () => import('./modules/notifications/notifications.routes').then(m => m.notificationsRoutes),
+  },
   { 
     path: '', 
     loadComponent: () => 

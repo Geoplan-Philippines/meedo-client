@@ -7,10 +7,11 @@ import { DialogModule } from 'primeng/dialog';
 import { LayoutService } from '../layout.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ThemeService } from '../../core/theme/theme.service';
+import { NotificationBell } from '../../shared/ui/notifications/notification-bell';
 
 @Component({
   selector: 'app-header',
-  imports: [ButtonModule, AvatarModule, DialogModule],
+  imports: [ButtonModule, AvatarModule, DialogModule, NotificationBell],
   templateUrl: './header.html',
   styleUrl: './header.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

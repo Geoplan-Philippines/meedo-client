@@ -27,7 +27,7 @@
       (onClick)="themeService.toggle()"
       [attr.aria-label]="themeService.isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
     />
-    <p-button icon="pi pi-bell" [text]="true" severity="secondary" class="header-icon-btn optional-action" />
+    <app-notification-bell />
     <p-button
       icon="pi pi-cog"
       [text]="true"
