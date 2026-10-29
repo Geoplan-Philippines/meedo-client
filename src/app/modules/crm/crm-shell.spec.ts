@@ -11,7 +11,7 @@ describe('CRM lazy shell routing', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [
     provideRouter([{ path: 'crm', children: crmRoutes }]),
     { provide: AuthService, useValue: { isAdmin: () => false } },
-    { provide: CrmService, useValue: { getLeads: () => of({ data: [] }), getSubscribers: () => of({ data: [] }) } },
+    { provide: CrmService, useValue: { getLeads: () => of({ data: [] }), getLeadsStats: () => of({ data: { total: 0, pending: 0, contacted: 0, qualified: 0, lost: 0 } }), getSubscribers: () => of({ data: [] }) } },
     { provide: CampaignsService, useValue: { list: () => of({ data: [], meta: { total: 0, lastPage: 0 } }) } },
   ] }));
   it.each([

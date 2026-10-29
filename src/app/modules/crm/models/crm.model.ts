@@ -1,8 +1,9 @@
 export interface LeadsStats {
   total: number;
   pending: number;
+  contacted: number;
   qualified: number;
-  converted: number;
+  lost: number;
 }
 
 export interface Lead {

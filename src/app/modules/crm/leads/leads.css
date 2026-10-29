@@ -59,7 +59,7 @@
 /* ─── Stats Grid ───────────────────────────────────────── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
 }
 
@@ -92,7 +92,7 @@
 .stat-icon--total    { background: var(--color-secondary);      color: var(--color-primary); }
 .stat-icon--pending  { background: var(--color-muted-warning);  color: var(--color-muted-warning-foreground); }
 .stat-icon--qualified { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
-.stat-icon--converted { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
+.stat-icon--lost { background: var(--color-muted-destructive); color: var(--color-destructive); }
 
 .stat-body {
   display: flex;
@@ -374,8 +374,6 @@
 .status-contacted { background: var(--color-muted-info); color: var(--color-muted-info-foreground); }
 .status-contacted .status-dot { background: var(--color-info); }
 
-.status-converted { background: var(--color-muted-success); color: var(--color-muted-success-foreground); }
-.status-converted .status-dot { background: var(--color-success); }
 
 .status-lost { background: var(--color-muted-destructive); color: #7F1D1D; }
 .status-lost .status-dot { background: var(--color-destructive); }

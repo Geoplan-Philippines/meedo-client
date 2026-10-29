@@ -15,9 +15,9 @@ export class CrmService {
     return this.http.get<LeadsResponse>(`${this.baseUrl}/leads`);
   }
 
-  /** GET /crm/leads/stats — ready, pending backend implementation */
+  /** Authenticated GET /crm/leads/stats. */
   getLeadsStats(): Observable<LeadsStatsResponse> {
-    return this.http.get<LeadsStatsResponse>(`${this.baseUrl}/leads/stats`);
+    return this.http.get<LeadsStatsResponse>(`${this.baseUrl}/leads/stats`, { withCredentials: true });
   }
 
   getSubscribers(): Observable<SubscribersResponse> {

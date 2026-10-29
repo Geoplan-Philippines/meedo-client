@@ -21,7 +21,6 @@ export class Leads implements OnInit {
   readonly isLoading = signal(false);
   readonly searchTerm = signal('');
 
-  /** Populated once GET /crm/leads/stats is implemented on the backend */
   readonly stats = signal<LeadsStats | null>(null);
 
   readonly skeletonRows = [1, 2, 3, 4, 5];
@@ -52,7 +51,10 @@ export class Leads implements OnInit {
 
   ngOnInit(): void {
     this.loadLeads();
-    // TODO: call this.crmService.getLeadsStats() here once GET /crm/leads/stats is live
+    this.crmService.getLeadsStats().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: response => this.stats.set(response.data),
+      error: () => this.stats.set(null),
+    });
   }
 
   private loadLeads(): void {
