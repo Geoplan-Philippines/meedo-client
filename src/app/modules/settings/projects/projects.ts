@@ -12,8 +12,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
-import { ClientsService } from '../customers/services/clients.service';
-import { ClientOption } from '../customers/models/client.model';
 import { ProjectAdminService } from './services/project-admin.service';
 import {
   ProjectListFilters,
@@ -25,6 +23,8 @@ import { ProjectDetailDrawer } from './project-detail-drawer/project-detail-draw
 import { WorkspaceService } from '../../clients/services/workspace.service';
 import { WorkspaceBreadcrumb } from '../../clients/workspace-breadcrumb/workspace-breadcrumb';
 import { UNASSIGNED_CLIENT_ID, workspaceLinks } from '../../clients/models/workspace.model';
+import { NewInternalRecord } from '../shared/new-internal-record';
+import { ClientTypeahead } from '../shared/client-typeahead';
 
 /** Group of projects under one client; `clientId` null is the "Unassigned" group. */
 interface ProjectGroup {
@@ -61,6 +61,8 @@ const SORT_OPTIONS: { label: string; field: ProjectSortField; order: 'asc' | 'de
     ProjectDetailDrawer,
     WorkspaceBreadcrumb,
     RouterLink,
+    NewInternalRecord,
+    ClientTypeahead,
   ],
   templateUrl: './projects.html',
   styleUrl: './projects.css',
@@ -68,7 +70,6 @@ const SORT_OPTIONS: { label: string; field: ProjectSortField; order: 'asc' | 'de
 })
 export class Projects implements OnInit {
   private readonly projectAdmin = inject(ProjectAdminService);
-  private readonly clientsService = inject(ClientsService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -76,11 +77,11 @@ export class Projects implements OnInit {
   private readonly workspace = inject(WorkspaceService);
 
   readonly isAdmin = this.authService.isAdmin;
+  readonly creating = signal(false);
   readonly sortOptions = SORT_OPTIONS.map((option, index) => ({ label: option.label, value: index }));
 
   readonly projects = signal<ProjectRecord[]>([]);
   readonly loadState = signal<LoadState>('loading');
-  readonly clientOptions = signal<ClientOption[]>([]);
   readonly statusOptions = signal<string[]>([]);
   readonly selectedProjectId = signal<string | null>(null);
 
@@ -93,6 +94,7 @@ export class Projects implements OnInit {
     clientId: new FormControl<string | null>(null),
     status: new FormControl<string | null>(null),
     includeArchived: new FormControl(false, { nonNullable: true }),
+    includeClosed: new FormControl(true, { nonNullable: true }),
     sort: new FormControl(0, { nonNullable: true }),
   });
 
@@ -112,7 +114,7 @@ export class Projects implements OnInit {
   readonly routeProjectId = toSignal(this.route.paramMap.pipe(map((params) => params.get('projectId'))), {
     initialValue: this.route.snapshot.paramMap.get('projectId'),
   });
-  readonly subtitle = computed(() => this.routeClientId() ? 'Projects for this client.' : 'Apptivo work orders, grouped by customer.');
+  readonly subtitle = computed(() => this.routeClientId() ? 'Projects for this client.' : 'Internal projects and Apptivo work orders, grouped by customer.');
 
   constructor() {
     // The Project breadcrumb opens the existing detail drawer at a shareable URL.
@@ -137,11 +139,6 @@ export class Projects implements OnInit {
     // Older links used /…?clientId=; the client now lives in the path.
     const queryClientId = this.route.snapshot.queryParamMap.get('clientId');
     if (queryClientId && !this.routeClientId()) this.filters.controls.clientId.setValue(queryClientId);
-
-    this.clientsService
-      .options(true)
-      .pipe(catchError(() => of([] as ClientOption[])), takeUntilDestroyed(this.destroyRef))
-      .subscribe((options) => this.clientOptions.set(options));
 
     this.projectAdmin
       .statuses()
@@ -169,6 +166,8 @@ export class Projects implements OnInit {
   reload(): void {
     this.filters.updateValueAndValidity();
   }
+
+  onCreated() { this.creating.set(false); this.workspace.invalidate(); this.reload(); }
 
   clearFilters(): void {
     this.filters.patchValue({ search: '', clientId: null, status: null });
@@ -236,6 +235,7 @@ export class Projects implements OnInit {
       teamId: null,
       status: value.status,
       includeArchived: value.includeArchived,
+      includeClosed: value.includeClosed,
       sortField: sort.field,
       sortOrder: sort.order,
     };

@@ -1,6 +1,6 @@
 export interface ClientRecord {
   id: string;
-  apptivoId: string;
+  apptivoId: string | null;
   /** Shown name: displayName, else customerName (computed by the server). */
   name: string;
   displayName: string | null;

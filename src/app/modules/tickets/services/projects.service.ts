@@ -1,4 +1,5 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, effect, inject } from '@angular/core';
+import { AuthService } from '../../../core/auth/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
@@ -13,11 +14,18 @@ const PAGE_SIZE = 200;
 
 @Injectable({ providedIn: 'root' })
 export class ProjectsService {
+  private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/maintenance/projects`;
 
   /** Active projects, every page, shared by all ticket pickers until invalidated. */
   private active$: Observable<Project[]> | null = null;
+  private identityKey: string | undefined;
+  constructor() { effect(() => {
+    const key = `${this.auth.currentUser?.()?.id ?? ''}:${this.auth.organizationId?.() ?? ''}`;
+    if (this.identityKey !== undefined && this.identityKey !== key) this.active$ = null;
+    this.identityKey = key;
+  }); }
 
   /** Every active (non-archived) project, sorted by client then name. */
   getAll(): Observable<Project[]> {
@@ -71,8 +79,8 @@ export function toPickerProject(record: ProjectRecord): Project {
  * when the sync has archived it, so the field shows it (tagged "Archived") instead of
  * going blank. It can stay selected but cannot be picked for another ticket.
  */
-export function withCurrentProject(projects: Project[], current: Ticket['project'] | undefined): Project[] {
-  if (!current || projects.some((project) => project.id === current.id)) return projects;
+export function withCurrentProject(projects: Project[], current: Ticket['project'] | undefined, allowHiddenCurrent = true): Project[] {
+  if (!allowHiddenCurrent || !current || projects.some((project) => project.id === current.id)) return projects;
   const name = projectDisplayName(current);
   const clientName = clientDisplayName(current.client) || current.customerName || '';
   const archived: Project = {

@@ -40,14 +40,14 @@ describe('user client navigation', () => {
     fixture.detectChanges();
     const request = http.expectOne((req) => req.url.endsWith('/maintenance/clients/tree'));
     expect(request.request.params.get('hasActiveProjects')).toBe('true');
-    expect(request.request.params.get('limit')).toBe('8');
+    expect(request.request.params.get('limit')).toBe('5');
     expect(request.request.params.has('teamId')).toBe(false);
     request.flush({
       data: [
         { id: 'beta', name: 'Beta Client With A Long Display Name', projectCount: 1 },
         { id: 'alpha', name: 'Alpha', projectCount: 3 },
       ],
-      meta: { page: 1, limit: 8, lastPage: 1, total: 2 },
+      meta: { page: 1, limit: 5, lastPage: 1, total: 2 },
     });
     fixture.detectChanges();
   });

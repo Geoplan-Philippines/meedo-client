@@ -13,6 +13,10 @@ export class ClientsService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/maintenance/clients`;
 
+  create(name: string) {
+    return this.http.post<ApiResponse<ClientRecord>>(this.baseUrl, { name: name.trim() }, { withCredentials: true }).pipe(map(res => res.data));
+  }
+
   list(params: ClientListParams): Observable<PaginatedApiResponse<ClientRecord>> {
     const query: Record<string, string | number | boolean> = { page: params.page, limit: params.limit };
     if (params.search?.trim()) query['search'] = params.search.trim();
@@ -21,6 +25,10 @@ export class ClientsService {
     if (params.sortOrder) query['sortOrder'] = params.sortOrder;
 
     return this.http.get<PaginatedApiResponse<ClientRecord>>(this.baseUrl, { params: query, withCredentials: true });
+  }
+
+  get(id: string): Observable<ClientOption> {
+    return this.http.get<ApiResponse<ClientOption>>(`${this.baseUrl}/${id}`, { withCredentials: true }).pipe(map(response => response.data));
   }
 
   /** Every client as { id, name }, sorted by shown name, for pickers and filters. */

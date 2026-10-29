@@ -30,7 +30,7 @@ describe('Projects client navigation', () => {
           snapshot: { paramMap: params.value, queryParamMap: convertToParamMap({}) },
         } },
         { provide: AuthService, useValue: { isAdmin: () => true } },
-        { provide: ClientsService, useValue: { options: () => of([]) } },
+        { provide: ClientsService, useValue: { list: () => of({ data: [], meta: { page: 1, limit: 20, total: 0, lastPage: 0 } }), get: () => of({ id: 'c1', name: 'Alpha', customerName: 'Alpha', isArchived: false }) } },
         { provide: WorkspaceService, useValue: {
           client: (id: string) => of({ id, name: 'Alpha' }),
           project: () => of(project),

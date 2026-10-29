@@ -13,6 +13,7 @@ export interface ProjectListFilters {
   teamId: string | null;
   status: string | null;
   includeArchived: boolean;
+  includeClosed?: boolean;
   sortField: ProjectSortField;
   sortOrder: 'asc' | 'desc';
 }

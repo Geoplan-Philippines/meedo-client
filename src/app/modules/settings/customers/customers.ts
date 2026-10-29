@@ -17,6 +17,7 @@ import { WorkspaceService } from '../../clients/services/workspace.service';
 import { WorkspaceBreadcrumb } from '../../clients/workspace-breadcrumb/workspace-breadcrumb';
 import { ClientsService } from './services/clients.service';
 import { ClientListParams, ClientRecord, ClientSortField } from './models/client.model';
+import { NewInternalRecord } from '../shared/new-internal-record';
 
 /** Must match the server's DISPLAY_NAME_MAX_LENGTH. */
 const DISPLAY_NAME_MAX_LENGTH = 200;
@@ -40,6 +41,7 @@ const SORTABLE: Record<string, ClientSortField> = {
     TooltipModule,
     ArchivedTag,
     WorkspaceBreadcrumb,
+    NewInternalRecord,
   ],
   templateUrl: './customers.html',
   styleUrl: './customers.css',
@@ -53,6 +55,8 @@ export class Customers {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly isAdmin = this.authService.isAdmin;
+  readonly creating = signal(false);
+  onCreated() { this.creating.set(false); this.workspace.invalidate(); this.reload(); }
   readonly pageSize = PAGE_SIZE;
   readonly maxNameLength = DISPLAY_NAME_MAX_LENGTH;
 

@@ -7,11 +7,12 @@ import { catchError, map, of, startWith, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
 
 import { RouterLink } from '@angular/router';
 
 import { ArchivedTag } from '../../../../shared/ui/archived-tag/archived-tag';
+import { ProjectAccessPanel } from './project-access-panel';
+import { ClientTypeahead } from '../../shared/client-typeahead';
 import { UNASSIGNED_CLIENT_ID, workspaceLinks } from '../../../clients/models/workspace.model';
 import { ClientOption } from '../../customers/models/client.model';
 import { ProjectAdminService } from '../services/project-admin.service';
@@ -37,7 +38,7 @@ type DetailState =
 
 @Component({
   selector: 'app-project-detail-drawer',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe, ButtonModule, DrawerModule, InputTextModule, SelectModule, ArchivedTag],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe, ButtonModule, DrawerModule, InputTextModule, ClientTypeahead, ArchivedTag, ProjectAccessPanel],
   templateUrl: './project-detail-drawer.html',
   styleUrl: './project-detail-drawer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,7 +49,6 @@ export class ProjectDetailDrawer {
 
   readonly projectId = input<string | null>(null);
   readonly isAdmin = input(false);
-  readonly clientOptions = input<ClientOption[]>([]);
   readonly closed = output<void>();
   readonly changed = output<ProjectRecord>();
 
@@ -65,6 +65,7 @@ export class ProjectDetailDrawer {
   readonly isEditingClient = signal(false);
   readonly isSaving = signal(false);
   readonly saveError = signal<string | null>(null);
+  readonly chosenClient = signal<ClientOption | null>(null);
 
   readonly nameForm = new FormGroup({
     displayName: new FormControl('', {
@@ -74,13 +75,6 @@ export class ProjectDetailDrawer {
   });
   readonly clientForm = new FormGroup({
     clientId: new FormControl<string>(NO_CLIENT, { nonNullable: true }),
-  });
-
-  /** Active clients to reassign to, plus the project's current client even if it is archived. */
-  readonly clientChoices = computed(() => {
-    const project = this.project();
-    const active = this.clientOptions().filter((option) => !option.isArchived || option.id === project?.clientId);
-    return [{ id: NO_CLIENT, name: 'No client', customerName: '', isArchived: false }, ...active];
   });
 
   /** The project's tickets page under its client (or under "Unassigned"). */
@@ -129,6 +123,12 @@ export class ProjectDetailDrawer {
       });
   }
 
+  onAccessChanged(updated: ProjectRecord) {
+    const previous = this.project();
+    if (previous) this.state.set({ status: 'ready', project: { ...previous, ...updated } });
+    this.changed.emit(updated);
+  }
+
   startEditName(): void {
     const project = this.project();
     if (!project) return;
@@ -153,6 +153,7 @@ export class ProjectDetailDrawer {
 
   startEditClient(): void {
     this.clientForm.reset({ clientId: this.project()?.clientId ?? NO_CLIENT });
+    this.chosenClient.set(this.project()?.client ?? null);
     this.saveError.set(null);
     this.isEditingClient.set(true);
   }
@@ -160,6 +161,11 @@ export class ProjectDetailDrawer {
   saveClient(): void {
     const value = this.clientForm.controls.clientId.value;
     this.save({ clientId: value === NO_CLIENT ? null : value });
+  }
+
+  selectClient(client: ClientOption | null): void {
+    this.chosenClient.set(client);
+    this.clientForm.controls.clientId.setValue(client?.id ?? NO_CLIENT);
   }
 
   /** Hand the client back to the Apptivo sync; it takes effect on the next sync. */
@@ -194,7 +200,10 @@ export class ProjectDetailDrawer {
   }
 
   private clientName(id: unknown): string {
-    return this.clientOptions().find((option) => option.id === id)?.name ?? 'another client';
+    const chosen = this.chosenClient();
+    if (chosen && chosen.id === id) return chosen.name;
+    const current = this.project()?.client;
+    return current && current.id === id ? current.name : 'another client';
   }
 
   private save(payload: UpdateProjectPayload): void {

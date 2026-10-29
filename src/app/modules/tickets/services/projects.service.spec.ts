@@ -21,6 +21,7 @@ const record = (id: string, overrides: Partial<Project> = {}): Project =>
   });
 
 describe('ticket project picker helpers', () => {
+  it('does not add a hidden current project for a non-admin picker', () => { const active = [record('1')]; expect(withCurrentProject(active, { id: 'hidden', customerName: 'Example client', workOrderNumber: 'Example work' }, false)).toBe(active); });
   it('labels a project with its shown name, client and WO number', () => {
     expect(record('1').label).toBe('Project 1 · Denso · SO-1');
     expect(record('1').clientName).toBe('Denso');

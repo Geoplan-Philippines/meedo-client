@@ -22,6 +22,7 @@
 
   @if (project(); as p) {
     <div class="drawer-body">
+      <app-project-access-panel [project]="p" [isAdmin]="isAdmin()" (changed)="onAccessChanged($event)" />
       <section class="block" aria-labelledby="project-name-heading">
         @if (isEditingName()) {
           <form class="edit-form" [formGroup]="nameForm" (ngSubmit)="saveName()">
@@ -79,20 +80,7 @@
         <h3 class="block-title" id="project-client-heading">Client</h3>
         @if (isEditingClient()) {
           <form class="edit-form" [formGroup]="clientForm" (ngSubmit)="saveClient()">
-            <label for="project-client" class="sr-only">Client</label>
-            <p-select
-              inputId="project-client"
-              formControlName="clientId"
-              [options]="clientChoices()"
-              optionLabel="name"
-              optionValue="id"
-              [filter]="true"
-              filterBy="name,customerName"
-              [virtualScroll]="true"
-              [virtualScrollItemSize]="38"
-              appendTo="body"
-              styleClass="w-full"
-            />
+            <app-client-typeahead inputId="project-client" label="Client" [value]="clientForm.controls.clientId.value === noClient ? null : clientForm.controls.clientId.value" [current]="p.client" (valueChange)="selectClient($event)" />
             <small class="hint">A client set here stays when the Apptivo sync runs.</small>
             <div class="edit-actions">
               <p-button label="Cancel" severity="secondary" text size="small" (onClick)="cancelEdit()" [disabled]="isSaving()" />

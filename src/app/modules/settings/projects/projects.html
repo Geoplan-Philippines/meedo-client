@@ -15,6 +15,7 @@
       <p class="text-sm text-body/70">{{ subtitle() }}</p>
     </div>
     @if (isAdmin()) {
+      <p-button label="New project" icon="pi pi-plus" (onClick)="creating.set(true)" />
       <p-button
         label="Sync from Apptivo"
         icon="pi pi-refresh"
@@ -56,35 +57,23 @@
     </div>
   }
 
+  @if (isAdmin() && creating()) { <app-new-internal-record kind="project" (saved)="onCreated()" (cancelled)="creating.set(false)" /> }
   <form class="toolbar" [formGroup]="filters" (ngSubmit)="reload()" role="search" aria-label="Filter projects">
+    <label class="toolbar-toggle"><input type="checkbox" formControlName="includeClosed" /> Show closed</label>
     <span class="toolbar-search">
       <i class="pi pi-search" aria-hidden="true"></i>
       <input
         pInputText
         type="search"
         formControlName="search"
-        placeholder="Search name, quote subject or WO number"
-        aria-label="Search projects by name, quote subject or WO number"
+        placeholder="Search project or client name, quote subject or WO number"
+        aria-label="Search projects by project or client name, quote subject or WO number"
         autocomplete="off"
         maxlength="100"
       />
     </span>
     @if (!routeClientId()) {
-    <p-select
-      formControlName="clientId"
-      [options]="clientOptions()"
-      optionLabel="name"
-      optionValue="id"
-      [filter]="true"
-      filterBy="name,customerName"
-      [showClear]="true"
-      [virtualScroll]="true"
-      [virtualScrollItemSize]="38"
-      placeholder="All customers"
-      ariaLabel="Filter by customer"
-      appendTo="body"
-      styleClass="toolbar-select toolbar-select--wide"
-    />
+    <app-client-typeahead label="Filter by customer" placeholder="Search customers" [value]="filters.controls.clientId.value" [includeArchived]="true" (valueChange)="filters.controls.clientId.setValue($event?.id ?? null)" />
     }
     <p-select
       formControlName="status"
@@ -165,6 +154,8 @@
                       <span class="row-main">
                         <span class="row-title">
                           <span class="row-name">{{ project.name }}</span>
+                          @if (project.isClosed) { <span class="text-xs bg-secondary text-secondary-foreground rounded px-2 py-1">Closed</span> }
+                          @if (!project.apptivoId) { <span class="text-xs text-body/70">Internal</span> }
                           @if (project.isArchived) { <app-archived-tag /> }
                         </span>
                         <span class="row-sub">
@@ -196,7 +187,6 @@
 <app-project-detail-drawer
   [projectId]="selectedProjectId()"
   [isAdmin]="isAdmin()"
-  [clientOptions]="clientOptions()"
   (closed)="closeDrawer()"
   (changed)="onProjectChanged($event)"
 />

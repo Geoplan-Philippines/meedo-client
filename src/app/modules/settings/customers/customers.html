@@ -4,12 +4,15 @@
   <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
     <div class="flex flex-col gap-1">
       <h1 class="text-2xl font-semibold text-heading">All Clients</h1>
-      <p class="text-sm text-body/70">Customer accounts from Apptivo and their projects.</p>
+      <p class="text-sm text-body/70">Internal clients and Apptivo customer accounts.</p>
     </div>
     @if (!isAdmin()) {
       <span class="readonly-note"><i class="pi pi-lock" aria-hidden="true"></i> Read-only. Ask an admin to rename customers.</span>
     }
+    @if (isAdmin()) { <p-button label="New client" icon="pi pi-plus" (onClick)="creating.set(true)" /> }
   </header>
+
+  @if (isAdmin() && creating()) { <app-new-internal-record kind="client" (saved)="onCreated()" (cancelled)="creating.set(false)" /> }
 
   <div class="toolbar" role="search" aria-label="Filter customers">
     <span class="toolbar-search">

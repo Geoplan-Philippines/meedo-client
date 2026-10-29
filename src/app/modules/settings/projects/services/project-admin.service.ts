@@ -24,6 +24,20 @@ export class ProjectAdminService {
   private readonly ticketProjects = inject(ProjectsService);
   private readonly baseUrl = `${environment.apiBaseUrl}/maintenance/projects`;
 
+  create(name: string, clientId: string) {
+    return this.http.post<ApiResponse<ProjectRecord>>(this.baseUrl, { name: name.trim(), clientId }, { withCredentials: true }).pipe(map(res => res.data), tap(() => this.ticketProjects.invalidate()));
+  }
+  members(id: string) {
+    return this.http.get<ApiResponse<{ userId: string; user: { id: string; name: string | null; email: string } }[]>>(`${this.baseUrl}/${id}/members`, { withCredentials: true }).pipe(map(res => res.data));
+  }
+  memberOptions() {
+    return this.http.get<ApiResponse<{ user: { id: string; name: string | null; email: string } }[]>>(`${this.baseUrl}/member-options`, { withCredentials: true }).pipe(map(res => res.data.map(row => row.user)));
+  }
+  addMember(id: string, userId: string) { return this.http.post(`${this.baseUrl}/${id}/members`, { userId }, { withCredentials: true }); }
+  removeMember(id: string, userId: string) { return this.http.delete(`${this.baseUrl}/${id}/members/${userId}`, { withCredentials: true }); }
+  setClosed(id: string, isClosed: boolean) { return this.http.patch<ApiResponse<ProjectRecord>>(`${this.baseUrl}/${id}/closed`, { isClosed }, { withCredentials: true }).pipe(map(res => res.data)); }
+  setArchived(id: string, isArchived: boolean) { return this.http.patch<ApiResponse<ProjectRecord>>(`${this.baseUrl}/${id}/archive`, { isArchived }, { withCredentials: true }).pipe(map(res => res.data), tap(() => this.ticketProjects.invalidate())); }
+
   /** Every project matching the filters (all pages; the screen groups them by client). */
   listAll(filters: ProjectListFilters): Observable<ProjectRecord[]> {
     return this.fetchPage(filters, 1).pipe(
@@ -81,6 +95,7 @@ export class ProjectAdminService {
     if (filters.teamId) params['teamId'] = filters.teamId;
     if (filters.status) params['status'] = filters.status;
     if (filters.includeArchived) params['includeArchived'] = true;
+    if (filters.includeClosed === false) params['includeClosed'] = false;
 
     return this.http.get<PaginatedApiResponse<ProjectRecord>>(this.baseUrl, { params, withCredentials: true });
   }

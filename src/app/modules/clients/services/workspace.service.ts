@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { AuthService } from '../../../core/auth/auth.service';
 import { Observable, Subscription, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
 
@@ -13,6 +14,7 @@ import { ClientTreeNode, UNASSIGNED_CLIENT_ID } from '../models/workspace.model'
 /** Shared client shortcuts and breadcrumb names; kept across layout remounts. */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceService {
+  private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly maintenanceUrl = `${environment.apiBaseUrl}/maintenance`;
 
@@ -24,6 +26,22 @@ export class WorkspaceService {
   private clientsRequest: Subscription | null = null;
   private readonly clientCache = new Map<string, Observable<ClientOption | null>>();
   private readonly projectCache = new Map<string, Observable<ProjectRecord | null>>();
+  private identityKey: string | undefined;
+
+  constructor() {
+    effect(() => {
+      const userId = this.auth.currentUser?.()?.id;
+      const key = `${userId ?? ''}:${this.auth.organizationId?.() ?? ''}`;
+      if (this.identityKey === undefined) { this.identityKey = key; return; }
+      if (key === this.identityKey) return;
+      this.identityKey = key;
+      untracked(() => {
+        this.clientsRequest?.unsubscribe(); this.clientsLoaded = false;
+        this.clientsLoading.set(false); this.clients.set([]); this.clientCache.clear(); this.projectCache.clear();
+        if (userId && this.clientsOpen()) this.reloadClients();
+      });
+    });
+  }
 
   ensureClients(): void {
     if (!this.clientsLoaded && !this.clientsLoading()) this.reloadClients();
@@ -35,7 +53,7 @@ export class WorkspaceService {
     this.clientsError.set(false);
     this.clientsRequest = this.http
       .get<PaginatedApiResponse<ClientTreeNode>>(`${this.maintenanceUrl}/clients/tree`, {
-        params: { page: 1, limit: 8, hasActiveProjects: true },
+        params: { page: 1, limit: 5, hasActiveProjects: true },
         withCredentials: true,
       })
       .subscribe({
@@ -43,7 +61,7 @@ export class WorkspaceService {
           this.clients.set(response.data
             .filter((client) => client.projectCount > 0 && client.id !== UNASSIGNED_CLIENT_ID)
             .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-            .slice(0, 8));
+            .slice(0, 5));
           this.clientsLoaded = true;
           this.clientsLoading.set(false);
         },

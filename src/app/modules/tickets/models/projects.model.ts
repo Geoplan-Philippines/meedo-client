@@ -3,7 +3,9 @@ import { PaginatedApiResponse } from '../../../shared/interface/paginated-respon
 /** A project as GET /maintenance/projects returns it. */
 export interface ProjectRecord {
   id: string;
-  apptivoId: string;
+  apptivoId: string | null;
+  isClosed?: boolean;
+  archivedManually?: boolean;
   /** Shown name: displayName, else quoteSubject, else workOrderNumber (computed by the server). */
   name: string;
   displayName: string | null;
