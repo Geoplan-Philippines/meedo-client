@@ -40,3 +40,18 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ```bash
 bun run test
 ```
+
+## Deployment API and notification socket URL
+
+`API_BASE_URL` is the single Docker build argument for the API endpoint and
+notifications socket origin. `scripts/configure-api-url.cjs` writes it into
+`environment.prod.ts`; that environment derives the socket origin using
+`new URL(apiBaseUrl).origin`. The socket client appends `/notifications` as its
+namespace, so `/api/v1` must not be part of the socket URL.
+
+The existing deploy workflow passes its production API_URL on master and staging
+API_URL on staging. No new repository variable or secret is required. The source
+environment and Docker argument retain their staging default for local builds.
+To check replacement without Docker, run `node scripts/configure-api-url.cjs
+<API_BASE_URL> <temporary-environment-file>` against a copy of the production
+environment. This is the same script the Dockerfile invokes.
