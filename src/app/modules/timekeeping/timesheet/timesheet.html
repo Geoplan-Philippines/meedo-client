@@ -8,8 +8,10 @@
       <p class="page-subtitle">Your weekly work log.</p>
     </div>
 
-    <button pButton type="button" label="New entry" (click)="openEntryForm()" [disabled]="isLocked() || isLoading()"></button>
-    <button pButton type="button" icon="pi pi-plus" label="Add Project" class="add-project-btn" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
+    <div class="timesheet-header-actions">
+      <button pButton type="button" icon="pi pi-plus" label="Add project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
+      <button pButton type="button" icon="pi pi-plus" label="New entry" (click)="openEntryForm()" [disabled]="isLocked() || isLoading()"></button>
+    </div>
   </header>
 
   @if (lockMessage(); as message) {
@@ -186,6 +188,8 @@
               optionValue="value"
               [filter]="true"
               filterBy="label"
+              scrollHeight="min(18rem, 45vh)"
+              panelStyleClass="timesheet-project-panel"
               placeholder="Select a project"
               appendTo="body"
               styleClass="entry-select"
@@ -203,7 +207,7 @@
 
   @if (cellModal(); as modal) {
     <div class="dialog-backdrop" role="presentation">
-      <div class="app-dialog entry-modal-dialog light-scope" role="dialog" aria-modal="true" aria-labelledby="entry-modal-title" (click)="$event.stopPropagation()">
+      <div class="app-dialog entry-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="entry-modal-title" (click)="$event.stopPropagation()">
         <div class="dialog-header">
           <h3 id="entry-modal-title" class="dialog-title">{{ modal.readonly ? 'Entry Details' : 'Edit Entries' }}</h3>
           <button type="button" class="dialog-close-btn" (click)="closeCellModal(false)" aria-label="Close">

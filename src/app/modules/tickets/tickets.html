@@ -66,7 +66,7 @@
     </div>
 
     <div class="table-toolbar">
-      <div role="group" aria-label="Ticket layout">
+      <div class="ticket-layout-toggle" role="group" aria-label="Ticket layout">
         <button pButton type="button" label="List" icon="pi pi-list" [text]="layout() !== 'list'" [attr.aria-pressed]="layout() === 'list'" (click)="setLayout('list')"></button>
         <button pButton type="button" label="Board" icon="pi pi-th-large" [text]="layout() !== 'board'" [attr.aria-pressed]="layout() === 'board'" (click)="setLayout('board')"></button>
       </div>

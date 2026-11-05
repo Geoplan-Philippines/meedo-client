@@ -17,11 +17,11 @@ h3 { font-size: .875rem; line-height: 1.5; font-weight: 600; color: var(--text-h
 .card-tags { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem; min-width: 0; }
 .avatars { display: flex; gap: .125rem; }
 :host ::ng-deep .avatars .p-avatar { width: 1.5rem; height: 1.5rem; font-size: .625rem; }
-:host ::ng-deep .priority .p-tag { border-radius: 100px; font-size: .75rem; padding: .125rem .5rem; }
+:host ::ng-deep .priority.p-tag { border-radius: 100px; font-size: .75rem; padding: .125rem .5rem; }
 :host ::ng-deep .priority .p-tag-icon { font-size: .375rem; }
-:host ::ng-deep .priority-low .p-tag { background: var(--muted-success); color: var(--muted-success-foreground); }
-:host ::ng-deep .priority-medium .p-tag, :host ::ng-deep .priority-high .p-tag { background: var(--muted-warning); color: var(--muted-warning-foreground); }
-:host ::ng-deep .priority-urgent .p-tag { background: var(--muted-destructive); color: var(--muted-destructive-foreground); }
+:host ::ng-deep .priority-low.p-tag { background: var(--muted-success); color: var(--muted-success-foreground); }
+:host ::ng-deep .priority-medium.p-tag, :host ::ng-deep .priority-high.p-tag { background: var(--muted-warning); color: var(--muted-warning-foreground); }
+:host ::ng-deep .priority-urgent.p-tag { background: var(--muted-destructive); color: var(--muted-destructive-foreground); }
 .team { font-size: .75rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 button, select { border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text-body); font: inherit; font-size: .75rem; padding: .375rem .5rem; cursor: pointer; }
 select { max-width: 9rem; }

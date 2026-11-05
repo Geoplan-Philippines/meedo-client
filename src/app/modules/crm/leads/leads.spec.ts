@@ -34,4 +34,13 @@ describe('Leads', () => {
     expect(fixture.nativeElement.textContent).toContain('Contacted');
     expect(fixture.nativeElement.textContent).toContain('Lost');
   });
+
+  it('applies the themed badge class for uppercase API statuses', () => {
+    component.leads.set(['PENDING', 'CONTACTED', 'QUALIFIED', 'LOST'].map((status, index) => ({
+      id: String(index), firstName: 'Example', lastName: status, email: `example${index}@example.test`, status, createdAt: '2026-10-29',
+    })));
+    fixture.detectChanges();
+    const badges = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.status-badge')];
+    expect(badges.map(badge => badge.className)).toEqual(['pending', 'contacted', 'qualified', 'lost'].map(status => `status-badge status-${status}`));
+  });
 });

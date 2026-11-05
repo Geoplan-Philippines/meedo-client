@@ -1333,3 +1333,7 @@
   .compose-pill,
   .picker-search input { transition: none; }
 }
+
+.ticket-layout-toggle { display: flex; gap: .25rem; }
+.ticket-layout-toggle button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-primary-foreground); border-color: var(--color-primary); }
+.ticket-layout-toggle button[aria-pressed="false"] { background: transparent; color: var(--color-body); border-color: transparent; }

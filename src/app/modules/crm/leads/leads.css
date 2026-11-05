@@ -375,7 +375,7 @@
 .status-contacted .status-dot { background: var(--color-info); }
 
 
-.status-lost { background: var(--color-muted-destructive); color: #7F1D1D; }
+.status-lost { background: var(--color-muted-destructive); color: var(--color-muted-destructive-foreground); }
 .status-lost .status-dot { background: var(--color-destructive); }
 
 /* ─── Empty State ──────────────────────────────────────── */

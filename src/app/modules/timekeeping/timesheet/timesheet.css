@@ -586,7 +586,7 @@ button.grid-cell--value.grid-cell--future:hover {
 .dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--color-heading) 45%, transparent);
+  background: var(--p-mask-background, rgb(0 0 0 / .5));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -606,10 +606,6 @@ button.grid-cell--value.grid-cell--future:hover {
   gap: 0.875rem;
   overflow-y: auto;
 }
-
-/* The entry modal always uses the app's light theme tokens, regardless of
-   the global dark-mode toggle (`.app-dark` on <html>) — see `.light-scope`
-   in src/styles.css. */
 
 .entry-modal-dialog {
   background: var(--color-surface) !important;
@@ -874,3 +870,6 @@ button.grid-cell--value.grid-cell--future:hover {
   .grid-toolbar { flex-wrap: wrap; }
   .week-picker-group { justify-content: flex-start; flex-wrap: wrap; }
 }
+
+.timesheet-header-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.add-project-dialog { width: min(32rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; }

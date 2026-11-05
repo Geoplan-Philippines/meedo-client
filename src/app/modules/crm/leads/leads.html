@@ -162,7 +162,7 @@
               <span class="lead-message" [title]="lead.message || ''">{{ lead.message || '—' }}</span>
             </td>
             <td>
-              <span class="status-badge" [class]="'status-badge status-' + (lead.status || 'pending')">
+              <span class="status-badge" [class]="'status-badge status-' + (lead.status || 'PENDING').toLowerCase()">
                 <span class="status-dot" aria-hidden="true"></span>
                 {{ lead.status || 'pending' }}
               </span>
