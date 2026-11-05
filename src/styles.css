@@ -51,6 +51,10 @@
   --muted-info-foreground: #1A4F9C;
   --success-foreground: #FFFFFF;
 
+  /* Neutral badge (inactive, built-in, rest day, no schedule): 7.9:1, WCAG AA. */
+  --badge-neutral-bg: #E6ECF2;
+  --badge-neutral-fg: #33495A;
+
   /* Attendance punch categories — fixed marker/legend hues, constant across themes. */
   --attendance-field: #3B82F6;
   --attendance-wfh: #EAB308;
@@ -99,6 +103,10 @@
   --muted-info: #11283A;
   --muted-info-foreground: #86C4EF;
   --success-foreground: #FFFFFF;
+
+  /* Neutral badge: 9.0:1, WCAG AA. */
+  --badge-neutral-bg: #232D39;
+  --badge-neutral-fg: #C5D1DD;
 }
 
 /* Forces the light-theme token values on an element (and its descendants)
@@ -139,6 +147,8 @@
   --muted-info: #DCE9FB;
   --muted-info-foreground: #1A4F9C;
   --success-foreground: #FFFFFF;
+  --badge-neutral-bg: #E6ECF2;
+  --badge-neutral-fg: #33495A;
 }
 
 /* `inline` makes utilities reference the source variable directly
@@ -177,6 +187,8 @@
   --color-info: var(--info);
   --color-muted-info: var(--muted-info);
   --color-muted-info-foreground: var(--muted-info-foreground);
+  --color-badge-neutral: var(--badge-neutral-bg);
+  --color-badge-neutral-foreground: var(--badge-neutral-fg);
 
   --color-attendance-field: var(--attendance-field);
   --color-attendance-wfh: var(--attendance-wfh);

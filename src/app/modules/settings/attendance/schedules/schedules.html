@@ -56,7 +56,7 @@
                 </span>
               }
               @if (!schedule.isActive) {
-                <span class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-body/70">Inactive</span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-badge-neutral px-2 py-0.5 text-[11px] text-badge-neutral-foreground">Inactive</span>
               }
               @if (inUseCount(schedule) > 0) {
                 <span class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground" [pTooltip]="'Assigned to ' + inUseCount(schedule) + ' team(s)/employee(s)'" tooltipPosition="top">

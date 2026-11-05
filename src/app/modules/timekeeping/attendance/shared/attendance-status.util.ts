@@ -9,11 +9,17 @@ export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
   rest_day: 'Rest day',
   holiday: 'Holiday',
   no_schedule: 'No schedule',
+  present_unscheduled: 'Present (no schedule)',
 };
 
+/** Admin-facing explanation shown beside a present-without-schedule chip. */
+export const NO_SCHEDULE_ASSIGNED_HINT =
+  'No schedule assigned to this employee. Assign one in Settings > Attendance.';
+
 /**
- * Chip tone (theme tokens) per status. Working-day outcomes use success/warning/
- * destructive; rest days and unscheduled days stay neutral; holidays use the
+ * Chip tone (theme tokens) per status. Working-day outcomes, including an
+ * unscheduled time-in, use success/warning/destructive; rest days and
+ * unscheduled days with no punch use the neutral badge token; holidays use the
  * secondary accent.
  */
 export const ATTENDANCE_STATUS_TONE: Record<AttendanceStatus, string> = {
@@ -21,9 +27,10 @@ export const ATTENDANCE_STATUS_TONE: Record<AttendanceStatus, string> = {
   late: 'bg-muted-warning text-muted-warning-foreground',
   absent: 'bg-muted-destructive text-muted-destructive-foreground',
   upcoming: 'bg-secondary text-secondary-foreground',
-  rest_day: 'bg-muted text-body/70',
+  rest_day: 'bg-badge-neutral text-badge-neutral-foreground',
   holiday: 'bg-secondary text-secondary-foreground',
-  no_schedule: 'bg-muted text-body/60',
+  no_schedule: 'bg-badge-neutral text-badge-neutral-foreground',
+  present_unscheduled: 'bg-muted-success text-muted-success-foreground',
 };
 
 /** "1 hr" / "7.5 hrs" for an hours value, or a dash when unknown. */
