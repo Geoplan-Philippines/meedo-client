@@ -199,3 +199,6 @@
     padding: 1.25rem;
   }
 }
+
+.verification-notice { margin-top: 0.75rem; line-height: 1.5; }
+.verification-notice a { color: var(--p-primary-color); text-decoration: underline; }
