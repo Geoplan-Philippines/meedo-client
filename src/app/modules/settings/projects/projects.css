@@ -137,10 +137,27 @@
   border-top: 1px solid var(--border);
 }
 
+/* Row button and the admin "Manage project" action share one line. */
+.row-item {
+  display: flex;
+  align-items: center;
+}
+
+.row-item:hover {
+  background: var(--background);
+}
+
+.row-item > p-button {
+  flex-shrink: 0;
+  margin-right: 0.5rem;
+}
+
 .row {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex: 1;
+  min-width: 0;
   width: 100%;
   padding: 0.625rem 1rem;
   background: transparent;

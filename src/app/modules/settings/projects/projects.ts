@@ -83,6 +83,8 @@ export class Projects implements OnInit {
   readonly loadState = signal<LoadState>('loading');
   readonly statusOptions = signal<string[]>([]);
   readonly selectedProjectId = signal<string | null>(null);
+  /** Manage button that opened the drawer, so focus can return to it on close. */
+  private manageTrigger: HTMLElement | null = null;
 
   readonly filters = new FormGroup({
     search: new FormControl('', { nonNullable: true }),
@@ -180,12 +182,31 @@ export class Projects implements OnInit {
     this.selectedProjectId.set(project.id);
   }
 
+  /**
+   * Admin row action: open the project drawer in place. No navigation, so the
+   * table keeps its filters, toggles and scroll position.
+   */
+  manageProject(project: ProjectRecord, event: Event): void {
+    event.stopPropagation();
+    if (!this.isAdmin()) return;
+    this.manageTrigger = (event.target as HTMLElement | null)?.closest('button') ?? null;
+    this.selectedProjectId.set(project.id);
+  }
+
   closeDrawer(): void {
     const clientId = this.routeClientId();
     if (clientId && this.routeProjectId()) {
       void this.router.navigate(workspaceLinks.clientProjects(clientId));
     }
     this.selectedProjectId.set(null);
+    this.restoreManageFocus();
+  }
+
+  /** Return keyboard focus to the Manage button that opened the drawer. */
+  private restoreManageFocus(): void {
+    const trigger = this.manageTrigger;
+    this.manageTrigger = null;
+    if (trigger) setTimeout(() => trigger.focus());
   }
 
   /** Keep the list row in step with an edit made in the drawer. */

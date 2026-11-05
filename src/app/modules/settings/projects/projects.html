@@ -107,7 +107,7 @@
               </header>
               <ul class="rows">
                 @for (project of group.projects; track project.id) {
-                  <li>
+                  <li class="row-item">
                     <button
                       type="button"
                       class="row"
@@ -138,6 +138,23 @@
                       </span>
                       <i class="pi pi-angle-right row-chevron" aria-hidden="true"></i>
                     </button>
+                    @if (isAdmin()) {
+                      <!-- Sibling of the row button (buttons can't nest), so it never triggers row navigation. -->
+                      <p-button
+                        styleClass="row-manage"
+                        icon="pi pi-pencil"
+                        severity="secondary"
+                        text
+                        rounded
+                        size="small"
+                        data-action="manage-project"
+                        [ariaLabel]="'Manage project ' + project.name"
+                        pTooltip="Manage project"
+                        tooltipPosition="left"
+                        tooltipEvent="both"
+                        (onClick)="manageProject(project, $event)"
+                      />
+                    }
                   </li>
                 }
               </ul>
