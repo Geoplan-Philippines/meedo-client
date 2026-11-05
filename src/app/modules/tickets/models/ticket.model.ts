@@ -50,12 +50,12 @@ export interface Ticket {
   } | null;
   project?: {
     id: string;
-    customerName: string;
-    workOrderNumber: string;
+    customerName: string | null;
+    workOrderNumber: string | null;
     displayName?: string | null;
     quoteSubject?: string | null;
     isArchived?: boolean;
-    client?: { customerName: string; displayName?: string | null } | null;
+    client?: { customerName: string | null; displayName?: string | null } | null;
   } | null;
   /** Other tickets this one is linked to (symmetric — the server keeps both sides in sync). */
   relatedTickets?: TicketRelation[];

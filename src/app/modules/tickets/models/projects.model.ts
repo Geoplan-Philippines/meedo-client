@@ -4,21 +4,22 @@ import { PaginatedApiResponse } from '../../../shared/interface/paginated-respon
 export interface ProjectRecord {
   id: string;
   apptivoId: string | null;
+  missingFromApptivoAt?: string | null;
   isClosed?: boolean;
   archivedManually?: boolean;
   /** Shown name: displayName, else quoteSubject, else workOrderNumber (computed by the server). */
   name: string;
   displayName: string | null;
-  workOrderNumber: string;
+  workOrderNumber: string | null;
   quoteSubject: string | null;
-  customerName: string;
+  customerName: string | null;
   status: string;
   total: number;
   reportedDate: string | null;
   clientId: string | null;
   clientLocked: boolean;
   isArchived: boolean;
-  client: { id: string; name: string; customerName: string; displayName: string | null; isArchived: boolean } | null;
+  client: { id: string; name: string; customerName: string | null; displayName: string | null; isArchived: boolean } | null;
 }
 
 /** Picker option: the record plus the text the ticket pickers show and filter on. */

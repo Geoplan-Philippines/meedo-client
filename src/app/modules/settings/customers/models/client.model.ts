@@ -1,10 +1,11 @@
 export interface ClientRecord {
   id: string;
   apptivoId: string | null;
+  missingFromApptivoAt?: string | null;
   /** Shown name: displayName, else customerName (computed by the server). */
   name: string;
   displayName: string | null;
-  customerName: string;
+  customerName: string | null;
   isArchived: boolean;
   /** All linked projects, archived ones included. */
   projectCount: number;
@@ -15,7 +16,7 @@ export interface ClientRecord {
 export interface ClientOption {
   id: string;
   name: string;
-  customerName: string;
+  customerName: string | null;
   isArchived: boolean;
 }
 

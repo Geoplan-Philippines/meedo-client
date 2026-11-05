@@ -144,7 +144,8 @@ export class ProjectDetailDrawer {
     }
     const value = this.nameForm.controls.displayName.value.trim();
     // Saving the Apptivo name unchanged is the same as having no admin name.
-    this.save({ displayName: value && value !== this.apptivoName() ? value : null });
+    if (!value && !this.project()?.apptivoId) { this.saveError.set('A name is required for internal projects.'); return; }
+    this.save({ displayName: this.project()?.apptivoId && value === this.apptivoName() ? null : value || null });
   }
 
   resetName(): void {
@@ -166,11 +167,6 @@ export class ProjectDetailDrawer {
   selectClient(client: ClientOption | null): void {
     this.chosenClient.set(client);
     this.clientForm.controls.clientId.setValue(client?.id ?? NO_CLIENT);
-  }
-
-  /** Hand the client back to the Apptivo sync; it takes effect on the next sync. */
-  unlockClient(): void {
-    this.save({ clientLocked: false });
   }
 
   cancelEdit(): void {

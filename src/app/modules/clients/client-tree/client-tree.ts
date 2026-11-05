@@ -23,6 +23,7 @@ export class ClientTree implements OnInit {
   readonly navigated = output<void>();
   readonly expandSidebar = output<void>();
   readonly links = workspaceLinks;
+  readonly isAdmin = this.authService.isAdmin;
   readonly userName = computed(() => this.authService.currentUser()?.name || this.authService.currentUser()?.email || 'Signed in');
 
   private readonly url = toSignal(
@@ -45,6 +46,12 @@ export class ClientTree implements OnInit {
 
   ngOnInit(): void {
     this.workspace.ensureClients();
+  }
+
+  newProject(): void {
+    if (!this.isAdmin()) return;
+    void this.router.navigate(['/settings/projects'], { queryParams: { create: Date.now() } });
+    this.navigated.emit();
   }
 
   toggle(): void {

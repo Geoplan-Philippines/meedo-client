@@ -17,7 +17,6 @@ import {
   ProjectListFilters,
   ProjectRecord,
   ProjectSortField,
-  ProjectSyncResult,
 } from './models/project-admin.model';
 import { ProjectDetailDrawer } from './project-detail-drawer/project-detail-drawer';
 import { WorkspaceService } from '../../clients/services/workspace.service';
@@ -85,10 +84,6 @@ export class Projects implements OnInit {
   readonly statusOptions = signal<string[]>([]);
   readonly selectedProjectId = signal<string | null>(null);
 
-  readonly isSyncing = signal(false);
-  readonly syncResult = signal<ProjectSyncResult | null>(null);
-  readonly syncError = signal<string | null>(null);
-
   readonly filters = new FormGroup({
     search: new FormControl('', { nonNullable: true }),
     clientId: new FormControl<string | null>(null),
@@ -136,6 +131,9 @@ export class Projects implements OnInit {
   ]);
 
   ngOnInit(): void {
+    (this.route.queryParamMap ?? of(this.route.snapshot.queryParamMap))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => { if (this.isAdmin() && params.has('create')) this.creating.set(true); });
     // Older links used /…?clientId=; the client now lives in the path.
     const queryClientId = this.route.snapshot.queryParamMap.get('clientId');
     if (queryClientId && !this.routeClientId()) this.filters.controls.clientId.setValue(queryClientId);
@@ -194,34 +192,6 @@ export class Projects implements OnInit {
   onProjectChanged(updated: ProjectRecord): void {
     this.projects.update((list) => list.map((project) => (project.id === updated.id ? updated : project)));
     this.workspace.refreshProjects();
-  }
-
-  sync(): void {
-    if (this.isSyncing()) return;
-    this.isSyncing.set(true);
-    this.syncError.set(null);
-    this.syncResult.set(null);
-
-    this.projectAdmin
-      .sync()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (result) => {
-          this.isSyncing.set(false);
-          this.syncResult.set(result);
-          this.workspace.invalidate();
-          this.reload();
-        },
-        error: () => {
-          this.isSyncing.set(false);
-          this.syncError.set('The Apptivo sync failed and nothing was changed. Please try again.');
-        },
-      });
-  }
-
-  dismissSyncMessage(): void {
-    this.syncResult.set(null);
-    this.syncError.set(null);
   }
 
   private toListFilters(): ProjectListFilters {

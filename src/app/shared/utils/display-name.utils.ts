@@ -7,7 +7,7 @@
 export interface ProjectNameFields {
   displayName?: string | null;
   quoteSubject?: string | null;
-  workOrderNumber: string;
+  workOrderNumber: string | null;
 }
 
 export interface ClientNameFields {
@@ -21,7 +21,7 @@ function nonBlank(value: string | null | undefined): string | null {
 }
 
 export function projectDisplayName(project: ProjectNameFields): string {
-  return nonBlank(project.displayName) ?? nonBlank(project.quoteSubject) ?? project.workOrderNumber;
+  return nonBlank(project.displayName) ?? nonBlank(project.quoteSubject) ?? nonBlank(project.workOrderNumber) ?? 'Unnamed project';
 }
 
 export function clientDisplayName(client: ClientNameFields | null | undefined): string {

@@ -135,7 +135,7 @@ export class Customers {
   }
 
   startEdit(client: ClientRecord): void {
-    this.editForm.reset({ displayName: client.displayName ?? client.customerName });
+    this.editForm.reset({ displayName: client.displayName ?? client.customerName ?? client.name });
     this.saveError.set(null);
     this.editingId.set(client.id);
   }
@@ -152,6 +152,7 @@ export class Customers {
       return;
     }
     const value = this.editForm.controls.displayName.value.trim();
+    if (!value && !client.apptivoId) { this.saveError.set('A name is required for internal clients.'); return; }
     // Saving the Apptivo name unchanged is the same as having no admin name.
     this.save(client, value && value !== client.customerName ? value : null);
   }

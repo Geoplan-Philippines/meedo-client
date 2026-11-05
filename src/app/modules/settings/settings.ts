@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, EMPTY } from 'rxjs';
 
+import { ApptivoSyncPanel } from './shared/apptivo-sync-panel';
 import { AuthService } from '../../core/auth/auth.service';
 import { isOrganizationAdmin } from '../../core/auth/org-admin.guard';
 
@@ -21,7 +22,7 @@ interface SettingsGroup {
 
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink],
+  imports: [RouterLink, ApptivoSyncPanel],
   templateUrl: './settings.html',
   styleUrl: './settings.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -15,47 +15,11 @@
       <p class="text-sm text-body/70">{{ subtitle() }}</p>
     </div>
     @if (isAdmin()) {
-      <p-button label="New project" icon="pi pi-plus" (onClick)="creating.set(true)" />
-      <p-button
-        label="Sync from Apptivo"
-        icon="pi pi-refresh"
-        [loading]="isSyncing()"
-        (onClick)="sync()"
-        pTooltip="Fetch work orders and customers from Apptivo. Names and clients you set here are kept."
-        tooltipPosition="left"
-      />
+      <p-button label="Add project" icon="pi pi-plus" (onClick)="creating.set(true)" />
     } @else {
       <span class="readonly-note"><i class="pi pi-lock" aria-hidden="true"></i> Read-only. Ask an admin to rename or reassign projects.</span>
     }
   </header>
-
-  @if (isSyncing()) {
-    <div role="status" class="banner banner--info">
-      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-      <span>Syncing with Apptivo. This can take a minute on a large import.</span>
-    </div>
-  }
-  @if (syncResult(); as result) {
-    <div role="status" class="banner banner--success">
-      <i class="pi pi-check-circle" aria-hidden="true"></i>
-      <span class="banner-text">
-        Sync complete: <strong>{{ result.created }}</strong> created, <strong>{{ result.updated }}</strong> updated,
-        <strong>{{ result.archived }}</strong> archived, <strong>{{ result.unarchived }}</strong> unarchived
-        <span class="banner-sub">
-          ({{ result.synced }} work orders; customers {{ result.clients.created }} created, {{ result.clients.updated }} updated,
-          {{ result.clients.archived }} archived, {{ result.clients.unarchived }} unarchived@if (result.unmatched) {; {{ result.unmatched }} work orders have no matching customer})
-        </span>
-      </span>
-      <p-button icon="pi pi-times" text rounded size="small" severity="secondary" ariaLabel="Dismiss" (onClick)="dismissSyncMessage()" />
-    </div>
-  }
-  @if (syncError(); as message) {
-    <div role="alert" class="banner banner--error">
-      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-      <span class="banner-text">{{ message }}</span>
-      <p-button icon="pi pi-times" text rounded size="small" severity="secondary" ariaLabel="Dismiss" (onClick)="dismissSyncMessage()" />
-    </div>
-  }
 
   @if (isAdmin() && creating()) { <app-new-internal-record kind="project" (saved)="onCreated()" (cancelled)="creating.set(false)" /> }
   <form class="toolbar" [formGroup]="filters" (ngSubmit)="reload()" role="search" aria-label="Filter projects">
@@ -155,8 +119,9 @@
                         <span class="row-title">
                           <span class="row-name">{{ project.name }}</span>
                           @if (project.isClosed) { <span class="text-xs bg-secondary text-secondary-foreground rounded px-2 py-1">Closed</span> }
-                          @if (!project.apptivoId) { <span class="text-xs text-body/70">Internal</span> }
-                          @if (project.isArchived) { <app-archived-tag /> }
+                          @if (!project.apptivoId) { <span class="text-xs text-body">Internal</span> }
+                          @if (isAdmin() && project.missingFromApptivoAt) { <span class="missing-apptivo">Missing from Apptivo</span> }
+                @if (project.isArchived) { <app-archived-tag /> }
                         </span>
                         <span class="row-sub">
                           @if (project.quoteSubject && project.quoteSubject !== project.name) {

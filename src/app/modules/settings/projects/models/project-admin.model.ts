@@ -52,13 +52,13 @@ export interface ProjectDetail extends ProjectRecord {
 export interface UpdateProjectPayload {
   displayName?: string | null;
   clientId?: string | null;
-  clientLocked?: boolean;
 }
 
 export interface SyncCounts {
   synced: number;
   created: number;
   updated: number;
+  missing?: number;
   archived: number;
   unarchived: number;
 }

@@ -82,13 +82,18 @@
                 <p-button icon="pi pi-check" size="small" type="submit" [loading]="isSaving()" ariaLabel="Save name" />
                 <p-button icon="pi pi-times" size="small" severity="secondary" text (onClick)="cancelEdit()" [disabled]="isSaving()" ariaLabel="Cancel" />
               </form>
-              <small class="hint">Leave empty to show the Apptivo name: {{ client.customerName }}</small>
+              @if (client.apptivoId) {
+                <small class="hint">Leave empty to show the Apptivo name: {{ client.customerName }}</small>
+              } @else {
+                <small class="hint">A name is required for internal clients.</small>
+              }
             } @else {
               <span class="name-cell">
                 <a class="name hover:text-primary" [routerLink]="['/clients', client.id]" [title]="client.name">{{ client.name }}</a>
+                @if (isAdmin() && client.missingFromApptivoAt) { <span class="missing-apptivo">Missing from Apptivo</span> }
                 @if (client.isArchived) { <app-archived-tag /> }
               </span>
-              @if (client.displayName) {
+              @if (client.apptivoId && client.displayName && client.displayName !== client.customerName) {
                 <span class="hint">Apptivo: {{ client.customerName }}</span>
               }
             }
@@ -122,7 +127,7 @@
                   tooltipPosition="top"
                   (onClick)="startEdit(client)"
                 />
-                @if (client.displayName) {
+                @if (client.apptivoId && client.displayName && client.displayName !== client.customerName) {
                   <p-button
                     icon="pi pi-undo"
                     severity="secondary"

@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
@@ -18,8 +18,10 @@ describe('user client navigation', () => {
   let router: Router;
   let workspace: WorkspaceService;
   const userName = 'Maria Santos';
+  const isAdmin = signal(false);
 
   beforeEach(async () => {
+    isAdmin.set(false);
     await TestBed.configureTestingModule({
       imports: [ClientTree],
       providers: [
@@ -30,7 +32,7 @@ describe('user client navigation', () => {
           { path: 'clients/:clientId/projects/:projectId', component: Destination },
           { path: 'clients/:clientId/projects/:projectId/tickets', component: Destination },
         ]),
-        { provide: AuthService, useValue: { currentUser: () => ({ name: userName }) } },
+        { provide: AuthService, useValue: { currentUser: () => ({ name: userName }), isAdmin } },
       ],
     }).compileComponents();
     router = TestBed.inject(Router);
@@ -53,6 +55,13 @@ describe('user client navigation', () => {
   });
 
   afterEach(() => http.verify());
+
+  it('shows the existing create-project link only to admins', () => {
+    expect(fixture.nativeElement.querySelector('[data-action="new-project"]')).toBeNull();
+    isAdmin.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-action="new-project"]').textContent).toContain('New project');
+  });
 
   it('toggles the user item and renders plain client links with See all last', async () => {
     const element = fixture.nativeElement as HTMLElement;

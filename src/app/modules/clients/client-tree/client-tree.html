@@ -14,6 +14,9 @@
 </button>
 
 <ul id="workspace-client-list" class="client-list" [hidden]="!workspace.clientsOpen()">
+  @if (isAdmin()) {
+    <li><button type="button" data-action="new-project" class="client-link block w-full text-left rounded-md px-3 py-2 text-sm text-primary hover:bg-secondary" (click)="newProject()"><i class="pi pi-plus" aria-hidden="true"></i> New project</button></li>
+  }
   @for (client of workspace.clients(); track client.id) {
     <li>
       <a

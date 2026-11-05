@@ -49,7 +49,7 @@
               <p-button icon="pi pi-pencil" text rounded size="small" severity="secondary" ariaLabel="Edit display name" (onClick)="startEditName()" />
             }
           </div>
-          @if (p.displayName) {
+          @if (p.apptivoId && p.displayName && p.displayName !== apptivoName()) {
             <p class="hint">
               Name set by an admin. Apptivo name: {{ apptivoName() }}
               @if (isAdmin()) {
@@ -68,6 +68,7 @@
       <section class="block">
         <dl class="fields">
           <div class="field"><dt>Quote subject</dt><dd>{{ p.quoteSubject || '—' }}</dd></div>
+          @if (isAdmin() && p.missingFromApptivoAt) { <div class="field"><dt>Apptivo</dt><dd><span class="missing-apptivo">Missing from Apptivo since {{ p.missingFromApptivoAt | date: 'mediumDate' }}</span></dd></div> }
           <div class="field"><dt>WO number</dt><dd>{{ p.workOrderNumber }}</dd></div>
           <div class="field"><dt>Status</dt><dd>{{ p.status }}</dd></div>
           <div class="field"><dt>Total</dt><dd>{{ p.total | number: '1.2-2' }}</dd></div>
@@ -95,14 +96,7 @@
               <p-button label="Reassign" icon="pi pi-arrow-right-arrow-left" text size="small" (onClick)="startEditClient()" />
             }
           </div>
-          @if (p.clientLocked) {
-            <p class="hint">
-              <i class="pi pi-lock" aria-hidden="true"></i> Set by hand; the Apptivo sync won't change it.
-              @if (isAdmin()) {
-                <p-button label="Let Apptivo set the client" link size="small" (onClick)="unlockClient()" [disabled]="isSaving()" />
-              }
-            </p>
-          }
+          <p class="hint">The client link is managed in Meedo. Apptivo never changes it.</p>
         }
       </section>
 
