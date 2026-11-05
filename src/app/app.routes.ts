@@ -7,11 +7,7 @@ export const routes: Routes = [
     path: 'notifications', component: MainLayout, canActivate: [authGuard],
     loadChildren: () => import('./modules/notifications/notifications.routes').then(m => m.notificationsRoutes),
   },
-  { 
-    path: '', 
-    loadComponent: () => 
-      import('./modules/home/home').then(m => m.Home) 
-  },
+  { path: '', pathMatch: 'full', redirectTo: 'timekeeping' },
   {
     path: 'auth',
     canActivate: [guestGuard],
