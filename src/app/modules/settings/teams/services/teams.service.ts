@@ -28,7 +28,7 @@ export class TeamsService {
   /**
    * The members assigned to one team, used to scope ticket assignees.
    * Backed by our own endpoint rather than Better Auth's `list-team-members`,
-   * which 400s unless the caller is themselves in the team — that error was
+   * which 400s unless the caller is themselves in the team. That error was
    * silently unscoping the assignee picker to the whole org.
    */
   listTeamMembers(teamId: string) {

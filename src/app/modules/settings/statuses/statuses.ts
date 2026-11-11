@@ -25,7 +25,7 @@ type DialogMode = 'create' | 'edit';
 /**
  * Curated swatch palette for custom (editable) statuses. Deliberately distinct
  * from the built-in Standard status hues (slate / blue / amber / violet / green /
- * red) so custom statuses read as their own family. No free-form picker — this
+ * red) so custom statuses read as their own family. No free-form picker. This
  * keeps every status color uniform and on-brand. Mirrors CUSTOM_STATUS_COLORS
  * on the server, which rejects anything outside this set.
  */
@@ -72,7 +72,7 @@ export class Statuses implements OnInit {
   readonly showArchivedControl = new FormControl(false, { nonNullable: true });
   readonly showArchived = toSignal(this.showArchivedControl.valueChanges, { initialValue: false });
 
-  /** Built-in, locked statuses — the fixed baseline (sourced from the API now). */
+  /** Built-in, locked statuses. The fixed baseline, sourced from the API. */
   readonly systemStatuses = computed(() => this.statuses().filter((s) => s.isSystem));
 
   /** Team-defined statuses that can be edited or archived. */

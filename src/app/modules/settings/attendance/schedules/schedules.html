@@ -167,7 +167,7 @@
         <p-toggleSwitch inputId="schedule-default" formControlName="isDefault" />
       </label>
 
-      <p class="text-xs text-body/60">You’ll set up the working days and shifts next.</p>
+      <p class="text-xs text-body/60">You'll set up the working days and shifts next.</p>
     }
   </form>
 
@@ -189,7 +189,7 @@
 >
   <div class="flex flex-col gap-3 text-sm text-body">
     <p>
-      Delete <strong class="text-heading">{{ scheduleToDelete()?.name }}</strong>? Its working days are removed too. This can’t be undone.
+      Delete <strong class="text-heading">{{ scheduleToDelete()?.name }}</strong>? Its working days are removed too. This can't be undone.
     </p>
     @if (deleteError()) {
       <p role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3">

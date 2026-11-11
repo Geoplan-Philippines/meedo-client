@@ -68,7 +68,7 @@ function extractFiles(dt: DataTransfer | null): File[] {
     .filter((file): file is File => !!file);
 }
 
-/** True when a drag payload carries files (not just selected text/html). */
+/** True when a drag payload carries files. Selected text or HTML alone does not count. */
 function hasFiles(event: DragEvent): boolean {
   const types = event.dataTransfer?.types;
   return !!types && Array.from(types).includes('Files');
@@ -620,7 +620,7 @@ export class MarkdownEditor implements AfterViewInit {
 
     if (file.size > MAX_ATTACHMENT_BYTES) {
       this.addTask(file, at, 'error', {
-        message: `Too large — ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB max`,
+        message: `Too large. ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB maximum.`,
         retriable: false,
       });
       return;

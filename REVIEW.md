@@ -5,7 +5,7 @@
 - Prefer short fragments over perfect grammar
 - Sacrifice grammar for clarity + speed
 - No long explanations
-- No “nice to have” comments unless maintainability/scalability risk
+- No "nice to have" comments unless maintainability/scalability risk
 - One issue = one clear reason + one actionable fix
 - Use direct severity labels: Critical / High / Medium / Low
 - Prioritize high-impact issues first

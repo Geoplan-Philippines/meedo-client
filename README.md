@@ -6,8 +6,8 @@
 
 Make sure you have installed:
 
-- [Node.js](https://nodejs.org/) — required by Angular CLI
-- [Bun](https://bun.sh/) — package manager
+- [Node.js](https://nodejs.org/), required by Angular CLI
+- [Bun](https://bun.sh/), the package manager
 
 ## Setup
 
@@ -35,7 +35,7 @@ Output goes to `dist/`. Production build by default.
 
 ## Testing
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Run unit tests with [Vitest](https://vitest.dev/):
 
 ```bash
 bun run test

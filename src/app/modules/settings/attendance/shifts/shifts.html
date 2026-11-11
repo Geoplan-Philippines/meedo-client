@@ -177,7 +177,7 @@
     </div>
     @if (form.hasError('endBeforeStart') && !form.controls.crossesMidnight.value) {
       <small class="text-destructive -mt-2">
-        End must be after start. For an overnight shift, turn on “Ends the next day”.
+        End must be after start. For an overnight shift, turn on "Ends the next day".
       </small>
     }
 
@@ -204,7 +204,7 @@
     <label for="shift-flexible" class="flex items-center justify-between gap-3 cursor-pointer">
       <span class="flex flex-col">
         <span class="text-sm font-medium text-heading">Flexible</span>
-        <span class="text-xs text-body/70">Start time is nominal; lateness isn’t tracked.</span>
+        <span class="text-xs text-body/70">Start time is nominal; lateness isn't tracked.</span>
       </span>
       <p-toggleSwitch inputId="shift-flexible" formControlName="isFlexible" />
     </label>

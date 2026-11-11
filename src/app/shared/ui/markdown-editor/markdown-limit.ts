@@ -2,7 +2,7 @@ import { Editor, Extension } from '@tiptap/core';
 import { Node, Slice } from '@tiptap/pm/model';
 import { EditorState, Plugin, Transaction } from '@tiptap/pm/state';
 
-/** Measure the saved source, including syntax and attachment URLs, not just visible text. */
+/** Measure the saved source, including syntax and attachment URLs, as well as the visible text. */
 export function markdownSource(editor: Editor, doc: Node = editor.state.doc): string {
   const storage = editor.storage as unknown as { markdown: { serializer: { serialize(doc: Node): string } } };
   return storage.markdown.serializer.serialize(doc);

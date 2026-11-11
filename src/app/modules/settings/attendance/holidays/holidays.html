@@ -62,7 +62,7 @@
       <i class="pi pi-flag text-3xl text-body/40" aria-hidden="true"></i>
       <p class="text-body font-medium">No holidays for {{ year() }}</p>
       <p class="text-sm text-body/70 max-w-sm">
-        Add holidays one at a time, or import a country’s public holidays for the year and adjust from there.
+        Add holidays one at a time, or import a country's public holidays for the year and adjust from there.
       </p>
       <div class="flex items-center gap-2 mt-2">
         <p-button label="Import {{ year() }}" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="openImport()" />
@@ -184,7 +184,7 @@
 >
   <form [formGroup]="importForm" (ngSubmit)="runImport()" class="flex flex-col gap-4">
     <p class="text-sm text-body/70">
-      Fetches the year’s public holidays for a country and adds any that are new. Existing dates are left untouched, and every imported holiday comes in as “Regular” so you can adjust the type after.
+      Fetches the year's public holidays for a country and adds any that are new. Existing dates are left untouched, and every imported holiday comes in as "Regular" so you can adjust the type after.
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div class="flex flex-col gap-1.5">
@@ -221,7 +221,7 @@
 >
   <p class="text-sm text-body">
     Delete all <strong class="text-heading">{{ holidays().length }}</strong> {{ holidays().length === 1 ? 'holiday' : 'holidays' }} in
-    <strong class="text-heading">{{ year() }}</strong>? Other years are not affected. This can’t be undone.
+    <strong class="text-heading">{{ year() }}</strong>? Other years are not affected. This can't be undone.
   </p>
   <ng-template pTemplate="footer">
     <p-button label="Cancel" severity="secondary" text (onClick)="cancelClearYear()" [disabled]="isClearing()" />
@@ -239,7 +239,7 @@
   header="Delete holiday"
 >
   <p class="text-sm text-body">
-    Delete <strong class="text-heading">{{ holidayToDelete()?.name }}</strong>? This can’t be undone.
+    Delete <strong class="text-heading">{{ holidayToDelete()?.name }}</strong>? This can't be undone.
   </p>
   <ng-template pTemplate="footer">
     <p-button label="Cancel" severity="secondary" text (onClick)="cancelDelete()" [disabled]="isDeleting()" />

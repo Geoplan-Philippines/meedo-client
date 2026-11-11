@@ -309,7 +309,7 @@ export class TicketThread {
       });
   }
 
-  /** Confirm before deleting — removal is permanent and there's no undo. */
+  /** Confirm before deleting. Removal is permanent and there's no undo. */
   confirmDelete(comment: TicketComment): void {
     const noun = comment.parentId !== null ? 'reply' : 'comment';
     this.confirmationService.confirm({
