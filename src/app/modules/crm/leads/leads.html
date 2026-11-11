@@ -34,6 +34,15 @@
       </div>
     </div>
     <div class="stat-card" role="listitem">
+      <div class="stat-icon stat-icon--pending" aria-hidden="true">
+        <i class="pi pi-phone"></i>
+      </div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats()?.contacted ?? '—' }}</span>
+        <span class="stat-label">Contacted</span>
+      </div>
+    </div>
+    <div class="stat-card" role="listitem">
       <div class="stat-icon stat-icon--qualified" aria-hidden="true">
         <i class="pi pi-star"></i>
       </div>
@@ -43,12 +52,12 @@
       </div>
     </div>
     <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--converted" aria-hidden="true">
-        <i class="pi pi-check-circle"></i>
+      <div class="stat-icon stat-icon--lost" aria-hidden="true">
+        <i class="pi pi-times-circle"></i>
       </div>
       <div class="stat-body">
-        <span class="stat-value">{{ stats()?.converted ?? '—' }}</span>
-        <span class="stat-label">Converted</span>
+        <span class="stat-value">{{ stats()?.lost ?? '—' }}</span>
+        <span class="stat-label">Lost</span>
       </div>
     </div>
   </div>
@@ -153,7 +162,7 @@
               <span class="lead-message" [title]="lead.message || ''">{{ lead.message || '—' }}</span>
             </td>
             <td>
-              <span class="status-badge" [class]="'status-badge status-' + (lead.status || 'pending')">
+              <span class="status-badge" [class]="'status-badge status-' + (lead.status || 'PENDING').toLowerCase()">
                 <span class="status-dot" aria-hidden="true"></span>
                 {{ lead.status || 'pending' }}
               </span>

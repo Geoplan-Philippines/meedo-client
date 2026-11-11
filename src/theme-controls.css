@@ -1,0 +1,48 @@
+/* Native controls and body-mounted overlays inherit the active application theme. */
+:root { color-scheme: light; }
+html.app-dark { color-scheme: dark; }
+
+.timesheet-project-panel {
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+}
+.timesheet-project-panel .p-select-list-container {
+  max-height: min(18rem, 45dvh) !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.timesheet-project-panel .p-select-option-label { white-space: normal; overflow-wrap: anywhere; }
+
+/* Explicit app tokens also cover PrimeNG controls whose styles load lazily. */
+.app-dark :is(.p-inputtext, .p-textarea, .p-select, .p-multiselect, .p-datepicker-input),
+.app-dark :is(input, textarea, select):not([type=checkbox]):not([type=radio]) {
+  background-color: var(--surface);
+  color: var(--text-heading);
+  border-color: var(--border-strong);
+}
+.app-dark :is(.p-select-overlay, .p-multiselect-overlay, .p-datepicker-panel, .p-popover, .p-menu, .p-dialog) {
+  background: var(--popover);
+  color: var(--text-body);
+  border-color: var(--border-strong);
+}
+.app-dark :is(.p-select-option, .p-multiselect-option, .p-menu-item-link, .p-datepicker-day) {
+  color: var(--text-body);
+}
+.app-dark :is(.p-select-option, .p-multiselect-option, .p-menu-item-link, .p-datepicker-day):hover {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+.app-dark :is(.p-select-option-selected, .p-multiselect-option-selected, .p-datepicker-day-selected) {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.missing-apptivo {
+  display: inline-flex;
+  padding: .125rem .5rem;
+  border-radius: 100px;
+  background: var(--muted-info);
+  color: var(--muted-info-foreground);
+  font-size: .75rem;
+  font-weight: 600;
+}

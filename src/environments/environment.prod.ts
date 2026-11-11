@@ -1,4 +1,7 @@
+const apiBaseUrl = 'https://meedo-v3-api-stg.geoplanph.com/api/v1';
+
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://meedo-v3-api-stg.geoplanph.com/api/v1',
+  notificationsSocketUrl: new URL(apiBaseUrl).origin,
+  apiBaseUrl,
 };

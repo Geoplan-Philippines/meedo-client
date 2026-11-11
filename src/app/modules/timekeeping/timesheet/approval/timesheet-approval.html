@@ -89,8 +89,8 @@
     <div class="bulk-bar" role="status" aria-live="polite">
       <span class="bulk-count">{{ selectedCount() }} row(s) selected</span>
       <div class="bulk-actions">
-        <button pButton type="button" size="small" icon="pi pi-check" label="Approve" (click)="approveSelected()" [loading]="isApproving()"></button>
-        <button pButton type="button" size="small" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject" (click)="openRejectDialog()" [disabled]="isApproving()"></button>
+        <button pButton type="button" size="small" icon="pi pi-check" label="Approve" (click)="approveSelected()" [loading]="isApproving()" [disabled]="isPeriodLocked()"></button>
+        <button pButton type="button" size="small" severity="danger" [outlined]="true" icon="pi pi-times" label="Reject" (click)="openRejectDialog()" [disabled]="isApproving() || isPeriodLocked()"></button>
         <button pButton type="button" size="small" severity="secondary" [text]="true" label="Clear selection" (click)="toggleAllSubmitted(false)"></button>
       </div>
     </div>
@@ -155,7 +155,7 @@
           [ngModel]="projectFilter()"
           (ngModelChange)="projectFilter.set($event)"
           [options]="projects()"
-          optionLabel="displayName"
+          optionLabel="label"
           optionValue="id"
           [filter]="true"
           [showClear]="true"
@@ -187,7 +187,7 @@
                   type="checkbox"
                   [checked]="selectedCount() > 0 && selectedCount() === submittedEntryIds().length"
                   (change)="toggleAllSubmitted($any($event.target).checked)"
-                  [disabled]="submittedEntryIds().length === 0"
+                  [disabled]="isPeriodLocked() || submittedEntryIds().length === 0"
                   aria-label="Select all submitted entries"
                 />
               </th>
@@ -221,7 +221,7 @@
                   [checked]="employeeAllSubmittedSelected(employee)"
                   [indeterminate]="employeeSomeSubmittedSelected(employee)"
                   (change)="toggleEmployeeSubmitted(employee, $any($event.target).checked)"
-                  [disabled]="employeeSubmittedCount(employee) === 0"
+                  [disabled]="isPeriodLocked() || employeeSubmittedCount(employee) === 0"
                   [attr.aria-label]="'Select submitted entries for ' + employee.employeeName"
                 />
               </td>
@@ -401,17 +401,19 @@
                 <tbody>
                   @for (entry of emp.entries; track entry.id) {
                     <tr [class.entry-row--approved]="entry.status === 'APPROVED'" [class.entry-row--rejected]="entry.status === 'REJECTED'">
-                      <td class="entry-date">{{ entry.workDate | date: 'MMM d' }}</td>
+                      <td class="entry-date">{{ entry.workDate | date: 'MMM d':'UTC' }}</td>
                       <td class="entry-task">
+                        @if (entry.ticket) { <span>Ticket #{{ entry.ticket.ticketNumber }}</span> }
                         <span class="entry-project">{{ projectLabel(entry) }}</span>
                         @if (entry.task) {
                           <button type="button" class="task-cell-btn" (click)="openTaskPreview(entry)" aria-label="View full task description">
-                            <div class="entry-task-text" [innerHTML]="entry.task"></div>
+                            <div class="entry-task-text">@if (entry.description) { {{ entry.description }} } @else { <span [innerHTML]="entry.task"></span> }</div>
                           </button>
                         }
                       </td>
                       <td class="entry-hrs">{{ entry.hours | number: '1.1-1' }}</td>
                       <td class="entry-status-cell">
+                        @if (entry.status === 'SUBMITTED' && !isPeriodLocked()) { <button pButton type="button" label="Edit submitted entry" (click)="editEntry(entry)"></button> }
                         <span [class]="statusClass(entry.status)">{{ entry.status }}</span>
                         @if (entry.rejectionReason) {
                           <small class="rejection-note">{{ entry.rejectionReason }}</small>
@@ -436,6 +438,7 @@
               label="Approve Timesheet"
               (click)="approveEmployee(emp)"
               [loading]="isApproving()"
+              [disabled]="isPeriodLocked()"
             ></button>
             <button
               pButton
@@ -445,7 +448,7 @@
               icon="pi pi-times"
               label="Reject Timesheet"
               (click)="rejectEmployee(emp)"
-              [disabled]="isApproving()"
+              [disabled]="isApproving() || isPeriodLocked()"
             ></button>
           } @else {
             <div class="footer-info">
@@ -497,10 +500,12 @@
         <textarea pTextarea rows="4" [ngModel]="rejectReason()" (ngModelChange)="rejectReason.set($event)" placeholder="Reason for rejection…" class="dialog-textarea"></textarea>
         <div class="dialog-actions">
           <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="cancelReject()" [disabled]="isRejecting()"></button>
-          <button pButton type="button" severity="danger" icon="pi pi-times" label="Reject rows" (click)="rejectSelected()" [loading]="isRejecting()"></button>
+          <button pButton type="button" severity="danger" icon="pi pi-times" label="Reject rows" (click)="rejectSelected()" [loading]="isRejecting()" [disabled]="isPeriodLocked()"></button>
         </div>
       </div>
     </div>
   }
 
 </div>
+
+@if (editingEntry(); as entry) { <app-timesheet-entry-form [entry]="entry" [projects]="projects()" (saved)="entrySaved()" (cancelled)="editingEntry.set(null)" /> }

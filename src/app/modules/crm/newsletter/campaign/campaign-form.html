@@ -1,0 +1,35 @@
+<main>
+  <a routerLink="/crm/newsletter/campaigns">← Campaigns</a>
+  <h1>{{ id ? 'Campaign details' : 'Create campaign' }}</h1>
+  <p>Drafts only. Sending is not available yet.</p>
+  @if (loading()) {
+    <p role="status">Loading campaign…</p>
+  } @else if (loadError()) {
+    <p role="alert" class="error">{{ loadError() }}</p><button (click)="load()">Retry</button>
+  } @else if (!id && !isAdmin()) {
+    <p role="status">An organization owner or admin can create campaigns.</p>
+  } @else {
+    @if (campaign()?.status === 'ARCHIVED') { <p role="status">Archived. Restore this campaign from the list before editing.</p> }
+    <form [formGroup]="form" (ngSubmit)="save()">
+      @for (field of textFields; track field) {
+        <label [for]="field">{{ field === 'name' ? 'Name' : 'Subject' }} <span>(required)</span></label>
+        <input [id]="field" [formControlName]="field" [attr.maxlength]="limits[field]" [readonly]="!canEdit() || saving()" [attr.aria-invalid]="invalid(field)" [attr.aria-describedby]="field + '-feedback'" required />
+        <div [id]="field + '-feedback'" class="feedback" aria-live="polite">
+          @if (invalid(field)) { <span class="error">{{ field === 'name' ? 'Name' : 'Subject' }} is required and must be at most {{ limits[field] }} characters.</span> }
+          @if (nearLimit(field)) { <span class="counter">{{ length(field) }} / {{ limits[field] }} characters</span> }
+        </div>
+      }
+      <p id="body-label" class="label">Body <span>(required)</span></p>
+      <app-rich-text-editor campaignBodyAccessibility [invalid]="invalid('body')" [content]="values().body" (contentChange)="bodyChanged($event)" [editable]="canEdit() && !saving()" placeholder="Write campaign content…" />
+      <div id="body-feedback" class="feedback" aria-live="polite">
+        @if (invalid('body')) { <span class="error">Body is required and must be at most {{ limits.body }} characters.</span> }
+        @if (nearLimit('body')) { <span class="counter">{{ length('body') }} / {{ limits.body }} characters (including formatting)</span> }
+      </div>
+      @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
+      <div class="actions">
+        @if (canEdit()) { <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save draft' }}</button> }
+        <a routerLink="/crm/newsletter/campaigns">{{ canEdit() ? 'Cancel' : 'Back to campaigns' }}</a>
+      </div>
+    </form>
+  }
+</main>

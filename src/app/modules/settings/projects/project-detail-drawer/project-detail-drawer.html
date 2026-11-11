@@ -1,0 +1,156 @@
+<p-drawer
+  [visible]="projectId() !== null"
+  (visibleChange)="onVisibleChange($event)"
+  position="right"
+  styleClass="project-drawer"
+  [closeOnEscape]="!isSaving()"
+  header="Project"
+>
+  @switch (state().status) {
+    @case ('loading') {
+      <div class="drawer-state" role="status">
+        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Loading project…
+      </div>
+    }
+    @case ('error') {
+      <div class="drawer-state" role="alert">
+        <span>Failed to load this project.</span>
+        <p-button label="Retry" icon="pi pi-refresh" size="small" text (onClick)="retry()" />
+      </div>
+    }
+  }
+
+  @if (project(); as p) {
+    <div class="drawer-body">
+      <app-project-access-panel [project]="p" [isAdmin]="isAdmin()" (changed)="onAccessChanged($event)" />
+      <section class="block" aria-labelledby="project-name-heading">
+        @if (isEditingName()) {
+          <form class="edit-form" [formGroup]="nameForm" (ngSubmit)="saveName()">
+            <label for="project-display-name" class="field-label" id="project-name-heading">Display name</label>
+            <input
+              id="project-display-name"
+              pInputText
+              formControlName="displayName"
+              [attr.maxlength]="maxNameLength"
+              autocomplete="off"
+              aria-describedby="project-name-hint"
+            />
+            <small id="project-name-hint" class="hint">Leave empty to show the Apptivo name: {{ apptivoName() }}</small>
+            <div class="edit-actions">
+              <p-button label="Cancel" severity="secondary" text size="small" (onClick)="cancelEdit()" [disabled]="isSaving()" />
+              <p-button label="Save" size="small" type="submit" [loading]="isSaving()" />
+            </div>
+          </form>
+        } @else {
+          <div class="title-row">
+            <h2 class="title" id="project-name-heading">{{ p.name }}</h2>
+            @if (p.isArchived) { <app-archived-tag /> }
+            @if (isAdmin()) {
+              <p-button icon="pi pi-pencil" text rounded size="small" severity="secondary" ariaLabel="Edit display name" (onClick)="startEditName()" />
+            }
+          </div>
+          @if (p.apptivoId && p.displayName && p.displayName !== apptivoName()) {
+            <p class="hint">
+              Name set by an admin. Apptivo name: {{ apptivoName() }}
+              @if (isAdmin()) {
+                <p-button label="Reset to Apptivo name" link size="small" (onClick)="resetName()" [disabled]="isSaving()" />
+              }
+            </p>
+          }
+        }
+      </section>
+
+      <a class="tickets-link" [routerLink]="ticketsLink()" (click)="onVisibleChange(false)">
+        <i class="pi pi-ticket" aria-hidden="true"></i> Open tickets for this project
+        <i class="pi pi-arrow-right" aria-hidden="true"></i>
+      </a>
+
+      <section class="block">
+        <dl class="fields">
+          <div class="field"><dt>Quote subject</dt><dd>{{ p.quoteSubject || '—' }}</dd></div>
+          @if (isAdmin() && p.missingFromApptivoAt) { <div class="field"><dt>Apptivo</dt><dd><span class="missing-apptivo">Missing from Apptivo since {{ p.missingFromApptivoAt | date: 'mediumDate' }}</span></dd></div> }
+          <div class="field"><dt>WO number</dt><dd>{{ p.workOrderNumber }}</dd></div>
+          <div class="field"><dt>Status</dt><dd>{{ p.status }}</dd></div>
+          <div class="field"><dt>Total</dt><dd>{{ p.total | number: '1.2-2' }}</dd></div>
+          <div class="field"><dt>Reported</dt><dd>{{ p.reportedDate ? (p.reportedDate | date: 'mediumDate') : '—' }}</dd></div>
+          <div class="field"><dt>Apptivo quote ref</dt><dd>{{ p.apptivoQuoteRefId || '—' }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="block" aria-labelledby="project-client-heading">
+        <h3 class="block-title" id="project-client-heading">Client</h3>
+        @if (isEditingClient()) {
+          <form class="edit-form" [formGroup]="clientForm" (ngSubmit)="saveClient()">
+            <app-client-typeahead inputId="project-client" label="Client" [value]="clientForm.controls.clientId.value === noClient ? null : clientForm.controls.clientId.value" [current]="p.client" (valueChange)="selectClient($event)" />
+            <small class="hint">A client set here stays when the Apptivo sync runs.</small>
+            <div class="edit-actions">
+              <p-button label="Cancel" severity="secondary" text size="small" (onClick)="cancelEdit()" [disabled]="isSaving()" />
+              <p-button label="Save" size="small" type="submit" [loading]="isSaving()" />
+            </div>
+          </form>
+        } @else {
+          <div class="value-row">
+            <span class="value">{{ p.client?.name || 'Unassigned' }}</span>
+            @if (p.client?.isArchived) { <app-archived-tag /> }
+            @if (isAdmin()) {
+              <p-button label="Reassign" icon="pi pi-arrow-right-arrow-left" text size="small" (onClick)="startEditClient()" />
+            }
+          </div>
+          <p class="hint">The client link is managed in Meedo. Apptivo never changes it.</p>
+        }
+      </section>
+
+      @if (saveError(); as message) {
+        <p class="save-error" role="alert">{{ message }}</p>
+      }
+
+      <section class="block" aria-labelledby="project-activity-heading">
+        <h3 class="block-title" id="project-activity-heading">Activity</h3>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-value">{{ p.ticketCount }}</span>
+            <span class="stat-label">Tickets ({{ p.openTicketCount }} open)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">{{ p.timesheetHours | number: '1.0-2' }}</span>
+            <span class="stat-label">Timesheet hours ({{ p.approvedTimesheetHours | number: '1.0-2' }} approved)</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="project-sla-heading">
+        <h3 class="block-title" id="project-sla-heading">SLA policy</h3>
+        @if (p.slaPolicies.length) {
+          <ul class="sla-list">
+            @for (policy of p.slaPolicies; track policy.id + policy.priority) {
+              <li class="sla-item">
+                <span class="sla-priority">{{ policy.priority }}</span>
+                <span class="sla-name">{{ policy.name }}</span>
+                <span class="sla-times">
+                  {{ formatMinutes(policy.firstResponseMinutes) }} response · {{ formatMinutes(policy.resolutionMinutes) }} resolution
+                </span>
+                <span class="sla-scope">{{ policy.scope === 'project' ? 'This project' : 'Org default' }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="hint">No SLA policy applies to this project's tickets.</p>
+        }
+      </section>
+
+      @if (p.history.length) {
+        <section class="block" aria-labelledby="project-history-heading">
+          <h3 class="block-title" id="project-history-heading">Change history</h3>
+          <ul class="history">
+            @for (entry of p.history; track entry.id) {
+              <li>
+                <span class="history-what">{{ describeChange(entry) }}</span>
+                <span class="history-who">{{ actorName(entry) }} · {{ entry.createdAt | date: 'medium' }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+  }
+</p-drawer>

@@ -620,3 +620,5 @@
     transition: none;
   }
 }
+:host .md-limit-notice { margin: .375rem 0 0; color: var(--destructive); font-size: .75rem; line-height: 1.5; }
+:host .md-limit-notice:empty { display: none; }

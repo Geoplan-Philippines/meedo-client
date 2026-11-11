@@ -211,7 +211,7 @@
                             <td class="td-wo">{{ workOrderLabel(entry) }}</td>
                             <td class="td-task">
                               <button type="button" class="task-cell-btn" (click)="openTaskPreview(entry)" aria-label="View full task description">
-                                <div class="td-task-content" [innerHTML]="entry.task"></div>
+                                <div class="td-task-content">@if (entry.ticket) { <span>Ticket #{{ entry.ticket.ticketNumber }}  |  </span> }@if (entry.description) { {{ entry.description }} } @else { <span [innerHTML]="entry.task"></span> }</div>
                               </button>
                             </td>
                             <td class="td-loc">{{ entry.location }}</td>

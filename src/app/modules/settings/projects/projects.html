@@ -1,0 +1,174 @@
+<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
+  @if (routeClientId()) {
+    <app-workspace-breadcrumb [clientId]="routeClientId()" [projectId]="routeProjectId()" />
+  } @else {
+    <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+      <a routerLink="/settings" class="hover:text-primary">Settings</a>
+      <span class="mx-2 opacity-60">/</span>
+      <span class="text-heading" aria-current="page">Projects</span>
+    </nav>
+  }
+
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-semibold text-heading">{{ routeClientId() ? (routeClientName()?.name ?? 'Projects') : 'Projects' }}</h1>
+      <p class="text-sm text-body/70">{{ subtitle() }}</p>
+    </div>
+    @if (isAdmin()) {
+      <p-button label="Add project" icon="pi pi-plus" (onClick)="creating.set(true)" />
+    } @else {
+      <span class="readonly-note"><i class="pi pi-lock" aria-hidden="true"></i> Read-only. Ask an admin to rename or reassign projects.</span>
+    }
+  </header>
+
+  @if (isAdmin() && creating()) { <app-new-internal-record kind="project" (saved)="onCreated()" (cancelled)="creating.set(false)" /> }
+  <form class="toolbar" [formGroup]="filters" (ngSubmit)="reload()" role="search" aria-label="Filter projects">
+    <label class="toolbar-toggle"><input type="checkbox" formControlName="includeClosed" /> Show closed</label>
+    <span class="toolbar-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        pInputText
+        type="search"
+        formControlName="search"
+        placeholder="Search project or client name, quote subject or WO number"
+        aria-label="Search projects by project or client name, quote subject or WO number"
+        autocomplete="off"
+        maxlength="100"
+      />
+    </span>
+    @if (!routeClientId()) {
+    <app-client-typeahead label="Filter by customer" placeholder="Search customers" [value]="filters.controls.clientId.value" [includeArchived]="true" (valueChange)="filters.controls.clientId.setValue($event?.id ?? null)" />
+    }
+    <p-select
+      formControlName="status"
+      [options]="statusOptions()"
+      [showClear]="true"
+      placeholder="All statuses"
+      ariaLabel="Filter by status"
+      appendTo="body"
+      styleClass="toolbar-select"
+    />
+    <p-select
+      formControlName="sort"
+      [options]="sortOptions"
+      optionLabel="label"
+      optionValue="value"
+      ariaLabel="Sort projects"
+      appendTo="body"
+      styleClass="toolbar-select"
+    />
+    <label class="toolbar-toggle" for="projects-show-archived">
+      <p-toggleSwitch inputId="projects-show-archived" formControlName="includeArchived" />
+      <span>Show archived</span>
+    </label>
+  </form>
+
+  @switch (loadState()) {
+    @case ('loading') {
+      <div class="flex items-center justify-center py-12 text-body/70" role="status">
+        <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
+        Loading projects…
+      </div>
+    }
+    @case ('error') {
+      <div role="alert" class="banner banner--error">
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+        <span class="banner-text">Failed to load projects. Please try again.</span>
+        <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="reload()" />
+      </div>
+    }
+    @default {
+      @if (projects().length === 0) {
+        <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
+          <i class="pi pi-briefcase text-3xl text-body/40" aria-hidden="true"></i>
+          @if (hasActiveFilters()) {
+            <p class="text-body font-medium">No projects match these filters</p>
+            <p-button label="Clear filters" text (onClick)="clearFilters()" />
+          } @else {
+            <p class="text-body font-medium">No projects yet</p>
+            <p class="text-sm text-body/70">
+              @if (isAdmin()) { Run a sync to import work orders from Apptivo. } @else { An admin can import them from Apptivo. }
+            </p>
+          }
+        </div>
+      } @else {
+        <p class="text-sm text-body/70" aria-live="polite">
+          {{ projects().length }} {{ projects().length === 1 ? 'project' : 'projects' }} across {{ clientCount() }}
+          {{ clientCount() === 1 ? 'customer' : 'customers' }}
+        </p>
+
+        <div class="groups">
+          @for (group of groups(); track group.clientId ?? 'unassigned') {
+            <section class="group" [attr.aria-label]="group.name">
+              <header class="group-header">
+                <h2 class="group-title">{{ group.name }}</h2>
+                @if (group.isArchived) { <app-archived-tag /> }
+                <span class="group-count">{{ group.projects.length }}</span>
+              </header>
+              <ul class="rows">
+                @for (project of group.projects; track project.id) {
+                  <li class="row-item">
+                    <button
+                      type="button"
+                      class="row"
+                      [class.row--archived]="project.isArchived"
+                      [attr.aria-label]="'Open ' + project.name"
+                      (click)="openProject(project)"
+                    >
+                      <span class="row-main">
+                        <span class="row-title">
+                          <span class="row-name">{{ project.name }}</span>
+                          @if (project.isClosed) { <span class="text-xs bg-secondary text-secondary-foreground rounded px-2 py-1">Closed</span> }
+                          @if (!project.apptivoId) { <span class="text-xs text-body">Internal</span> }
+                          @if (isAdmin() && project.missingFromApptivoAt) { <span class="missing-apptivo">Missing from Apptivo</span> }
+                @if (project.isArchived) { <app-archived-tag /> }
+                        </span>
+                        <span class="row-sub">
+                          @if (project.quoteSubject && project.quoteSubject !== project.name) {
+                            <span class="row-quote" [title]="project.quoteSubject">{{ project.quoteSubject }}</span>
+                            <span aria-hidden="true">·</span>
+                          }
+                          <span class="row-wo">{{ project.workOrderNumber }}</span>
+                        </span>
+                      </span>
+                      <span class="row-meta">
+                        <span class="row-status">{{ project.status }}</span>
+                        <span class="row-total">{{ project.total | number: '1.2-2' }}</span>
+                        <span class="row-date">{{ project.reportedDate ? (project.reportedDate | date: 'mediumDate') : 'No date' }}</span>
+                      </span>
+                      <i class="pi pi-angle-right row-chevron" aria-hidden="true"></i>
+                    </button>
+                    @if (isAdmin()) {
+                      <!-- Sibling of the row button (buttons can't nest), so it never triggers row navigation. -->
+                      <p-button
+                        styleClass="row-manage"
+                        icon="pi pi-pencil"
+                        severity="secondary"
+                        text
+                        rounded
+                        size="small"
+                        data-action="manage-project"
+                        [ariaLabel]="'Manage project ' + project.name"
+                        pTooltip="Manage project"
+                        tooltipPosition="left"
+                        tooltipEvent="both"
+                        (onClick)="manageProject(project, $event)"
+                      />
+                    }
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      }
+    }
+  }
+</main>
+
+<app-project-detail-drawer
+  [projectId]="selectedProjectId()"
+  [isAdmin]="isAdmin()"
+  (closed)="closeDrawer()"
+  (changed)="onProjectChanged($event)"
+/>

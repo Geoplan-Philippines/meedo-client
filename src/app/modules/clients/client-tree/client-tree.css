@@ -1,0 +1,34 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.client-list {
+  margin: 0.25rem 0 0 1.25rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
+  list-style: none;
+}
+
+.client-list li + li {
+  margin-top: 0.125rem;
+}
+
+.user-toggle:focus-visible,
+.client-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+@media (min-width: 768px) {
+  :host-context(.sidebar-collapsed) .user-toggle {
+    justify-content: center;
+    gap: 0;
+  }
+
+  :host-context(.sidebar-collapsed) .user-name,
+  :host-context(.sidebar-collapsed) .user-chevron,
+  :host-context(.sidebar-collapsed) .client-list {
+    display: none;
+  }
+}

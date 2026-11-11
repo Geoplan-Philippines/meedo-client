@@ -1,0 +1,42 @@
+:host { display: block; min-width: 0; }
+.board { display: flex; gap: 1rem; overflow-x: auto; padding: 1rem; align-items: stretch; }
+.column { flex: 0 0 19rem; min-height: 20rem; border: 1px solid var(--border); border-radius: 4px; background: var(--background); }
+.column-header { display: flex; gap: .5rem; align-items: center; padding: .875rem; border-bottom: 1px solid var(--border); }
+h2, h3, p { margin: 0; }
+h2 { font-size: .875rem; font-weight: 600; color: var(--text-heading); }
+.status-dot { width: .5rem; height: .5rem; border-radius: 100%; }
+.total { margin-left: auto; color: var(--text-muted); font-size: .75rem; }
+.cards { display: grid; gap: .75rem; padding: .75rem; }
+.ticket-card { padding: .875rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-body); cursor: grab; }
+.ticket-card:hover { background: color-mix(in srgb, var(--foreground) 6%, var(--surface)); border-color: var(--border-strong); }
+.ticket-card:active { cursor: grabbing; }
+.ticket-card:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ticket-number { color: var(--text-muted); font-size: .75rem; }
+h3 { font-size: .875rem; line-height: 1.5; font-weight: 600; color: var(--text-heading); overflow-wrap: anywhere; }
+.card-meta, .card-footer { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .75rem; }
+.card-tags { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem; min-width: 0; }
+.avatars { display: flex; gap: .125rem; }
+:host ::ng-deep .avatars .p-avatar { width: 1.5rem; height: 1.5rem; font-size: .625rem; }
+:host ::ng-deep .priority.p-tag { border-radius: 100px; font-size: .75rem; padding: .125rem .5rem; }
+:host ::ng-deep .priority .p-tag-icon { font-size: .375rem; }
+:host ::ng-deep .priority-low.p-tag { background: var(--muted-success); color: var(--muted-success-foreground); }
+:host ::ng-deep .priority-medium.p-tag, :host ::ng-deep .priority-high.p-tag { background: var(--muted-warning); color: var(--muted-warning-foreground); }
+:host ::ng-deep .priority-urgent.p-tag { background: var(--muted-destructive); color: var(--muted-destructive-foreground); }
+.team { font-size: .75rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button, select { border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text-body); font: inherit; font-size: .75rem; padding: .375rem .5rem; cursor: pointer; }
+select { max-width: 9rem; }
+button:hover, select:hover { border-color: var(--primary); color: var(--primary); }
+button:active { background: var(--secondary); }
+button:disabled, select:disabled { opacity: .6; cursor: wait; }
+.show-more { width: 100%; }
+.empty, .board-state { padding: 1.5rem .75rem; text-align: center; color: var(--text-muted); font-size: .875rem; }
+.empty i { display: block; margin-bottom: .75rem; }
+.empty p, .board-state p { margin: .5rem 0; }
+.skeleton { display: grid; gap: .75rem; padding: 1rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
+.skeleton span { height: .75rem; border-radius: 4px; background: var(--secondary); }
+.skeleton span:last-child { width: 60%; }
+.cdk-drag-placeholder { opacity: .25; }
+.cdk-drop-list-receiving { outline: 2px solid var(--ring); outline-offset: -2px; }
+.cdk-drag-preview { box-sizing: border-box; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.card-project { display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.75rem; color: var(--text-body); overflow-wrap: anywhere; }

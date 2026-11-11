@@ -6,12 +6,14 @@ import { expand, map, reduce } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
+import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 import {
   BulkApproveResult,
   BulkRejectResult,
   SubmitWeekResult,
   TimesheetAuditLog,
   TimesheetEntry,
+  TimesheetTicket,
   TimesheetEntryPayload,
   TimesheetPeriodLock,
   TimesheetProject,
@@ -23,6 +25,14 @@ import {
 export class TimesheetService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/timekeeping/timesheet`;
+
+  getTickets(page = 1, search = '') {
+    return this.http.get<PaginatedApiResponse<TimesheetTicket>>(this.baseUrl + '/tickets', { params: { page, limit: 20, ...(search.trim() ? { search: search.trim() } : {}) }, withCredentials: true });
+  }
+
+  createTicket(title: string, projectId: string | null) {
+    return this.http.post<ApiResponse<TimesheetTicket>>(environment.apiBaseUrl + '/tickets', { title: title.trim(), ...(projectId ? { projectId } : {}) }, { withCredentials: true }).pipe(map(response => response.data));
+  }
 
   getEntries(periodStart: string, periodEnd: string) {
     return this.fetchEntriesPage(periodStart, periodEnd, 1).pipe(
@@ -69,30 +79,31 @@ export class TimesheetService {
       .pipe(map((response) => response.data));
   }
 
-  getProjects() {
-    return this.fetchProjectsPage(1).pipe(
+  /**
+   * Every project for timesheet pickers. Archived projects are left out unless
+   * `includeArchived` (filters over existing entries need them; new entries cannot use them).
+   */
+  getProjects(includeArchived = false) {
+    return this.fetchProjectsPage(1, includeArchived).pipe(
       expand((response) =>
         response.meta.page < response.meta.lastPage
-          ? this.fetchProjectsPage(response.meta.page + 1)
+          ? this.fetchProjectsPage(response.meta.page + 1, includeArchived)
           : EMPTY,
       ),
       reduce((all, response) => all.concat(response.data), [] as TimesheetProject[]),
       map((projects) =>
         projects.map((project) => {
           const customerName = project.customerName?.trim() || project.client?.customerName?.trim() || '';
-          return {
-            ...project,
-            customerName,
-            displayName: customerName ? `${customerName} — ${project.workOrderNumber}` : project.workOrderNumber,
-          };
+          const label = timesheetProjectLabel({ ...project, customerName });
+          return { ...project, customerName, label: project.isArchived ? `${label} (Archived)` : label };
         }),
       ),
     );
   }
 
-  private fetchProjectsPage(page: number) {
+  private fetchProjectsPage(page: number, includeArchived: boolean) {
     return this.http.get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
-      params: { page, limit: 50 },
+      params: { page, limit: 50, ...(includeArchived ? { includeArchived: true } : {}) },
       withCredentials: true,
     });
   }

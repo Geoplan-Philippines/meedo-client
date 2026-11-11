@@ -7,4 +7,6 @@ export interface Status {
   isArchived: boolean;
   category: TicketStatusCategory;
   organizationId: string;
+  isSystem?: boolean;
+  createdAt?: string;
 }

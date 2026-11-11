@@ -9,7 +9,7 @@ RUN npm install
 FROM installer AS builder
 COPY . .
 ARG API_BASE_URL=https://meedo-v3-api-stg.geoplanph.com/api/v1
-RUN sed -i "s|apiBaseUrl:.*|apiBaseUrl: '${API_BASE_URL}',|" src/environments/environment.prod.ts
+RUN node scripts/configure-api-url.cjs "$API_BASE_URL"
 RUN npm run build
 
 FROM nginx:alpine AS runner

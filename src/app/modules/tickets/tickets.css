@@ -82,6 +82,47 @@
   max-width: 400px;
 }
 
+.my-issues-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: transparent;
+  color: var(--color-body);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.my-issues-toggle:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.my-issues-toggle--active,
+.my-issues-toggle--active:hover {
+  background: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+  font-weight: 600;
+}
+
+.my-issues-toggle:active {
+  background: var(--color-secondary);
+}
+
+.my-issues-toggle:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-issues-toggle { transition: none; }
+}
+
 .search-icon {
   position: absolute;
   left: 0.875rem;
@@ -715,6 +756,37 @@
   text-overflow: ellipsis;
 }
 
+/* Edit-dialog project picker rows (rendered in the overlay, still component-scoped). */
+.project-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.project-option__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.project-option__name {
+  color: var(--color-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-option__sub {
+  font-size: 0.6875rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ─── Assignee Avatars ─────────────────────────────────── */
 .avatar-stack {
   display: inline-flex;
@@ -1261,3 +1333,7 @@
   .compose-pill,
   .picker-search input { transition: none; }
 }
+
+.ticket-layout-toggle { display: flex; gap: .25rem; }
+.ticket-layout-toggle button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-primary-foreground); border-color: var(--color-primary); }
+.ticket-layout-toggle button[aria-pressed="false"] { background: transparent; color: var(--color-body); border-color: transparent; }

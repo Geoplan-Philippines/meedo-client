@@ -21,15 +21,21 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from '../services/tickets.service';
+import { TicketDepartmentService } from '../services/ticket-department.service';
 import { TicketAttachmentsService } from '../services/attachments.service';
 import { TicketCategoriesService } from '../services/ticket-categories.service';
 import { StatusesService } from '../services/statuses.service';
-import { ProjectsService } from '../services/projects.service';
+import { ProjectsService, filterProjects, withCurrentProject } from '../services/projects.service';
+import { SlaBadge } from '../sla-badge/sla-badge';
+import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
+import { clientDisplayName, projectDisplayName } from '../../../shared/utils/display-name.utils';
 import { MembersService } from '../services/members.service';
 import { TeamsService } from '../../settings/teams/services/teams.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { TicketThread } from '../ticket-thread/ticket-thread';
 import { MarkdownEditor } from '../../../shared/ui/markdown-editor/markdown-editor';
+import { TicketTitleEditor } from '../ticket-title-editor/ticket-title-editor';
+import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from '../tickets.constants';
 
 import { Ticket, TicketRelation, UpdateTicketPayload } from '../models/ticket.model';
 import { Status } from '../models/status.model';
@@ -62,6 +68,9 @@ type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
     DatePickerModule,
     TicketThread,
     MarkdownEditor,
+    TicketTitleEditor,
+    SlaBadge,
+    ArchivedTag,
   ],
   providers: [MessageService],
   templateUrl: './ticket-detail.html',
@@ -72,6 +81,7 @@ export class TicketDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly ticketsService = inject(TicketsService);
+  private readonly departmentService = inject(TicketDepartmentService);
   private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
@@ -83,6 +93,7 @@ export class TicketDetail {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly ticket = signal<Ticket | null>(null);
+  readonly descriptionMaxLength = TICKET_DESCRIPTION_MAX_LENGTH;
   /** loading → skeleton · ready → content · not-found → 404 · error → load failed (retryable). */
   readonly loadState = signal<'loading' | 'ready' | 'not-found' | 'error'>('loading');
   readonly loadErrorStatus = signal<number | null>(null);
@@ -149,11 +160,10 @@ export class TicketDetail {
     return list;
   });
 
-  readonly filteredProjects = computed(() => {
-    const query = this.projectSearch().trim().toLowerCase();
-    const list = this.projects();
-    return query ? list.filter((project) => project.displayName.toLowerCase().includes(query)) : list;
-  });
+  /** Active projects plus the ticket's own project when the sync archived it (shown tagged). */
+  readonly projectMatches = computed(() =>
+    filterProjects(withCurrentProject(this.projects(), this.ticket()?.project, this.authService.isAdmin()), this.projectSearch()),
+  );
 
   readonly categoryName = computed(() => {
     const id = this.ticket()?.categoryId;
@@ -250,7 +260,7 @@ export class TicketDetail {
       statuses: this.statusesService.getAll(),
       categories: this.categoriesService.getAll(),
       projects: this.projectsService.getAll(),
-      teams: organizationId ? this.teamsService.getTeams(organizationId) : of([] as Team[]),
+      department: this.departmentService.load(),
       members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -259,7 +269,7 @@ export class TicketDetail {
           this.statuses.set(res.statuses);
           this.categories.set(res.categories);
           this.projects.set(res.projects);
-          this.teams.set(res.teams as Team[]);
+          this.teams.set(res.department.teams);
           this.members.set(res.members);
         },
         error: (err: unknown) => console.error('Error loading ticket options:', err),
@@ -281,8 +291,14 @@ export class TicketDetail {
         },
         error: (err: unknown) => {
           console.error('Error loading ticket:', err);
-          if (hasSeed) return; // still have the seeded copy to show
           const status = err instanceof HttpErrorResponse ? err.status : 0;
+          if (status === 403 || status === 404) {
+            this.ticket.set(null);
+            this.loadErrorStatus.set(status);
+            this.loadState.set('not-found');
+            return;
+          }
+          if (hasSeed) return; // transient errors may keep an already loaded copy
           this.loadErrorStatus.set(status);
           // A real 404 is "not found"; anything else is a load failure the user can retry.
           this.loadState.set(status === 404 ? 'not-found' : 'error');
@@ -291,7 +307,13 @@ export class TicketDetail {
   }
 
   // ─── Inline property edits (optimistic + PATCH) ─────────
+  readonly canEdit = computed(() => this.authService.isAdmin() || this.ticket()?.createdById === this.authService.currentUser()?.id);
+  readonly canEditProject = computed(() => this.canEdit() && (this.authService.isAdmin() ||
+    !this.ticket()?.projectId || this.projects().some(project => project.id === this.ticket()?.projectId)));
+  readonly clientName = computed(() => clientDisplayName(this.ticket()?.project?.client) || 'No client');
+
   private applyPatch(payload: UpdateTicketPayload, optimistic: Partial<Ticket>): void {
+    if (!this.canEdit()) return;
     const previous = this.ticket();
     if (!previous) return;
     this.ticket.set({ ...previous, ...optimistic });
@@ -325,20 +347,35 @@ export class TicketDetail {
   }
 
   setTeam(team: Team): void {
+    if (!this.teams().some(option => option.id === team.id)) return;
     this.applyPatch({ teamId: team.id }, { teamId: team.id });
   }
 
   setProject(project: Project): void {
+    if (!this.canEditProject() || !this.projectMatches().items.some(option => option.id === project.id)) return;
     this.applyPatch(
       { projectId: project.id },
       {
         projectId: project.id,
-        project: { id: project.id, customerName: project.customerName, workOrderNumber: project.workOrderNumber },
+        project: {
+          id: project.id,
+          customerName: project.customerName,
+          workOrderNumber: project.workOrderNumber,
+          displayName: project.displayName,
+          quoteSubject: project.quoteSubject,
+          isArchived: project.isArchived,
+          client: project.client,
+        },
       },
     );
   }
 
+  projectName(project: NonNullable<Ticket['project']>): string {
+    return projectDisplayName(project);
+  }
+
   clearProject(): void {
+    if (!this.canEditProject()) return;
     this.applyPatch({ projectId: null }, { projectId: undefined, project: null });
   }
 
@@ -416,28 +453,13 @@ export class TicketDetail {
   }
 
   // ─── Title inline edit (optimistic + PATCH) ─────────────
-  /** Enter commits the title (single line) rather than inserting a newline. */
-  onTitleEnter(event: Event, el: HTMLElement): void {
-    event.preventDefault();
-    el.blur(); // blur triggers commitTitle
-  }
-
-  /** Escape discards the edit and restores the saved title. */
-  onTitleEscape(el: HTMLElement): void {
-    el.textContent = this.ticket()?.title ?? '';
-    el.blur();
-  }
-
-  commitTitle(el: HTMLElement): void {
+  commitTitle(title: string): void {
     const previous = this.ticket();
     if (!previous) return;
-    const next = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const next = title.replace(/\s+/g, ' ').trim();
 
-    // Title is required — a blank or unchanged value just snaps back (also normalises whitespace).
-    if (!next || next === previous.title) {
-      el.textContent = previous.title;
-      return;
-    }
+    // Guard programmatic calls as well as the bounded inline editor.
+    if (!next || title.length > TICKET_TITLE_MAX_LENGTH || next === previous.title) return;
 
     this.ticket.set({ ...previous, title: next });
     this.ticketsService
@@ -455,6 +477,7 @@ export class TicketDetail {
 
   // ─── Description autosave (WYSIWYG markdown) ────────────
   onDescriptionSave(markdown: string): void {
+    if (markdown.length > TICKET_DESCRIPTION_MAX_LENGTH) return;
     const previous = this.ticket();
     if (!previous) return;
     const current = previous.description ?? '';

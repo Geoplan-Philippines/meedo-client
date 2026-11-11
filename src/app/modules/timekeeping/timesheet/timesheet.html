@@ -8,7 +8,10 @@
       <p class="page-subtitle">Your weekly work log.</p>
     </div>
 
-    <button pButton type="button" icon="pi pi-plus" label="Add Project" class="add-project-btn" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
+    <div class="timesheet-header-actions">
+      <button pButton type="button" icon="pi pi-plus" label="Add project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
+      <button pButton type="button" icon="pi pi-plus" label="New entry" (click)="openEntryForm()" [disabled]="isLocked() || isLoading()"></button>
+    </div>
   </header>
 
   @if (lockMessage(); as message) {
@@ -87,7 +90,13 @@
         @for (projectId of tableProjectIds(); track projectId) {
           <div class="grid-row grid-row--body" role="row">
             <span class="grid-cell grid-cell--label" role="rowheader">
-              <span class="grid-cell-project-name">{{ projectName(projectId) }}</span>
+              <span class="grid-cell-project-name" [title]="projectName(projectId)">{{ projectName(projectId) }}</span>
+              @if (projectClientName(projectId) || projectIsArchived(projectId)) {
+                <span class="grid-cell-project-sub">
+                  <span class="grid-cell-project-client">{{ projectClientName(projectId) }}</span>
+                  @if (projectIsArchived(projectId)) { <app-archived-tag /> }
+                </span>
+              }
             </span>
             @for (day of weekDays(); track day.toISOString()) {
               @let cellEntries = entriesForCell(projectId, day);
@@ -125,7 +134,7 @@
             <span class="grid-empty-icon" aria-hidden="true"><i class="pi pi-briefcase"></i></span>
             <div class="grid-empty-copy">
               <strong class="grid-empty-title">No projects yet</strong>
-              <span class="grid-empty-text">Add a project to start logging hours for this week.</span>
+              <span class="grid-empty-text">Create an entry with a ticket, a project, or a free-text description.</span>
             </div>
             <button pButton type="button" icon="pi pi-plus" label="Add Project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
           </div>
@@ -179,6 +188,8 @@
               optionValue="value"
               [filter]="true"
               filterBy="label"
+              scrollHeight="min(18rem, 45vh)"
+              panelStyleClass="timesheet-project-panel"
               placeholder="Select a project"
               appendTo="body"
               styleClass="entry-select"
@@ -196,7 +207,7 @@
 
   @if (cellModal(); as modal) {
     <div class="dialog-backdrop" role="presentation">
-      <div class="app-dialog entry-modal-dialog light-scope" role="dialog" aria-modal="true" aria-labelledby="entry-modal-title" (click)="$event.stopPropagation()">
+      <div class="app-dialog entry-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="entry-modal-title" (click)="$event.stopPropagation()">
         <div class="dialog-header">
           <h3 id="entry-modal-title" class="dialog-title">{{ modal.readonly ? 'Entry Details' : 'Edit Entries' }}</h3>
           <button type="button" class="dialog-close-btn" (click)="closeCellModal(false)" aria-label="Close">
@@ -306,18 +317,9 @@
                   </div>
                 </div>
 
-                <div class="modal-field">
-                  <span>Task</span>
-                  <app-rich-text-editor
-                    [content]="row.task"
-                    (contentChange)="patchModalRow(row.localId, { task: $event })"
-                    [editable]="!modal.readonly && !row.readonly"
-                    placeholder="What are you working on? Type / for options…"
-                  />
-                  @if (rowTaskInvalid(row)) {
-                    <small class="modal-field-error">Task is required.</small>
-                  }
-                </div>
+                <app-timesheet-work-selector [value]="workForRow(row, modal.projectId)" [projects]="pickerProjects()" [readonly]="modal.readonly || row.readonly" (changed)="setRowWork(row, $event)" />
+                @if (rowTaskInvalid(row)) { <p role="alert">Choose a ticket or enter a description of at most 1000 characters.</p> }
+
               </div>
             }
           </div>
@@ -363,3 +365,6 @@
     </div>
   }
 </div>
+
+<section class="m-4 md:m-8 p-4 border border-border rounded bg-surface text-body" aria-label="Entry log"><h2 class="font-semibold text-heading">Entry log</h2>@for (entry of rawEntries(); track entry.id) { <article [id]="'timesheet-entry-'+entry.id" class="p-3 border-b border-border" [class.border-primary]="targetEntryId() === entry.id"><span>{{ entry.workDate | date:'EEE, MMM d':'UTC' }}  |  {{ entry.hours }} hours  |  {{ entry.status }}</span>@if (entry.ticket) { <p>Ticket #{{ entry.ticket.ticketNumber }}</p> }<div>@if (entry.description) { {{ entry.description }} } @else { <span [innerHTML]="entry.task"></span> }</div>@if (!entry.projectId) { <p>No project</p> }@if (!isLocked() && (entry.status === 'DRAFT' || entry.status === 'REJECTED')) { <button pButton type="button" label="Edit entry" (click)="openEntryForm(entry)"></button> }</article> } @empty { <p>No entries this week.</p> }</section>
+@if (formOpen()) { <app-timesheet-entry-form [entry]="editingEntry()" [projects]="pickerProjects()" (saved)="entryFormSaved()" (cancelled)="formOpen.set(false)" /> }

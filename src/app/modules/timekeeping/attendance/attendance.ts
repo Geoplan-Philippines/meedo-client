@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { WebcamImage, WebcamModule } from 'ngx-webcam';
+import { RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Observable, Subject } from 'rxjs';
 import { AttendanceService } from './services/attendance.service';
@@ -12,7 +13,7 @@ interface RecognitionResult {
 
 @Component({
   selector: 'app-attendance',
-  imports: [WebcamModule, Button],
+  imports: [WebcamModule, Button, RouterLink],
   templateUrl: './attendance.html',
   styleUrl: './attendance.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

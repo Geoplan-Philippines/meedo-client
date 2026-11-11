@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
@@ -23,11 +23,15 @@ import {
   TimesheetSummaryEmployee,
 } from '../models/timesheet.model';
 import { TimesheetService } from '../services/timesheet.service';
+import { TimesheetEntryForm } from '../entry-form/timesheet-entry-form';
+import { manilaTodayKey } from '../entry-form/timesheet-entry-form';
+import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 
 @Component({
   selector: 'app-timesheet-approval',
   imports: [
     CommonModule,
+    TimesheetEntryForm,
     FormsModule,
     TableModule,
     ButtonModule,
@@ -50,7 +54,7 @@ export class TimesheetApproval implements OnInit {
 
   private readonly approvalTable = viewChild<Table>('approvalTable');
 
-  readonly selectedDate = signal<Date>(new Date());
+  readonly selectedDate = signal<Date>(new Date(manilaTodayKey() + 'T12:00:00'));
   readonly selectedWeek = computed(() => startOfWeek(this.selectedDate()));
   readonly summary = signal<TimesheetSummary | null>(null);
   readonly periodLock = signal<TimesheetPeriodLock | null>(null);
@@ -60,6 +64,9 @@ export class TimesheetApproval implements OnInit {
   readonly selectedEntryIds = signal<Set<string>>(new Set());
   readonly selectedEmployee = signal<TimesheetSummaryEmployee | null>(null);
   readonly activeTab = signal<'SUBMITTED' | 'APPROVED' | 'REJECTED' | null>(null);
+  readonly editingEntry = signal<TimesheetEntry | null>(null);
+  editEntry(entry: TimesheetEntry) { if (!this.isPeriodLocked() && entry.status === 'SUBMITTED') this.editingEntry.set(entry); }
+  entrySaved() { this.editingEntry.set(null); this.loadData(); }
   readonly taskPreviewContent = signal<string | null>(null);
 
   readonly isLoading = signal(false);
@@ -133,6 +140,15 @@ export class TimesheetApproval implements OnInit {
       .map(e => e.id),
   );
 
+  constructor() {
+    effect(() => {
+      if (this.isPeriodLocked()) {
+        this.selectedEntryIds.set(new Set());
+        this.showRejectDialog.set(false);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.loadData();
   }
@@ -158,7 +174,8 @@ export class TimesheetApproval implements OnInit {
 
     forkJoin({
       summary: this.timesheetService.getSummary(this.currentFilters()),
-      projects: this.timesheetService.getProjects(),
+      // Include archived projects so entries already logged against them can still be filtered.
+      projects: this.timesheetService.getProjects(true),
       lock: this.timesheetService.getPeriodLock(this.periodStart(), this.periodEnd()),
       auditLogs: this.timesheetService.getAuditLogs(1, 8, this.periodStart(), this.periodEnd()),
     })
@@ -226,6 +243,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleEntry(entry: TimesheetEntry, checked: boolean): void {
+    if (checked && this.isPeriodLocked()) return;
     if (!isActionable(entry.status)) return;
     this.selectedEntryIds.update(ids => {
       const next = new Set(ids);
@@ -239,7 +257,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleAllSubmitted(checked: boolean): void {
-    this.selectedEntryIds.set(checked ? new Set(this.submittedEntryIds()) : new Set());
+    this.selectedEntryIds.set(checked && !this.isPeriodLocked() ? new Set(this.submittedEntryIds()) : new Set());
   }
 
   employeeAllSubmittedSelected(employee: TimesheetSummaryEmployee): boolean {
@@ -254,6 +272,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   toggleEmployeeSubmitted(employee: TimesheetSummaryEmployee, checked: boolean): void {
+    if (checked && this.isPeriodLocked()) return;
     const ids = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     this.selectedEntryIds.update(set => {
       const next = new Set(set);
@@ -263,6 +282,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   approveSelected(): void {
+    if (this.isPeriodLocked()) return;
     const entryIds = [...this.selectedEntryIds()];
     if (entryIds.length === 0) return;
 
@@ -282,6 +302,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   approveEmployee(employee: TimesheetSummaryEmployee): void {
+    if (this.isPeriodLocked()) return;
     const entryIds = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     if (entryIds.length === 0) return;
     this.selectedEntryIds.set(new Set(entryIds));
@@ -289,6 +310,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   rejectEmployee(employee: TimesheetSummaryEmployee): void {
+    if (this.isPeriodLocked()) return;
     const entryIds = employee.entries.filter(e => isActionable(e.status)).map(e => e.id);
     if (entryIds.length === 0) return;
     this.selectedEntryIds.set(new Set(entryIds));
@@ -300,6 +322,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   openRejectDialog(): void {
+    if (this.isPeriodLocked()) return;
     if (this.selectedCount() === 0) return;
     this.rejectReason.set('');
     this.showRejectDialog.set(true);
@@ -311,6 +334,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   rejectSelected(): void {
+    if (this.isPeriodLocked()) return;
     const reason = this.rejectReason().trim();
     if (!reason) {
       this.messageService.add({ severity: 'warn', summary: 'Reason required', detail: 'Please enter a rejection reason.' });
@@ -427,10 +451,7 @@ export class TimesheetApproval implements OnInit {
   }
 
   projectLabel(entry: TimesheetEntry): string {
-    if (!entry.project) return '—';
-    const customer = entry.project.customerName?.trim() || entry.project.client?.customerName?.trim();
-    const workOrder = entry.project.workOrderNumber?.trim() || '';
-    return customer ? `${customer} — ${workOrder}` : (workOrder || '—');
+    return timesheetProjectLabel(entry.project);
   }
 
   approvedBy(entry: TimesheetEntry): string {

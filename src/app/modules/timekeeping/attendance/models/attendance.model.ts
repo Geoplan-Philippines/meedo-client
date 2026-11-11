@@ -55,10 +55,12 @@ export interface AttendanceEvent {
 /**
  * How a day reads against its weekly schedule (from attendance settings):
  * a rest day, a holiday, an on-time or late working day, an absence, or a day
- * with no schedule resolved for the employee.
+ * with no schedule resolved for the employee (`present_unscheduled` once they
+ * time in anyway; it counts as Present on the board and is never late).
  */
 export type AttendanceStatus =
   | 'no_schedule'
+  | 'present_unscheduled'
   | 'holiday'
   | 'rest_day'
   | 'upcoming'

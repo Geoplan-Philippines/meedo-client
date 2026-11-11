@@ -33,4 +33,14 @@ export const settingsRoutes: Routes = [
     component: Users,
     canActivate: [orgAdminGuard],
   },
+  // Admin entry points reuse the same Projects and Customers screens.
+  {
+    path: 'projects',
+    loadComponent: () => import('./projects/projects').then((m) => m.Projects),
+  },
+  // Open to all members; editing is admin-only (enforced by the API and hidden in the UI).
+  {
+    path: 'customers',
+    redirectTo: '/clients',
+  },
 ];

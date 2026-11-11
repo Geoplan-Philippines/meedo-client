@@ -1,0 +1,71 @@
+@if (loading()) {
+  <div class="board" role="status" aria-label="Loading board">
+    @for (placeholder of [1, 2, 3]; track placeholder) {
+      <div class="column"><div class="skeleton"><span></span><span></span><span></span></div></div>
+    }
+  </div>
+} @else if (failed()) {
+  <div class="board-state" role="alert"><p>Unable to load the board.</p><button type="button" (click)="reload()">Try again</button></div>
+} @else {
+  <div class="board" cdkDropListGroup aria-label="Tickets board">
+    @for (column of columns(); track column.id) {
+      @let state = page(column.id);
+      <section class="column" cdkDropList [cdkDropListData]="column.id" [cdkDropListSortingDisabled]="true"
+        (cdkDropListDropped)="drop($event)" [attr.aria-label]="column.name" [attr.aria-busy]="state.loading">
+        <header class="column-header">
+          <span class="status-dot" [style.background]="statusColor(column.status?.color)" aria-hidden="true"></span>
+          <h2>{{ column.name }}</h2><span class="total" [attr.aria-label]="column.total + ' tickets'">{{ column.total }}</span>
+        </header>
+        <div class="cards">
+          @for (ticket of state.tickets; track ticket.id) {
+            <article class="ticket-card" cdkDrag [cdkDragData]="ticket" [cdkDragDisabled]="!!pending()"
+              tabindex="0" [attr.aria-label]="'Open ticket #' + ticket.ticketNumber + ': ' + ticket.title"
+              (click)="openTicket.emit(ticket)" (keydown.enter)="openTicket.emit(ticket)">
+              <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
+              <h3>{{ ticket.title }}</h3>
+              @if (ticket.project; as project) {
+                <div class="card-project" data-testid="ticket-project-context">
+                  <span>{{ projectName(project) }}</span>
+                  <span>{{ clientName(project.client) || 'No client' }}</span>
+                </div>
+              }
+              <div class="card-meta">
+                <span class="card-tags">
+                  <p-tag [value]="ticket.priority | titlecase" icon="pi pi-circle-fill" [class]="'priority priority-' + ticket.priority.toLowerCase()" />
+                  @if (ticket.sla; as sla) { <app-sla-badge [sla]="sla" /> }
+                </span>
+                <span class="avatars">
+                  @for (avatar of avatars(ticket); track $index) {
+                    <p-avatar [label]="avatar.initials" [styleClass]="avatar.className" shape="circle" [title]="avatar.name" [attr.aria-label]="avatar.name" />
+                  }
+                  @if (extraAvatars(ticket)) { <p-avatar [label]="'+' + extraAvatars(ticket)" styleClass="avatar-more" shape="circle" /> }
+                </span>
+              </div>
+              <div class="card-footer">
+                <span class="team" [title]="ticket.team?.name ?? 'No team'">{{ ticket.team?.name ?? 'No team' }}</span>
+                <select aria-label="Move to status" title="Move to status" [value]="ticket.ticketStatusId ?? ''" [disabled]="!!pending()"
+                  (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()"
+                  (change)="move(ticket, $any($event.target).value || null)">
+                  <option value="">No status</option>
+                  @for (status of moveStatuses(); track status.id) { <option [value]="status.id">{{ status.name }}</option> }
+                </select>
+              </div>
+            </article>
+          }
+          @if (state.loading) {
+            <div class="skeleton" role="status" aria-label="Loading tickets"><span></span><span></span><span></span></div>
+          } @else if (state.error) {
+            <div class="empty" role="alert"><p>Tickets could not be loaded.</p><button type="button" (click)="loadMore(column.id)">Try again</button></div>
+          } @else if (!state.tickets.length) {
+            <div class="empty"><i class="pi pi-ticket" aria-hidden="true"></i><h3>No tickets here</h3><p>Move a ticket here or adjust your filters.</p></div>
+          }
+          @if (state.more && !state.loading && !state.error) {
+            <button type="button" class="show-more" [disabled]="!!pending()" (click)="loadMore(column.id)">Show more<span class="sr-only"> in {{ column.name }}</span></button>
+          }
+        </div>
+      </section>
+    } @empty {
+      <div class="board-state"><h2>No statuses configured</h2><p>Add a status in Settings to start organizing tickets.</p></div>
+    }
+  </div>
+}

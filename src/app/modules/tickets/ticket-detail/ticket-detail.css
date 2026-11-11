@@ -64,38 +64,6 @@
   padding: 1.5rem 1.75rem 1.75rem;
 }
 
-.detail-title {
-  font-family: var(--font-heading);
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  color: var(--color-heading);
-  /* Negative inline margin keeps the text edge-aligned with the description while the
-     padded hit area gives the hover/focus tint room to breathe. */
-  margin: 0 -0.4rem 1.25rem;
-  padding: 0.125rem 0.4rem;
-  border-radius: var(--radius-base);
-  text-wrap: balance;
-  cursor: text;
-  outline: none;
-  transition: background-color 150ms ease;
-}
-
-.detail-title:hover,
-.detail-title:focus {
-  background: color-mix(in srgb, var(--color-heading) 5%, transparent);
-}
-
-.detail-title:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .detail-title { transition: none; }
-}
-
 /* ─── Description editor (app-markdown-editor) ─────────── */
 .detail-desc { display: block; }
 
@@ -257,7 +225,10 @@
 
 .project-val { display: flex; flex-direction: column; gap: 0.0625rem; min-width: 0; }
 .project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.project-wo { font-size: 0.75rem; color: var(--color-muted); font-weight: 400; }
+.project-wo { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; color: var(--color-muted); font-weight: 400; }
+.sla-rows { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; padding: 0.25rem 0.5rem; }
+.sla-row { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex-wrap: wrap; }
+.sla-row-key { font-size: 0.75rem; color: var(--color-muted); min-width: 4.5rem; }
 
 /* Assignee / picker avatar sizing. The colour palette (.avatar-*) is
    defined globally in src/styles.css. */

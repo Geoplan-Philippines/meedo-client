@@ -3,11 +3,11 @@ import { MainLayout } from './layout/main-layout/main-layout';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
-  { 
-    path: '', 
-    loadComponent: () => 
-      import('./modules/home/home').then(m => m.Home) 
+  {
+    path: 'notifications', component: MainLayout, canActivate: [authGuard],
+    loadChildren: () => import('./modules/notifications/notifications.routes').then(m => m.notificationsRoutes),
   },
+  { path: '', pathMatch: 'full', redirectTo: 'timekeeping' },
   {
     path: 'auth',
     canActivate: [guestGuard],
@@ -20,6 +20,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/tickets/tickets.routes').then((m) => m.ticketsRoutes),
+  },
+  {
+    path: 'clients',
+    component: MainLayout,
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./modules/clients/clients.routes').then((m) => m.clientsRoutes),
   },
   {
     path: 'timekeeping',

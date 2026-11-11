@@ -12,7 +12,7 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { forkJoin, of, debounceTime, distinctUntilChanged, finalize, catchError, map, switchMap } from 'rxjs';
+import { forkJoin, of, debounceTime, distinctUntilChanged, finalize, catchError, map, skip, switchMap } from 'rxjs';
 
 import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -27,10 +27,18 @@ import { PopoverModule } from 'primeng/popover';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from './services/tickets.service';
+import { TicketDepartmentService } from './services/ticket-department.service';
+import { TicketsBoard } from './tickets-board/tickets-board';
+import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
+import { ArchivedTag } from '../../shared/ui/archived-tag/archived-tag';
+import { WorkspaceBreadcrumb } from '../clients/workspace-breadcrumb/workspace-breadcrumb';
+import { clientDisplayName, projectDisplayName } from '../../shared/utils/display-name.utils';
+import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from './tickets.constants';
+import { trimmedRequired } from './utils/ticket-validation';
 import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { StatusesService } from './services/statuses.service';
-import { ProjectsService } from './services/projects.service';
+import { ProjectsService, filterProjects, withCurrentProject } from './services/projects.service';
 import { TeamsService } from '../settings/teams/services/teams.service';
 import { MembersService } from './services/members.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -77,6 +85,10 @@ import {
     FormsModule,
     ReactiveFormsModule,
     MarkdownEditor,
+    TicketsBoard,
+    InputFeedback,
+    ArchivedTag,
+    WorkspaceBreadcrumb,
   ],
   providers: [MessageService],
   templateUrl: './tickets.html',
@@ -85,6 +97,7 @@ import {
 })
 export class Tickets implements OnInit {
   private readonly ticketsService = inject(TicketsService);
+  private readonly departmentService = inject(TicketDepartmentService);
   private readonly attachmentsService = inject(TicketAttachmentsService);
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
@@ -101,6 +114,30 @@ export class Tickets implements OnInit {
 
   // List state (server-side pagination / sort / filter)
   readonly tickets = signal<Ticket[]>([]);
+  readonly layout = toSignal(this.route.queryParamMap.pipe(map(params => params.get('view') === 'board' ? 'board' : 'list')), {
+    initialValue: this.route.snapshot.queryParamMap.get('view') === 'board' ? 'board' : 'list',
+  });
+  /** Set on /clients/:clientId/projects/:projectId/tickets: the list, board and counts show one project. */
+  readonly scopeProjectId = toSignal(this.route.paramMap.pipe(map(params => params.get('projectId'))), {
+    initialValue: this.route.snapshot.paramMap.get('projectId'),
+  });
+  readonly scopeClientId = toSignal(this.route.paramMap.pipe(map(params => params.get('clientId'))), {
+    initialValue: this.route.snapshot.paramMap.get('clientId'),
+  });
+
+  readonly boardRevision = signal(0);
+  readonly boardFilters = computed(() => ({
+    page: 1, limit: 20, view: this.view(), search: this.searchTerm() || undefined,
+    teamId: this.selectedTeamIds(), ticketStatusId: this.selectedStatusIds(),
+    priority: this.selectedPriorities(), assigneeId: this.assigneeFilter(),
+    projectId: this.scopeProjectId() ?? undefined,
+  }));
+
+  setLayout(layout: 'list' | 'board'): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { view: layout === 'board' ? 'board' : null }, queryParamsHandling: 'merge' });
+  }
+
+  onBoardMove(): void { this.refreshFacets(); }
   readonly totalRecords = signal(0);
   readonly rows = signal(10);
   readonly isLoading = signal(false);
@@ -110,6 +147,7 @@ export class Tickets implements OnInit {
   private sortField: string | null = 'createdAt';
   private sortOrder: 'asc' | 'desc' | null = 'desc';
   private ticketsRequestId = 0;
+  private facetsRequestId = 0;
 
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly searchTerm = signal('');
@@ -168,7 +206,21 @@ export class Tickets implements OnInit {
   readonly statuses = signal<Status[]>([]);
   readonly projects = signal<Project[]>([]);
   readonly teams = signal<Team[]>([]);
+  readonly departmentAdmin = signal(false);
+  readonly departmentLoaded = signal(false);
+  readonly noDepartments = computed(() => this.departmentLoaded() && !this.departmentAdmin() && this.teams().length === 0);
   readonly members = signal<OrgMember[]>([]);
+  readonly myIssues = signal(false);
+  readonly currentMemberId = computed(() => {
+    const userId = this.authService.currentUser()?.id;
+    const organizationId = this.authService.organizationId();
+    return this.members().find(
+      (member) => member.userId === userId && member.organizationId === organizationId,
+    )?.id ?? null;
+  });
+  readonly assigneeFilter = computed(() =>
+    this.myIssues() ? this.currentMemberId() ?? undefined : undefined,
+  );
 
   // Start of today, computed once — used to flag overdue due dates in the list.
   private readonly today = startOfToday();
@@ -194,7 +246,12 @@ export class Tickets implements OnInit {
     initialValue: this.ticketForm.getRawValue(),
   });
 
-  readonly canCreate = computed(() => !!this.composeValue().title?.trim());
+  readonly titleMaxLength = TICKET_TITLE_MAX_LENGTH;
+  readonly descriptionMaxLength = TICKET_DESCRIPTION_MAX_LENGTH;
+  readonly canCreate = computed(() => {
+    this.composeValue();
+    return this.departmentLoaded() && this.ticketForm.valid;
+  });
 
   readonly selectedStatus = computed(() => {
     const id = this.composeValue().ticketStatusId;
@@ -242,11 +299,14 @@ export class Tickets implements OnInit {
   /** Markdown mirrored into the compose editor (reset clears it; the editor writes back on save). */
   readonly composeDescription = computed(() => this.composeValue().description ?? '');
 
-  readonly filteredProjects = computed(() => {
-    const query = this.projectSearch().trim().toLowerCase();
-    const list = this.projects();
-    return query ? list.filter((project) => project.displayName.toLowerCase().includes(query)) : list;
-  });
+  readonly projectMatches = computed(() => filterProjects(this.projects(), this.projectSearch()));
+
+  /** Edit dialog options: active projects plus the ticket's archived project, if it has one. */
+  readonly editProjectOptions = computed(() =>
+    withCurrentProject(this.projects(), this.selectedTicket()?.project, this.authService.isAdmin()),
+  );
+  readonly editProjectReadOnly = computed(() => !this.authService.isAdmin() && !!this.selectedTicket()?.projectId &&
+    !this.projects().some(project => project.id === this.selectedTicket()?.projectId));
 
   /**
    * Auth-user IDs belonging to the currently selected compose team.
@@ -302,6 +362,14 @@ export class Tickets implements OnInit {
         this.applyFilters();
       });
 
+    // Moving between projects in the sidebar reuses this component; reload for the new scope.
+    toObservable(this.scopeProjectId)
+      .pipe(distinctUntilChanged(), skip(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.refreshFacets();
+        this.applyFilters();
+      });
+
   }
 
   ngOnInit(): void {
@@ -316,7 +384,7 @@ export class Tickets implements OnInit {
   private openCreateFromQueryParam(): void {
     if (!this.route.snapshot.queryParamMap.has('new')) return;
     // Strip the param so a refresh doesn't reopen the composer.
-    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    this.router.navigate([], { relativeTo: this.route, queryParams: { new: null }, queryParamsHandling: 'merge', replaceUrl: true });
     this.openCreateDialog();
   }
 
@@ -325,7 +393,7 @@ export class Tickets implements OnInit {
     const editId = this.route.snapshot.queryParamMap.get('edit');
     if (!editId) return;
     // Strip the param so a refresh doesn't reopen the editor.
-    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    this.router.navigate([], { relativeTo: this.route, queryParams: { edit: null }, queryParamsHandling: 'merge', replaceUrl: true });
     this.ticketsService
       .getById(editId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -337,8 +405,8 @@ export class Tickets implements OnInit {
 
   private buildTicketForm() {
     return new FormGroup({
-      title: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-      description: new FormControl('', { nonNullable: true }),
+      title: new FormControl('', { nonNullable: true, validators: [trimmedRequired, Validators.maxLength(TICKET_TITLE_MAX_LENGTH)] }),
+      description: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(TICKET_DESCRIPTION_MAX_LENGTH)] }),
       priority: new FormControl<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('MEDIUM', { nonNullable: true }),
       dueDate: new FormControl<Date | null>(null),
       ticketStatusId: new FormControl('', { nonNullable: true }),
@@ -378,6 +446,8 @@ export class Tickets implements OnInit {
         ticketStatusId: this.selectedStatusIds().length ? this.selectedStatusIds() : undefined,
         priority: this.selectedPriorities().length ? this.selectedPriorities() : undefined,
         teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
+        assigneeId: this.assigneeFilter(),
+        projectId: this.scopeProjectId() ?? undefined,
         sortField: this.sortField || undefined,
         sortOrder: this.sortOrder || undefined,
       })
@@ -401,21 +471,31 @@ export class Tickets implements OnInit {
 
   private applyFilters(): void {
     this.searchTerm.set(this.searchControl.value.trim());
+    this.first = 0;
+    if (this.layout() === 'board') return;
     const table = this.table();
     if (table) {
       table.reset();
     } else {
-      this.first = 0;
       this.fetchTickets();
     }
   }
 
   private refreshFacets(): void {
+    const requestId = ++this.facetsRequestId;
     this.ticketsService
-      .getFacets({ view: this.view(), search: this.searchControl.value.trim() || undefined })
+      .getFacets({
+        view: this.view(),
+        search: this.searchControl.value.trim() || undefined,
+        teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
+        assigneeId: this.assigneeFilter(),
+        projectId: this.scopeProjectId() ?? undefined,
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (facets) => this.facets.set(facets),
+        next: (facets) => {
+          if (requestId === this.facetsRequestId) this.facets.set(facets);
+        },
         error: (err: unknown) => console.error('Error loading ticket facets:', err),
       });
   }
@@ -491,6 +571,14 @@ export class Tickets implements OnInit {
     this.selectedTeamIds.update((ids) =>
       ids.includes(id) ? ids.filter((existing) => existing !== id) : [...ids, id],
     );
+    this.refreshFacets();
+    this.applyFilters();
+  }
+
+  toggleMyIssues(): void {
+    if (!this.currentMemberId()) return;
+    this.myIssues.update((enabled) => !enabled);
+    this.refreshFacets();
     this.applyFilters();
   }
 
@@ -500,6 +588,7 @@ export class Tickets implements OnInit {
 
   removeTeam(id: string): void {
     this.selectedTeamIds.update((ids) => ids.filter((existing) => existing !== id));
+    this.refreshFacets();
     this.applyFilters();
   }
 
@@ -507,10 +596,13 @@ export class Tickets implements OnInit {
     this.selectedStatusIds.set([]);
     this.selectedPriorities.set([]);
     this.selectedTeamIds.set([]);
+    this.refreshFacets();
     this.applyFilters();
   }
 
   private refreshList(resetToFirstPage: boolean): void {
+    this.boardRevision.update(revision => revision + 1);
+    if (this.layout() === 'board') return;
     const table = this.table();
     if (resetToFirstPage && table) {
       table.reset();
@@ -528,7 +620,7 @@ export class Tickets implements OnInit {
       categories: this.categoriesService.getAll(),
       statuses: this.statusesService.getAll(),
       projects: this.projectsService.getAll(),
-      teams: organizationId ? this.teamsService.getTeams(organizationId) : of([] as Team[]),
+      department: this.departmentService.load(),
       members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -537,7 +629,13 @@ export class Tickets implements OnInit {
           this.categories.set(res.categories);
           this.statuses.set(res.statuses);
           this.projects.set(res.projects);
-          this.teams.set(res.teams as Team[]);
+          this.teams.set(res.department.teams);
+          this.departmentAdmin.set(res.department.isAdmin);
+          this.departmentLoaded.set(true);
+          for (const form of [this.ticketForm, this.editTicketForm]) {
+            form.controls.teamId.clearValidators();
+            form.controls.teamId.updateValueAndValidity();
+          }
           this.members.set(res.members);
           this.isLoadingDropdowns.set(false);
         },
@@ -547,6 +645,14 @@ export class Tickets implements OnInit {
           this.isLoadingDropdowns.set(false);
         },
       });
+  }
+
+  projectName(project: NonNullable<Ticket['project']>): string {
+    return projectDisplayName(project);
+  }
+
+  clientName(project: NonNullable<Ticket['project']>): string {
+    return clientDisplayName(project.client) || 'No client';
   }
 
   getMemberNames(ticket: Ticket): string {
@@ -602,7 +708,8 @@ export class Tickets implements OnInit {
       dueDate: null,
       ticketStatusId: '',
       categoryId: '',
-      projectId: '',
+      // New tickets on a project's page start on that project.
+      projectId: this.scopeProjectId() ?? '',
       teamId: '',
       assigneeIds: [],
     });
@@ -632,6 +739,7 @@ export class Tickets implements OnInit {
   }
 
   setTeamValue(id: string): void {
+    if (!this.departmentAdmin() && !this.teams().some(team => team.id === id)) return;
     const next = this.composeValue().teamId === id ? '' : id;
     this.ticketForm.controls.teamId.setValue(next);
   }
@@ -676,8 +784,13 @@ export class Tickets implements OnInit {
     this.router.navigate(['/tickets', ticket.id], { state: { ticket } });
   }
 
+  canEditTicket(ticket: Ticket) { return this.authService.isAdmin() || ticket.createdById === this.authService.currentUser()?.id; }
+
   openEditDialog(ticket: Ticket): void {
+    if (!this.canEditTicket(ticket)) return;
     this.selectedTicket.set(ticket);
+    this.editTicketForm.controls.teamId.setValidators(!this.departmentAdmin() && ticket.teamId ? [Validators.required] : []);
+    this.editTicketForm.controls.teamId.updateValueAndValidity();
     this.editTicketForm.reset({
       title: ticket.title,
       description: ticket.description ?? '',
@@ -697,6 +810,8 @@ export class Tickets implements OnInit {
   }
 
   updateTicket(): void {
+    if (this.isUpdating()) return;
+    if (!this.departmentLoaded()) return;
     if (this.editTicketForm.invalid) {
       this.editTicketForm.markAllAsTouched();
       return;
@@ -716,9 +831,9 @@ export class Tickets implements OnInit {
       dueDate: formValue.dueDate ? serializeDueDate(formValue.dueDate) : null,
       ticketStatusId: formValue.ticketStatusId || null,
       categoryId: formValue.categoryId || null,
-      projectId: formValue.projectId || null,
+      projectId: this.editProjectReadOnly() ? undefined : formValue.projectId || null,
       teamId: formValue.teamId || null,
-      assigneeIds: formValue.assigneeIds,
+      assigneeIds: this.departmentAdmin() ? formValue.assigneeIds : undefined,
     };
 
     this.ticketsService.updateTicket(ticket.id, payload)
@@ -728,6 +843,7 @@ export class Tickets implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Ticket updated' });
           this.editDialogVisible.set(false);
           this.isUpdating.set(false);
+          this.refreshFacets();
           this.refreshList(false);
         },
         error: (err: unknown) => {
@@ -739,6 +855,8 @@ export class Tickets implements OnInit {
   }
 
   saveTicket(): void {
+    if (this.isSaving()) return;
+    if (!this.departmentLoaded()) return;
     if (this.ticketForm.invalid) {
       this.ticketForm.markAllAsTouched();
       return;
@@ -756,7 +874,7 @@ export class Tickets implements OnInit {
       categoryId: formValue.categoryId || undefined,
       projectId: formValue.projectId || undefined,
       teamId: formValue.teamId || undefined,
-      assigneeIds: formValue.assigneeIds,
+      assigneeIds: this.departmentAdmin() ? formValue.assigneeIds : undefined,
     };
 
     this.ticketsService.createTicket(payload)
@@ -766,6 +884,7 @@ export class Tickets implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Ticket created' });
           this.createDialogVisible.set(false);
           this.isSaving.set(false);
+          this.refreshFacets();
           this.refreshList(true);
         },
         error: (err: unknown) => {

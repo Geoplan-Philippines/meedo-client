@@ -46,28 +46,18 @@
 
     <div class="detail-body">
       <main class="detail-main">
-        <!-- Editable in place; commits on blur / Enter, reverts on Escape (stays an <h1> for a11y). -->
-        <h1
-          #titleEl
-          class="detail-title"
-          contenteditable="plaintext-only"
-          [textContent]="t.title"
-          spellcheck="false"
-          enterkeyhint="done"
-          (keydown.enter)="onTitleEnter($event, titleEl)"
-          (keydown.escape)="onTitleEscape(titleEl)"
-          (blur)="commitTitle(titleEl)"
-        ></h1>
+        @if (canEdit()) { <app-ticket-title-editor [value]="t.title" (titleSave)="commitTitle($event)" /> } @else { <h1>{{ t.title }}</h1> }
 
         <!-- Linear-style: always-on WYSIWYG markdown, autosaves on pause/blur. -->
-        <app-markdown-editor
+        @if (canEdit()) { <app-markdown-editor
           class="detail-desc"
           [value]="t.description ?? ''"
           [upload]="uploadAttachment"
           placeholder="Add description…"
           ariaLabel="Ticket description"
+          [maxLength]="descriptionMaxLength"
           (contentSave)="onDescriptionSave($event)"
-        />
+        /> } @else { <p>{{ t.description }}</p> }
 
         <div class="detail-thread">
           <app-ticket-thread [ticketId]="t.id" />
@@ -80,7 +70,7 @@
 
           <div class="aside-row">
             <span class="aside-key">Status</span>
-            <button class="aside-edit" type="button" (click)="statusPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="statusPop.toggle($event)" aria-haspopup="true">
               @if (t.ticketStatus) {
                 <span class="status-dot" [style.background-color]="safeStatusColor(t.ticketStatus.color)" aria-hidden="true"></span>
                 <span class="edit-val">{{ t.ticketStatus.name }}</span>
@@ -93,7 +83,7 @@
 
           <div class="aside-row">
             <span class="aside-key">Priority</span>
-            <button class="aside-edit" type="button" (click)="priorityPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="priorityPop.toggle($event)" aria-haspopup="true">
               <span [class]="priorityDotClass(t.priority)" aria-hidden="true"></span>
               <span class="edit-val">{{ t.priority | titlecase }}</span>
               <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
@@ -102,7 +92,7 @@
 
           <div class="aside-row">
             <span class="aside-key">Team</span>
-            <button class="aside-edit" type="button" (click)="teamPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="teamPop.toggle($event)" aria-haspopup="true">
               <span class="edit-val" [class.muted]="!teamName()">{{ teamName() ?? 'Set team' }}</span>
               <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
             </button>
@@ -130,13 +120,26 @@
         <section class="aside-group">
           <h2 class="aside-label">Details</h2>
 
+          @if (t.sla; as sla) {
+            <div class="aside-row aside-row--top">
+              <span class="aside-key">SLA</span>
+              <div class="sla-rows" [attr.title]="sla.policyName + (sla.scope === 'project' ? ' (project policy)' : ' (org default)')">
+                <span class="sla-row"><span class="sla-row-key">Response</span><app-sla-badge [sla]="sla" target="response" /></span>
+                <span class="sla-row"><span class="sla-row-key">Resolution</span><app-sla-badge [sla]="sla" target="resolution" /></span>
+              </div>
+            </div>
+          }
+
           <div class="aside-row aside-row--top">
             <span class="aside-key">Project</span>
-            <button class="aside-edit aside-edit--wrap" type="button" (click)="projectPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit aside-edit--wrap" type="button" [disabled]="!canEditProject()" (click)="projectPop.toggle($event)" aria-haspopup="true" aria-label="Ticket project">
               @if (t.project) {
                 <span class="project-val">
-                  <span class="project-name">{{ t.project.customerName }}</span>
-                  <span class="project-wo">{{ t.project.workOrderNumber }}</span>
+                  <span class="project-name">{{ projectName(t.project) }}</span>
+                  <span class="project-wo">
+                    {{ t.project.workOrderNumber }}
+                    @if (t.project.isArchived) { <app-archived-tag /> }
+                  </span>
                 </span>
               } @else {
                 <span class="edit-val muted">Set project</span>
@@ -144,9 +147,14 @@
             </button>
           </div>
 
+          <div class="aside-row" data-testid="ticket-client">
+            <span class="aside-key">Client</span>
+            <span>{{ clientName() }}</span>
+          </div>
+
           <div class="aside-row">
             <span class="aside-key">Category</span>
-            <button class="aside-edit" type="button" (click)="categoryPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="categoryPop.toggle($event)" aria-haspopup="true">
               <span class="edit-val" [class.muted]="!categoryName()">{{ categoryName() ?? 'Set category' }}</span>
               <i class="pi pi-angle-down edit-caret" aria-hidden="true"></i>
             </button>
@@ -323,13 +331,14 @@
           </button>
         </li>
       }
-      @for (p of filteredProjects(); track p.id) {
+      @for (p of projectMatches().items; track p.id) {
         <li>
           <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.projectId === p.id" (click)="setProject(p); projectPop.hide()">
             <span class="pick-stack">
-              <span class="pick-label">{{ p.customerName }}</span>
-              <span class="pick-sub">{{ p.workOrderNumber }}</span>
+              <span class="pick-label">{{ p.name }}</span>
+              <span class="pick-sub">{{ p.clientName || 'No client' }} · {{ p.workOrderNumber }}</span>
             </span>
+            @if (p.isArchived) { <app-archived-tag /> }
             @if (ticket()?.projectId === p.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
           </button>
         </li>
@@ -337,6 +346,11 @@
         <li class="pick-empty">No projects</li>
       }
     </ul>
+    @if (projectMatches().total > projectMatches().items.length) {
+      <p class="pick-empty" aria-live="polite">
+        Showing {{ projectMatches().items.length }} of {{ projectMatches().total }}. Type to narrow.
+      </p>
+    }
   </p-popover>
 
   <p-popover #categoryPop styleClass="detail-pop">
@@ -414,8 +428,8 @@
 } @else {
   <div class="detail-missing">
     <div class="missing-icon" aria-hidden="true"><i class="pi pi-inbox"></i></div>
-    <p class="missing-title">Ticket not found</p>
-    <p class="missing-body">It may have been removed, or the link is out of date.</p>
+    <p class="missing-title">Ticket not available</p>
+    <p class="missing-body">It may have been removed, or you may not have access to its department.</p>
     <a routerLink="/tickets" class="missing-link">
       <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
     </a>

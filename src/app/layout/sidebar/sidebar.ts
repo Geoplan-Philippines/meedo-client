@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { LayoutService } from '../layout.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { ClientTree } from '../../modules/clients/client-tree/client-tree';
 
 interface NavItem {
   label: string;
@@ -19,7 +21,7 @@ interface NavSection {
 
 @Component({
   selector: 'app-sidebar',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ClientTree],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +34,10 @@ export class Sidebar {
   layoutService = inject(LayoutService);
   private router = inject(Router);
   private authService = inject(AuthService);
+  readonly desktop = toSignal(
+    inject(BreakpointObserver).observe('(min-width: 768px)').pipe(map((state) => state.matches)),
+    { initialValue: false },
+  );
 
   // Tracks the active URL; updated on every successful navigation.
   // Used by isActive() to drive longest-prefix-wins highlight logic.

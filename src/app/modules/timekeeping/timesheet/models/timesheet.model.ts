@@ -19,13 +19,21 @@ export type TimesheetWorkType =
 
 export interface TimesheetProject {
   id: string;
+  /** Shown name from the projects lookup (displayName, else quote subject, else WO number). */
+  name?: string;
+  /** Admin-set name (entry includes); null means the Apptivo name is shown. */
+  displayName?: string | null;
+  quoteSubject?: string | null;
   customerName?: string;
   workOrderNumber: string;
   status: string;
   reportedDate?: string | null;
-  displayName?: string;
+  isArchived?: boolean;
+  /** Picker text built by the client: "Client — Project name · WO number". */
+  label?: string;
   client?: {
     customerName?: string;
+    displayName?: string | null;
   } | null;
 }
 
@@ -48,8 +56,11 @@ export interface TimesheetEntry {
   id: string;
   organizationId: string;
   userId: string;
-  projectId: string;
-  project?: TimesheetProject;
+  projectId: string | null;
+  ticketId?: string | null;
+  description?: string | null;
+  ticket?: { id: string; ticketNumber: number; title: string } | null;
+  project?: TimesheetProject | null;
   user?: TimesheetUser;
   workDate: string;
   hours: number;
@@ -72,13 +83,20 @@ export interface TimesheetEntry {
   updatedAt: string;
 }
 
+export interface TimesheetTicket {
+  id: string; ticketNumber: number; title: string; projectId: string | null;
+  project?: { id: string; displayName?: string | null; quoteSubject?: string | null; workOrderNumber: string } | null;
+}
+
 export interface TimesheetEntryPayload {
-  projectId: string;
+  projectId?: string | null;
+  ticketId?: string | null;
+  description?: string;
   workDate: string;
   hours: number;
   location?: string;
   workType?: TimesheetWorkType;
-  task: string;
+  task?: string;
   projectDescription?: string | null;
   isOvertime?: boolean;
   isNightDifferential?: boolean;
