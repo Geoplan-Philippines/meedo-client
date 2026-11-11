@@ -1,5 +1,0 @@
-:host { display: block; }
-nav { display: flex; gap: .5rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface); }
-a { padding: .5rem .75rem; border-radius: 6px; color: var(--text-body); text-decoration: none; font-weight: 600; }
-a.active { background: var(--secondary); color: var(--secondary-foreground); }
-a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

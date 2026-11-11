@@ -11,7 +11,7 @@ import {
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, ParamMap } from '@angular/router';
 import { forkJoin, of, debounceTime, distinctUntilChanged, finalize, catchError, map, skip, switchMap } from 'rxjs';
 
 import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
@@ -33,7 +33,7 @@ import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
 import { ArchivedTag } from '../../shared/ui/archived-tag/archived-tag';
 import { WorkspaceBreadcrumb } from '../clients/workspace-breadcrumb/workspace-breadcrumb';
 import { clientDisplayName, projectDisplayName } from '../../shared/utils/display-name.utils';
-import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from './tickets.constants';
+import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH, MY_TICKETS_QUERY_PARAMS } from './tickets.constants';
 import { trimmedRequired } from './utils/ticket-validation';
 import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
@@ -210,7 +210,12 @@ export class Tickets implements OnInit {
   readonly departmentLoaded = signal(false);
   readonly noDepartments = computed(() => this.departmentLoaded() && !this.departmentAdmin() && this.teams().length === 0);
   readonly members = signal<OrgMember[]>([]);
-  readonly myIssues = signal(false);
+  private readonly membersLoaded = signal(false);
+  /** "My issues" lives in the URL (?assignee=me) so the sidebar's "My tickets" can open it. */
+  private readonly myIssues$ = this.route.queryParamMap.pipe(map(isMyTickets));
+  readonly myIssues = toSignal(this.myIssues$, { initialValue: isMyTickets(this.route.snapshot.queryParamMap) });
+  /** True while ?assignee=me waits for the member ID; loading now would briefly show everyone's tickets. */
+  readonly awaitingMember = computed(() => this.myIssues() && !this.membersLoaded());
   readonly currentMemberId = computed(() => {
     const userId = this.authService.currentUser()?.id;
     const organizationId = this.authService.organizationId();
@@ -362,7 +367,7 @@ export class Tickets implements OnInit {
         this.applyFilters();
       });
 
-    // Moving between projects in the sidebar reuses this component; reload for the new scope.
+    // Moving between projects reuses this component; reload for the new scope.
     toObservable(this.scopeProjectId)
       .pipe(distinctUntilChanged(), skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -370,6 +375,13 @@ export class Tickets implements OnInit {
         this.applyFilters();
       });
 
+    // The My issues toggle and the sidebar's "My tickets" / "Tickets" links only change the URL.
+    this.myIssues$
+      .pipe(distinctUntilChanged(), skip(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.refreshFacets();
+        this.applyFilters();
+      });
   }
 
   ngOnInit(): void {
@@ -437,6 +449,8 @@ export class Tickets implements OnInit {
   private fetchTickets(): void {
     const requestId = ++this.ticketsRequestId;
     this.isLoading.set(true);
+    // loadDropdowns() reloads once the member ID is known.
+    if (this.awaitingMember()) return;
     this.ticketsService
       .getAll({
         page: Math.floor(this.first / this.rows()) + 1,
@@ -483,6 +497,7 @@ export class Tickets implements OnInit {
 
   private refreshFacets(): void {
     const requestId = ++this.facetsRequestId;
+    if (this.awaitingMember()) return;
     this.ticketsService
       .getFacets({
         view: this.view(),
@@ -577,9 +592,11 @@ export class Tickets implements OnInit {
 
   toggleMyIssues(): void {
     if (!this.currentMemberId()) return;
-    this.myIssues.update((enabled) => !enabled);
-    this.refreshFacets();
-    this.applyFilters();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { assignee: this.myIssues() ? null : MY_TICKETS_QUERY_PARAMS.assignee },
+      queryParamsHandling: 'merge',
+    });
   }
 
   isTeamSelected(id: string): boolean {
@@ -638,13 +655,27 @@ export class Tickets implements OnInit {
           }
           this.members.set(res.members);
           this.isLoadingDropdowns.set(false);
+          this.resolveMyIssues();
         },
         error: (err: unknown) => {
           console.error('Error loading dropdowns:', err);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load form data' });
           this.isLoadingDropdowns.set(false);
+          this.resolveMyIssues();
         },
       });
+  }
+
+  /** Loads what ?assignee=me held back, or drops the param when the user has no member ID here. */
+  private resolveMyIssues(): void {
+    this.membersLoaded.set(true);
+    if (!this.myIssues()) return;
+    if (this.currentMemberId()) {
+      this.refreshFacets();
+      this.applyFilters();
+    } else {
+      void this.router.navigate([], { relativeTo: this.route, queryParams: { assignee: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
   }
 
   projectName(project: NonNullable<Ticket['project']>): string {
@@ -894,4 +925,8 @@ export class Tickets implements OnInit {
         },
       });
   }
+}
+
+function isMyTickets(params: ParamMap): boolean {
+  return params.get('assignee') === MY_TICKETS_QUERY_PARAMS.assignee;
 }

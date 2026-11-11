@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -19,7 +18,6 @@ import { Team } from './models/teams.model';
 @Component({
   selector: 'app-teams',
   imports: [
-    RouterLink,
     TableModule,
     ButtonModule,
     DialogModule,

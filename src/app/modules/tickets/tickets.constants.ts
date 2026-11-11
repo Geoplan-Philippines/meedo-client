@@ -6,3 +6,6 @@ export const THREAD_PAGE_SIZE = 50;
 export const TICKET_TITLE_MAX_LENGTH = 200;
 export const TICKET_DESCRIPTION_MAX_LENGTH = 5000;
 export const TICKET_COMMENT_MAX_LENGTH = 5000;
+
+/** Query params for the tickets list scoped to the signed-in member ("My tickets" in the sidebar). */
+export const MY_TICKETS_QUERY_PARAMS = { assignee: 'me' } as const;

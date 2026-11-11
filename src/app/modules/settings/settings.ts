@@ -12,7 +12,6 @@ interface SettingsCard {
   description: string;
   route?: string;
   icon: string;
-  adminOnly?: boolean;
 }
 
 interface SettingsGroup {
@@ -33,19 +32,12 @@ export class Settings implements OnInit {
 
   readonly canManageUsers = signal(false);
 
+  // Clients, Users and Teams live in the sidebar's Workspace section, not here.
   readonly groups = signal<SettingsGroup[]>([
     {
       label: 'General',
       cards: [
         { label: 'Organization', description: 'Company info and branding', icon: 'pi-globe' },
-        {
-          label: 'Users',
-          description: 'Members, roles and permissions',
-          icon: 'pi-users',
-          route: 'users',
-          adminOnly: true,
-        },
-        { label: 'Teams', description: 'Manage your teams', route: 'teams', icon: 'pi-sitemap' },
       ],
     },
     {
@@ -57,13 +49,6 @@ export class Settings implements OnInit {
           route: 'attendance',
           icon: 'pi-clock',
         },
-      ],
-    },
-    {
-      label: 'Workspace',
-      cards: [
-        { label: 'Projects', description: 'Active and archived projects', route: 'projects', icon: 'pi-briefcase' },
-        { label: 'Customers', description: 'Customer accounts and project counts', route: 'customers', icon: 'pi-building' },
       ],
     },
     {

@@ -1,7 +1,7 @@
 <main class="dashboard">
   <header class="page-header">
     <div>
-      <h1 class="page-title">Dashboard</h1>
+      <h1 class="page-title">Ticket overview</h1>
       <p class="page-subtitle">The ticket queue at a glance.</p>
     </div>
     <div class="header-actions">
@@ -20,7 +20,7 @@
     <section class="panel error-panel" role="alert">
       <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
       <div>
-        <h2 class="panel-title">Couldn't load the dashboard</h2>
+        <h2 class="panel-title">Couldn't load the ticket overview</h2>
         <p class="muted">Something went wrong fetching ticket data.</p>
       </div>
       <button type="button" class="view-btn" (click)="load()">
@@ -29,7 +29,7 @@
       </button>
     </section>
   } @else if (isLoading()) {
-    <p class="sr-only" role="status">Loading dashboard…</p>
+    <p class="sr-only" role="status">Loading ticket overview…</p>
 
     <section class="metric-strip" aria-hidden="true">
       @for (i of skeletonMetrics; track i) {

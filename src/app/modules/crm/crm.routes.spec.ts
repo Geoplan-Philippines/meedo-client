@@ -7,7 +7,7 @@ import { crmRoutes } from './crm.routes';
 import { CrmService } from './services/crm.service';
 import { CampaignsService } from './services/campaigns.service';
 
-describe('CRM lazy shell routing', () => {
+describe('Website lazy routing', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [
     provideRouter([{ path: 'crm', children: crmRoutes }]),
     { provide: AuthService, useValue: { isAdmin: () => false } },
@@ -15,15 +15,16 @@ describe('CRM lazy shell routing', () => {
     { provide: CampaignsService, useValue: { list: () => of({ data: [], meta: { total: 0, lastPage: 0 } }) } },
   ] }));
   it.each([
-    ['/crm/leads', 'app-leads', 'Leads'],
-    ['/crm/newsletter/subscribers', 'app-subscribers', 'Subscribers'],
-    ['/crm/newsletter/campaigns', 'app-campaign-list', 'Campaigns'],
-  ])('renders %s with three tabs and the active member-visible section', async (url, selector, label) => {
+    ['/crm/leads', 'app-leads'],
+    ['/crm/newsletter/subscribers', 'app-subscribers'],
+    ['/crm/newsletter/campaigns', 'app-campaign-list'],
+  ])('renders %s without a top tab bar', async (url, selector) => {
     const harness = await RouterTestingHarness.create(url);
-    const root = harness.routeNativeElement!;
-    const tabs = root.querySelectorAll('nav[aria-label="CRM sections"] a');
-    expect(Array.from(tabs).map(tab => tab.textContent?.trim())).toEqual(['Leads', 'Subscribers', 'Campaigns']);
-    expect(root.querySelector(selector)).toBeTruthy();
-    expect(root.querySelector('nav a[aria-current=page]')?.textContent).toBe(label);
+    expect(harness.routeNativeElement?.matches(selector)).toBe(true);
+    const host = harness.fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('nav')).toBeNull();
+    for (const section of ['/crm/leads', '/crm/newsletter/subscribers', '/crm/newsletter/campaigns']) {
+      expect(host.querySelector(`a[href="${section}"]`)).toBeNull();
+    }
   }, 15000);
 });

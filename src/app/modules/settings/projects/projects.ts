@@ -133,9 +133,6 @@ export class Projects implements OnInit {
   ]);
 
   ngOnInit(): void {
-    (this.route.queryParamMap ?? of(this.route.snapshot.queryParamMap))
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(params => { if (this.isAdmin() && params.has('create')) this.creating.set(true); });
     // Older links used /…?clientId=; the client now lives in the path.
     const queryClientId = this.route.snapshot.queryParamMap.get('clientId');
     if (queryClientId && !this.routeClientId()) this.filters.controls.clientId.setValue(queryClientId);

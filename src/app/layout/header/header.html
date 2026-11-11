@@ -16,6 +16,21 @@
       width="455"
       height="148"
     />
+
+    <!-- Desktop sidebar collapse; small screens use the menu button above instead. -->
+    <span class="header-icon-btn hidden md:inline-flex shrink-0">
+      <button
+        pButton
+        type="button"
+        [text]="true"
+        severity="secondary"
+        [icon]="layoutService.sidebarCollapsed() ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"
+        (click)="layoutService.toggleSidebarCollapsed()"
+        [attr.aria-label]="layoutService.sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+        [attr.aria-expanded]="!layoutService.sidebarCollapsed()"
+        aria-controls="app-sidebar"
+      ></button>
+    </span>
   </div>
 
   <div class="header-actions flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">

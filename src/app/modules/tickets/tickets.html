@@ -157,8 +157,10 @@
       </div>
     }
     @if (layout() === 'board') {
-      <app-tickets-board [statuses]="statuses()" [filters]="boardFilters()" [revision]="boardRevision()"
-        (openTicket)="openDetail($event)" (moved)="onBoardMove()" />
+      @if (!awaitingMember()) {
+        <app-tickets-board [statuses]="statuses()" [filters]="boardFilters()" [revision]="boardRevision()"
+          (openTicket)="openDetail($event)" (moved)="onBoardMove()" />
+      }
     } @else {
       <p-table
         #dt

@@ -3,7 +3,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -31,7 +30,6 @@ type DialogMode = 'create' | 'edit';
 @Component({
   selector: 'app-users',
   imports: [
-    RouterLink,
     TableModule,
     ButtonModule,
     DialogModule,

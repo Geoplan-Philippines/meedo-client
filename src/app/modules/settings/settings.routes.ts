@@ -33,7 +33,7 @@ export const settingsRoutes: Routes = [
     component: Users,
     canActivate: [orgAdminGuard],
   },
-  // Admin entry points reuse the same Projects and Customers screens.
+  // Flat projects list. No longer in Settings or the sidebar, but project notifications and old links open it.
   {
     path: 'projects',
     loadComponent: () => import('./projects/projects').then((m) => m.Projects),

@@ -41,10 +41,21 @@ describe('Tickets', () => {
     updateTicket: ReturnType<typeof vi.fn<TicketsService['updateTicket']>>;
   };
   let department: TicketDepartmentOptions;
+  let membersService: { getMembers: ReturnType<typeof vi.fn<MembersService['getMembers']>> };
   const admin = signal(true);
+
+  /** Rebuilds the component so it reads the current URL and services on init. */
+  const recreate = async () => {
+    fixture.destroy();
+    fixture = TestBed.createComponent(Tickets);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
 
   beforeEach(async () => {
     department = { isAdmin: true, teams: [] };
+    membersService = { getMembers: vi.fn<MembersService['getMembers']>().mockReturnValue(of([member])) };
     admin.set(true);
     service = {
       getAll: vi.fn<TicketsService['getAll']>().mockReturnValue(of({
@@ -64,7 +75,7 @@ describe('Tickets', () => {
         { provide: AuthService, useValue: {
           isAdmin: admin, currentUser: () => ({ id: member.userId }), organizationId: () => member.organizationId,
         } },
-        { provide: MembersService, useValue: { getMembers: () => of([member]) } },
+        { provide: MembersService, useValue: membersService },
         { provide: TeamsService, useValue: { getTeams: () => of([]), listTeamMembers: () => of([]) } },
         { provide: ProjectsService, useValue: { getAll: () => of([]) } },
         { provide: StatusesService, useValue: { getAll: () => of([]) } },
@@ -216,9 +227,11 @@ describe('Tickets', () => {
     component.onLazyLoad({ first: 20, rows: 10 });
     expect(service.getAll).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 }));
 
+    const router = TestBed.inject(Router);
     const button = fixture.nativeElement.querySelector('.my-issues-toggle') as HTMLButtonElement;
     button.click();
     await fixture.whenStable();
+    expect(router.parseUrl(router.url).queryParams).toEqual({ assignee: 'me' });
     expect(service.getAll).toHaveBeenLastCalledWith(expect.objectContaining({
       page: 1, assigneeId: member.id, view: 'active', search: 'inspection',
       teamId: ['team-1', 'team-2'], ticketStatusId: ['status-id'], priority: ['HIGH'],
@@ -231,9 +244,59 @@ describe('Tickets', () => {
     component.onLazyLoad({ first: 30, rows: 10 });
     button.click();
     await fixture.whenStable();
+    expect(router.parseUrl(router.url).queryParams).toEqual({});
     expect(service.getAll).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, assigneeId: undefined }));
     expect(service.getFacets).toHaveBeenLastCalledWith(expect.objectContaining({ assigneeId: undefined }));
     expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('follows the sidebar between My tickets (?assignee=me) and Tickets without a remount', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/?assignee=me');
+    await fixture.whenStable();
+    expect(component.myIssues()).toBe(true);
+    expect(service.getAll).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, assigneeId: member.id }));
+    expect(service.getFacets).toHaveBeenLastCalledWith(expect.objectContaining({ assigneeId: member.id }));
+
+    await router.navigateByUrl('/');
+    await fixture.whenStable();
+    expect(component.myIssues()).toBe(false);
+    expect(service.getAll).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, assigneeId: undefined }));
+    expect(service.getFacets).toHaveBeenLastCalledWith(expect.objectContaining({ assigneeId: undefined }));
+  });
+
+  it('opens from ?assignee=me and waits for the member ID instead of loading every ticket first', async () => {
+    const router = TestBed.inject(Router);
+    const members$ = new Subject<OrgMember[]>();
+    membersService.getMembers.mockReturnValue(members$);
+    await router.navigateByUrl('/?assignee=me');
+    service.getAll.mockClear();
+    service.getFacets.mockClear();
+    await recreate();
+    expect(component.myIssues()).toBe(true);
+    expect(component.isLoading()).toBe(true);
+    expect(service.getAll).not.toHaveBeenCalled();
+    expect(service.getFacets).not.toHaveBeenCalled();
+
+    members$.next([member]);
+    members$.complete();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(service.getAll).toHaveBeenCalled();
+    expect(service.getAll.mock.calls.every(([params]) => params.assigneeId === member.id)).toBe(true);
+    expect(service.getFacets).toHaveBeenLastCalledWith(expect.objectContaining({ assigneeId: member.id }));
+    const button = fixture.nativeElement.querySelector('.my-issues-toggle') as HTMLButtonElement;
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('drops ?assignee=me and lists every ticket when the user has no member ID in this organization', async () => {
+    const router = TestBed.inject(Router);
+    membersService.getMembers.mockReturnValue(of([{ ...member, userId: 'other-user' }]));
+    await router.navigateByUrl('/?assignee=me&keep=1');
+    await recreate();
+    expect(router.parseUrl(router.url).queryParams).toEqual({ keep: '1' });
+    expect(component.myIssues()).toBe(false);
+    expect(service.getAll).toHaveBeenLastCalledWith(expect.objectContaining({ assigneeId: undefined }));
   });
 
   it('hides My issues when membership is unavailable or belongs to another user or organization', async () => {
@@ -247,8 +310,9 @@ describe('Tickets', () => {
     }
   });
 
-  it('refreshes facet scope when teams are selected, removed, or cleared', () => {
+  it('refreshes facet scope when teams are selected, removed, or cleared', async () => {
     component.toggleMyIssues();
+    await fixture.whenStable();
     component.toggleTeam('team-1');
     expect(service.getFacets).toHaveBeenLastCalledWith(expect.objectContaining({ teamId: ['team-1'], assigneeId: member.id }));
     component.toggleTeam('team-2');
@@ -261,8 +325,9 @@ describe('Tickets', () => {
     expect(service.getFacets).toHaveBeenLastCalledWith(expect.objectContaining({ teamId: undefined, assigneeId: member.id }));
   });
 
-  it('refreshes facets after creating and editing a ticket', () => {
+  it('refreshes facets after creating and editing a ticket', async () => {
     component.toggleMyIssues();
+    await fixture.whenStable();
     service.getFacets.mockClear();
     component.ticketForm.controls.title.setValue('New ticket');
     component.saveTicket();
@@ -276,11 +341,12 @@ describe('Tickets', () => {
     expect(service.getFacets).toHaveBeenCalledTimes(2);
   });
 
-  it('does not replace scoped facets with a late response from the previous scope', () => {
+  it('does not replace scoped facets with a late response from the previous scope', async () => {
     const previous = new Subject<TicketFacets>();
     service.getFacets.mockReturnValueOnce(previous);
     component.toggleTeam('team-1');
     component.toggleMyIssues();
+    await fixture.whenStable();
     previous.next({ ...facets, views: { ...facets.views, all: 99 } });
     expect(component.facets()).toEqual(facets);
     previous.complete();

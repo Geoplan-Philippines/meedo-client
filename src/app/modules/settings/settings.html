@@ -7,18 +7,16 @@
       <h2 class="text-lg font-medium text-heading mb-3">{{ group.label }}</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         @for (card of group.cards; track card.label) {
-          @if (!card.adminOnly || canManageUsers()) {
-            <a
-              [routerLink]="card.route"
-              class="group bg-surface border border-border rounded-lg p-6 flex flex-col items-center text-center gap-3 transition-all hover:border-primary hover:shadow-sm cursor-pointer"
-            >
-              <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-secondary text-secondary-foreground">
-                <i [class]="'pi ' + card.icon + ' text-2xl'"></i>
-              </span>
-              <h3 class="text-base font-medium text-primary group-hover:text-primary-hover">{{ card.label }}</h3>
-              <p class="text-sm text-body/70">{{ card.description }}</p>
-            </a>
-          }
+          <a
+            [routerLink]="card.route"
+            class="group bg-surface border border-border rounded-lg p-6 flex flex-col items-center text-center gap-3 transition-all hover:border-primary hover:shadow-sm cursor-pointer"
+          >
+            <span class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-secondary text-secondary-foreground">
+              <i [class]="'pi ' + card.icon + ' text-2xl'"></i>
+            </span>
+            <h3 class="text-base font-medium text-primary group-hover:text-primary-hover">{{ card.label }}</h3>
+            <p class="text-sm text-body/70">{{ card.description }}</p>
+          </a>
         }
       </div>
     </section>
