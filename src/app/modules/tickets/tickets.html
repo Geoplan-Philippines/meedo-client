@@ -234,6 +234,7 @@
               @if (ticket.project; as project) {
                 <span class="project-cell">
                   <span class="project-customer" [title]="projectName(project)">{{ projectName(project) }}</span>
+                  <span class="project-wo" data-testid="ticket-client">{{ clientName(project) }}</span>
                   <span class="project-wo">{{ project.workOrderNumber }}</span>
                 </span>
               } @else {
@@ -742,6 +743,13 @@
     <div class="form-row">
       <div class="form-field form-field--flex">
         <label class="form-label" for="edit-ticket-project">Project</label>
+        @if (editProjectReadOnly()) {
+          @if (selectedTicket()?.project; as project) {
+            <div data-testid="edit-ticket-project-context">
+              <span>{{ projectName(project) }}</span> · <span>{{ clientName(project) }}</span>
+            </div>
+          }
+        } @else {
         <p-select inputId="edit-ticket-project" formControlName="projectId" [options]="editProjectOptions()" optionLabel="label" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="label" [virtualScroll]="true" [virtualScrollItemSize]="44" [showClear]="true" appendTo="body">
           <ng-template #selectedItem let-project>
             <span class="project-option">
@@ -759,6 +767,7 @@
             </span>
           </ng-template>
         </p-select>
+        }
       </div>
       <div class="form-field form-field--flex">
         <label class="form-label" for="edit-ticket-team">Team (optional)</label>

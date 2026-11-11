@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, Subject } from 'rxjs';
@@ -40,9 +41,11 @@ describe('Tickets', () => {
     updateTicket: ReturnType<typeof vi.fn<TicketsService['updateTicket']>>;
   };
   let department: TicketDepartmentOptions;
+  const admin = signal(true);
 
   beforeEach(async () => {
     department = { isAdmin: true, teams: [] };
+    admin.set(true);
     service = {
       getAll: vi.fn<TicketsService['getAll']>().mockReturnValue(of({
         statusCode: 200, message: 'Success', data: [],
@@ -59,7 +62,7 @@ describe('Tickets', () => {
         { provide: TicketsService, useValue: service },
         { provide: TicketDepartmentService, useValue: { load: () => of(department) } },
         { provide: AuthService, useValue: {
-          isAdmin: () => true, currentUser: () => ({ id: member.userId }), organizationId: () => member.organizationId,
+          isAdmin: admin, currentUser: () => ({ id: member.userId }), organizationId: () => member.organizationId,
         } },
         { provide: MembersService, useValue: { getMembers: () => of([member]) } },
         { provide: TeamsService, useValue: { getTeams: () => of([]), listTeamMembers: () => of([]) } },
@@ -80,6 +83,33 @@ describe('Tickets', () => {
     const button = fixture.nativeElement.querySelector('.my-issues-toggle') as HTMLButtonElement;
     expect(button.textContent).toContain('My issues');
     expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('renders project and client from the ticket response when the project picker is empty', async () => {
+    component.tickets.set([{ ...ticket, project: { id: 'restricted', displayName: 'Restricted rollout',
+      workOrderNumber: null, customerName: null, client: { displayName: 'Acme client', customerName: null } } }]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.projects()).toEqual([]);
+    expect(fixture.nativeElement.querySelector('.project-cell').textContent).toContain('Restricted rollout');
+    expect(fixture.nativeElement.querySelector('[data-testid="ticket-client"]').textContent).toContain('Acme client');
+    expect(fixture.nativeElement.querySelector('.project-cell a')).toBeNull();
+  });
+
+  it('keeps a non-member creator project read-only in the edit dialog and omits its link from PATCH', async () => {
+    admin.set(false);
+    component.openEditDialog({ ...ticket, createdById: member.userId, projectId: 'restricted',
+      project: { id: 'restricted', displayName: 'Restricted rollout', workOrderNumber: null, customerName: null,
+        client: { displayName: 'Acme client', customerName: null } } });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.editProjectReadOnly()).toBe(true);
+    const context = fixture.nativeElement.querySelector('[data-testid="edit-ticket-project-context"]');
+    expect(context.textContent).toContain('Restricted rollout');
+    expect(context.textContent).toContain('Acme client');
+    expect(fixture.nativeElement.querySelector('#edit-ticket-project')).toBeNull();
+    component.updateTicket();
+    expect(service.updateTicket).toHaveBeenCalledWith(ticket.id, expect.objectContaining({ projectId: undefined }));
   });
 
   it('lets members create without a department and keeps existing department clearing protected in edit', () => {

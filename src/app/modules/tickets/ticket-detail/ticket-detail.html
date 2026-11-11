@@ -132,7 +132,7 @@
 
           <div class="aside-row aside-row--top">
             <span class="aside-key">Project</span>
-            <button class="aside-edit aside-edit--wrap" type="button" (click)="projectPop.toggle($event)" aria-haspopup="true">
+            <button class="aside-edit aside-edit--wrap" type="button" [disabled]="!canEditProject()" (click)="projectPop.toggle($event)" aria-haspopup="true" aria-label="Ticket project">
               @if (t.project) {
                 <span class="project-val">
                   <span class="project-name">{{ projectName(t.project) }}</span>
@@ -145,6 +145,11 @@
                 <span class="edit-val muted">Set project</span>
               }
             </button>
+          </div>
+
+          <div class="aside-row" data-testid="ticket-client">
+            <span class="aside-key">Client</span>
+            <span>{{ clientName() }}</span>
           </div>
 
           <div class="aside-row">

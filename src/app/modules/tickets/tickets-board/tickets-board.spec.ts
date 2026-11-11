@@ -119,6 +119,18 @@ describe('TicketsBoard', () => {
     expect(service.updateTicket).toHaveBeenCalledWith(ticket.id, { ticketStatusId: 'done' });
   });
 
+  it('renders project and client from the ticket without a project lookup or navigation link', async () => {
+    board.pages.update(pages => ({ ...pages, todo: { ...pages['todo'], tickets: [{ ...ticket,
+      project: { id: 'restricted', displayName: 'Restricted rollout', workOrderNumber: null, customerName: null,
+        client: { displayName: 'Acme client', customerName: null } } }] } }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const context = fixture.nativeElement.querySelector('[data-testid="ticket-project-context"]');
+    expect(context.textContent).toContain('Restricted rollout');
+    expect(context.textContent).toContain('Acme client');
+    expect(context.querySelector('a,button')).toBeNull();
+  });
+
   it('does not make a request for same-column drops or drops outside the board', () => {
     board.move(ticket, 'todo');
     board.drop({ isPointerOverContainer: false } as CdkDragDrop<string | null, string | null, Ticket>);

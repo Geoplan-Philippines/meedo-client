@@ -39,3 +39,4 @@ button:disabled, select:disabled { opacity: .6; cursor: wait; }
 .cdk-drop-list-receiving { outline: 2px solid var(--ring); outline-offset: -2px; }
 .cdk-drag-preview { box-sizing: border-box; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.card-project { display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.75rem; color: var(--text-body); overflow-wrap: anywhere; }

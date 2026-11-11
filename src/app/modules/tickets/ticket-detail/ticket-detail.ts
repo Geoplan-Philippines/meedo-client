@@ -28,7 +28,7 @@ import { StatusesService } from '../services/statuses.service';
 import { ProjectsService, filterProjects, withCurrentProject } from '../services/projects.service';
 import { SlaBadge } from '../sla-badge/sla-badge';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
-import { projectDisplayName } from '../../../shared/utils/display-name.utils';
+import { clientDisplayName, projectDisplayName } from '../../../shared/utils/display-name.utils';
 import { MembersService } from '../services/members.service';
 import { TeamsService } from '../../settings/teams/services/teams.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -308,6 +308,9 @@ export class TicketDetail {
 
   // ─── Inline property edits (optimistic + PATCH) ─────────
   readonly canEdit = computed(() => this.authService.isAdmin() || this.ticket()?.createdById === this.authService.currentUser()?.id);
+  readonly canEditProject = computed(() => this.canEdit() && (this.authService.isAdmin() ||
+    !this.ticket()?.projectId || this.projects().some(project => project.id === this.ticket()?.projectId)));
+  readonly clientName = computed(() => clientDisplayName(this.ticket()?.project?.client) || 'No client');
 
   private applyPatch(payload: UpdateTicketPayload, optimistic: Partial<Ticket>): void {
     if (!this.canEdit()) return;
@@ -349,6 +352,7 @@ export class TicketDetail {
   }
 
   setProject(project: Project): void {
+    if (!this.canEditProject() || !this.projectMatches().items.some(option => option.id === project.id)) return;
     this.applyPatch(
       { projectId: project.id },
       {
@@ -371,6 +375,7 @@ export class TicketDetail {
   }
 
   clearProject(): void {
+    if (!this.canEditProject()) return;
     this.applyPatch({ projectId: null }, { projectId: undefined, project: null });
   }
 

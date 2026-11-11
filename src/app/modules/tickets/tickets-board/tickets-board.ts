@@ -10,6 +10,7 @@ import { Ticket, TicketFacets, TicketListParams } from '../models/ticket.model';
 import { TicketsService } from '../services/tickets.service';
 import { extraAssigneeCount, safeStatusColor, visibleAssignees } from '../utils/ticket.utils';
 import { SlaBadge } from '../sla-badge/sla-badge';
+import { clientDisplayName, projectDisplayName } from '../../../shared/utils/display-name.utils';
 
 export interface BoardColumn {
   id: string | null;
@@ -70,6 +71,8 @@ export class TicketsBoard {
   readonly avatars = visibleAssignees;
   readonly extraAvatars = extraAssigneeCount;
   readonly statusColor = safeStatusColor;
+  readonly projectName = projectDisplayName;
+  readonly clientName = clientDisplayName;
 
   constructor() {
     effect(() => {

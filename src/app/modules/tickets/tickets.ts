@@ -32,7 +32,7 @@ import { TicketsBoard } from './tickets-board/tickets-board';
 import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
 import { ArchivedTag } from '../../shared/ui/archived-tag/archived-tag';
 import { WorkspaceBreadcrumb } from '../clients/workspace-breadcrumb/workspace-breadcrumb';
-import { projectDisplayName } from '../../shared/utils/display-name.utils';
+import { clientDisplayName, projectDisplayName } from '../../shared/utils/display-name.utils';
 import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH } from './tickets.constants';
 import { trimmedRequired } from './utils/ticket-validation';
 import { TicketAttachmentsService } from './services/attachments.service';
@@ -305,6 +305,8 @@ export class Tickets implements OnInit {
   readonly editProjectOptions = computed(() =>
     withCurrentProject(this.projects(), this.selectedTicket()?.project, this.authService.isAdmin()),
   );
+  readonly editProjectReadOnly = computed(() => !this.authService.isAdmin() && !!this.selectedTicket()?.projectId &&
+    !this.projects().some(project => project.id === this.selectedTicket()?.projectId));
 
   /**
    * Auth-user IDs belonging to the currently selected compose team.
@@ -649,6 +651,10 @@ export class Tickets implements OnInit {
     return projectDisplayName(project);
   }
 
+  clientName(project: NonNullable<Ticket['project']>): string {
+    return clientDisplayName(project.client) || 'No client';
+  }
+
   getMemberNames(ticket: Ticket): string {
     const assignees = ticket.assignees ?? [];
     if (!assignees.length) return '—';
@@ -825,7 +831,7 @@ export class Tickets implements OnInit {
       dueDate: formValue.dueDate ? serializeDueDate(formValue.dueDate) : null,
       ticketStatusId: formValue.ticketStatusId || null,
       categoryId: formValue.categoryId || null,
-      projectId: formValue.projectId || null,
+      projectId: this.editProjectReadOnly() ? undefined : formValue.projectId || null,
       teamId: formValue.teamId || null,
       assigneeIds: this.departmentAdmin() ? formValue.assigneeIds : undefined,
     };

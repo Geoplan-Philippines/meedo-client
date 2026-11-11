@@ -23,6 +23,12 @@
               (click)="openTicket.emit(ticket)" (keydown.enter)="openTicket.emit(ticket)">
               <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
               <h3>{{ ticket.title }}</h3>
+              @if (ticket.project; as project) {
+                <div class="card-project" data-testid="ticket-project-context">
+                  <span>{{ projectName(project) }}</span>
+                  <span>{{ clientName(project.client) || 'No client' }}</span>
+                </div>
+              }
               <div class="card-meta">
                 <span class="card-tags">
                   <p-tag [value]="ticket.priority | titlecase" icon="pi pi-circle-fill" [class]="'priority priority-' + ticket.priority.toLowerCase()" />
