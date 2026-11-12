@@ -1,10 +1,12 @@
 import { Routes } from '@angular/router';
-import { MainLayout } from './layout/main-layout/main-layout';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
+
+/** The app chrome (header, sidebar, notifications) loads with the first signed-in page, not at startup. */
+const loadMainLayout = () => import('./layout/main-layout/main-layout').then((m) => m.MainLayout);
 
 export const routes: Routes = [
   {
-    path: 'notifications', component: MainLayout, canActivate: [authGuard],
+    path: 'notifications', loadComponent: loadMainLayout, canActivate: [authGuard],
     loadChildren: () => import('./modules/notifications/notifications.routes').then(m => m.notificationsRoutes),
   },
   { path: '', pathMatch: 'full', redirectTo: 'timekeeping' },
@@ -16,35 +18,35 @@ export const routes: Routes = [
   },
   {
     path: 'tickets',
-    component: MainLayout,
+    loadComponent: loadMainLayout,
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/tickets/tickets.routes').then((m) => m.ticketsRoutes),
   },
   {
     path: 'clients',
-    component: MainLayout,
+    loadComponent: loadMainLayout,
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/clients/clients.routes').then((m) => m.clientsRoutes),
   },
   {
     path: 'timekeeping',
-    component: MainLayout,
+    loadComponent: loadMainLayout,
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/timekeeping/timekeeping.routes').then((m) => m.timekeepingRoutes)
   },
   {
     path: 'crm',
-    component: MainLayout,
+    loadComponent: loadMainLayout,
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/crm/crm.routes').then((m) => m.crmRoutes),
   },
   {
     path: 'settings',
-    component: MainLayout,
+    loadComponent: loadMainLayout,
     canActivate: [authGuard],
     loadChildren: () =>
       import('./modules/settings/settings.routes').then((m) => m.settingsRoutes),

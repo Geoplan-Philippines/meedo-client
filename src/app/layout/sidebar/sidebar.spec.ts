@@ -118,7 +118,7 @@ describe('Sidebar', () => {
     await router.navigateByUrl(url);
     fixture.detectChanges();
     expect(activeLabels()).toEqual([label]);
-    expect(link(label).classList.contains('bg-secondary')).toBe(true);
+    expect(link(label).classList.contains('bg-selected')).toBe(true);
   });
 
   it('lights nothing on pages outside the sidebar', async () => {

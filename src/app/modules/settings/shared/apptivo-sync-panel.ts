@@ -24,13 +24,14 @@ import { ProjectsService } from '../../tickets/services/projects.service';
     </section>
   `,
   styles: `
-    :host { display: block; margin-top: 2rem; }
-    section { border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; background: var(--surface); color: var(--text-body); }
-    h2 { color: var(--text-heading); font-weight: 600; font-size: 1.125rem; }
-    p { margin-top: .75rem; max-width: 65rem; }
-    .actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
-    button { padding: .625rem 1rem; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--secondary); color: var(--secondary-foreground); cursor: pointer; }
-    button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+    :host { display: block; margin-top: 0.5rem; }
+    section { color: var(--text-body); font-size: 0.875rem; }
+    h2 { margin: 0; color: var(--text-heading); font-family: var(--font-body); font-weight: 600; font-size: 0.8125rem; }
+    p { margin: 0.375rem 0 0; max-width: 65rem; color: var(--text-muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    button { height: var(--control-h); padding: 0 0.875rem; border: 1px solid var(--border-strong); border-radius: var(--radius); background: transparent; color: var(--text-heading); font: inherit; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color var(--transition-fast); }
+    button:hover:not(:disabled) { background: var(--hover); }
+    button:focus-visible { outline: var(--focus-ring-width) solid var(--ring); outline-offset: var(--focus-ring-offset); }
     button:disabled { opacity: .6; cursor: wait; }
     .error { color: var(--muted-destructive-foreground); }
   `,

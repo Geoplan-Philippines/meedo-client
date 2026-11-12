@@ -31,7 +31,10 @@ const facets: TicketFacets = {
   views: { all: 0, active: 0, backlog: 0, closed: 0 }, statuses: [], priorities: [],
 };
 
-describe('Tickets', () => {
+// The page renders many PrimeNG components (tabs, select button, icon field, paginator, dialogs),
+// which jsdom renders slowly. The dialog tests take about 4 s alone and can pass the 5 s default
+// when the whole suite runs in parallel, so this file allows 15 s per test.
+describe('Tickets', { timeout: 15_000 }, () => {
   let component: Tickets;
   let fixture: ComponentFixture<Tickets>;
   let service: {
@@ -193,7 +196,7 @@ describe('Tickets', () => {
     const router = TestBed.inject(Router);
     expect(component.layout()).toBe('list');
     await router.navigateByUrl('/?keep=1');
-    const boardButton = Array.from(fixture.nativeElement.querySelectorAll('[aria-label="Ticket layout"] button'))
+    const boardButton = Array.from(fixture.nativeElement.querySelectorAll('[aria-label="Ticket layout"] [role="button"]'))
       .find((element: any) => element.textContent.includes('Board')) as HTMLElement;
     boardButton.click();
     await fixture.whenStable();

@@ -1,27 +1,33 @@
 <p-toast />
 <p-confirmDialog />
 
-<div class="timesheet-page">
-  <header class="page-header">
-    <div>
-      <h1 class="page-title">Timesheet</h1>
-      <p class="page-subtitle">Your weekly work log.</p>
-    </div>
+<app-page heading="Timesheet" subtitle="Your weekly work log.">
+  <button pageActions pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-plus" label="Add project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
+  <button pageActions pButton type="button" icon="pi pi-plus" label="New entry" (click)="openEntryForm()" [disabled]="isLocked() || isLoading()"></button>
 
-    <div class="timesheet-header-actions">
-      <button pButton type="button" icon="pi pi-plus" label="Add project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
-      <button pButton type="button" icon="pi pi-plus" label="New entry" (click)="openEntryForm()" [disabled]="isLocked() || isLoading()"></button>
-    </div>
-  </header>
+  <button pageToolbar class="history-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-history" label="History" (click)="showHistoryDialog.set(true)"></button>
+  <div pageToolbarEnd class="week-picker-group" aria-label="Selected timesheet week">
+    <button class="week-nav-btn" pButton type="button" severity="secondary" [text]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
+    <p-datepicker
+      inputId="timesheet-week"
+      [ngModel]="selectedDate()"
+      (ngModelChange)="onWeekChange($event)"
+      [showIcon]="true"
+      dateFormat="M d, yy"
+      appendTo="body"
+      ariaLabel="Select a date in the timesheet week"
+    />
+    <button class="week-nav-btn" pButton type="button" severity="secondary" [text]="true" icon="pi pi-chevron-right" (click)="nextWeek()" [disabled]="isLoading()" aria-label="Next week"></button>
+    <span class="week-range-label">{{ weekLabel() }}</span>
+  </div>
 
   @if (lockMessage(); as message) {
-    <div class="lock-banner" role="status">
-      <i class="pi pi-lock" aria-hidden="true"></i>
+    <p-message severity="info" icon="pi pi-lock" styleClass="ds-message">
       <span>{{ message }} Timesheet rows are read-only.</span>
-    </div>
+    </p-message>
   }
 
-  <section class="hours-strip" aria-label="Timesheet totals">
+  <section pageSummary class="hours-strip" aria-label="Timesheet totals">
     <div class="hours-item">
       <span class="hours-label">Week Total</span>
       @let weekTotal = totalHours();
@@ -54,42 +60,31 @@
     </div>
   </section>
 
-  <div class="grid-card">
-    <div class="grid-toolbar" aria-label="Timesheet week controls">
-      <button class="history-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-history" label="History" (click)="showHistoryDialog.set(true)"></button>
+  <div class="grid-region">
+    <div class="ds-table-scroll">
+      <p-table
+        class="ds-table week-table"
+        [value]="projectPager.pageRows()"
+        [rowHover]="true"
+        [tableStyle]="{ 'min-width': '58rem', 'table-layout': 'fixed' }"
+        aria-label="Weekly timesheet grid"
+      >
+        <ng-template #header>
+          <tr>
+            <th scope="col" class="col-project">Project</th>
+            @for (day of weekDays(); track day.toISOString()) {
+              <th scope="col" class="col-day" [class.col-day--today]="isToday(day)" [class.col-day--future]="isFuture(day)">
+                <span class="day-name">{{ day | date: 'EEE' }}</span>
+                <span class="day-date">{{ day | date: 'M/d' }}</span>
+              </th>
+            }
+            <th scope="col" class="col-actions"><span class="ds-sr-only">Actions</span></th>
+          </tr>
+        </ng-template>
 
-      <div class="week-picker-group" aria-label="Selected timesheet week">
-        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
-        <p-datepicker
-          inputId="timesheet-week"
-          [ngModel]="selectedDate()"
-          (ngModelChange)="onWeekChange($event)"
-          [showIcon]="true"
-          dateFormat="M d, yy"
-          appendTo="body"
-          ariaLabel="Select a date in the timesheet week"
-        />
-        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-right" (click)="nextWeek()" [disabled]="isLoading()" aria-label="Next week"></button>
-        <span class="week-range-label">{{ weekLabel() }}</span>
-      </div>
-    </div>
-
-    <div class="grid-scroll">
-      <div class="grid-table" role="table" aria-label="Weekly timesheet grid">
-        <div class="grid-row grid-row--head" role="row">
-          <span class="grid-cell grid-cell--label" role="columnheader">Project</span>
-          @for (day of weekDays(); track day.toISOString()) {
-            <span class="grid-cell grid-cell--day" role="columnheader" [class.grid-cell--today]="isToday(day)" [class.grid-cell--future]="isFuture(day)">
-              <strong>{{ day | date: 'EEE' }}</strong>
-              <small>{{ day | date: 'M/d' }}</small>
-            </span>
-          }
-          <span class="grid-cell grid-cell--actions" role="columnheader" aria-label="Actions"></span>
-        </div>
-
-        @for (projectId of tableProjectIds(); track projectId) {
-          <div class="grid-row grid-row--body" role="row">
-            <span class="grid-cell grid-cell--label" role="rowheader">
+        <ng-template #body let-projectId>
+          <tr>
+            <th scope="row" class="col-project">
               <span class="grid-cell-project-name" [title]="projectName(projectId)">{{ projectName(projectId) }}</span>
               @if (projectClientName(projectId) || projectIsArchived(projectId)) {
                 <span class="grid-cell-project-sub">
@@ -97,58 +92,68 @@
                   @if (projectIsArchived(projectId)) { <app-archived-tag /> }
                 </span>
               }
-            </span>
+            </th>
             @for (day of weekDays(); track day.toISOString()) {
               @let cellEntries = entriesForCell(projectId, day);
-              <button
-                type="button"
-                class="grid-cell grid-cell--value"
-                [class]="cellStatusClass(cellEntries)"
-                [class.grid-cell--has-entries]="cellEntries.length > 0"
-                [class.grid-cell--filled]="cellEntries.length > 0"
-                [class.grid-cell--today]="isToday(day)"
-                [class.grid-cell--future]="isFuture(day)"
-                (click)="openEntryCellModal(projectId, day)"
-              >
-                @if (cellEntries.length > 0) {
-                  <strong class="cell-total-hours">{{ formatHours(cellHoursTotal(cellEntries)) }} hr</strong>
-                  @if (cellEntries.length > 1) {
-                    <span class="cell-task-count">{{ cellEntries.length }} tasks</span>
+              <td class="col-value" [class.col-day--today]="isToday(day)">
+                <button
+                  type="button"
+                  class="grid-cell grid-cell--value"
+                  [class]="cellStatusClass(cellEntries)"
+                  [class.grid-cell--has-entries]="cellEntries.length > 0"
+                  [class.grid-cell--filled]="cellEntries.length > 0"
+                  [class.grid-cell--future]="isFuture(day)"
+                  [attr.aria-label]="projectName(projectId) + ', ' + (day | date: 'EEEE MMM d') + (cellEntries.length ? ', ' + formatHours(cellHoursTotal(cellEntries)) + ' hours, ' + statusBadgeLabel(cellStatus(cellEntries)) : ', no entries')"
+                  (click)="openEntryCellModal(projectId, day)"
+                >
+                  @if (cellEntries.length > 0) {
+                    <strong class="cell-total-hours">{{ formatHours(cellHoursTotal(cellEntries)) }} hr</strong>
+                    @if (cellEntries.length > 1) {
+                      <span class="cell-task-count">{{ cellEntries.length }} tasks</span>
+                    }
+                    <span [class]="statusBadgeClass(cellStatus(cellEntries))">
+                      {{ statusBadgeLabel(cellStatus(cellEntries)) }}
+                    </span>
+                  } @else {
+                    <span class="cell-empty" aria-hidden="true">+</span>
                   }
-                  <span [class]="statusBadgeClass(cellStatus(cellEntries))">
-                    {{ statusBadgeLabel(cellStatus(cellEntries)) }}
-                  </span>
-                } @else {
-                  ------
-                }
-              </button>
+                </button>
+              </td>
             }
-            <span class="grid-cell grid-cell--actions">
-              <button pButton type="button" severity="danger" [text]="true" icon="pi pi-trash" aria-label="Remove project" (click)="confirmRemoveProject(projectId)" [disabled]="isLocked() || isRemovingProject()"></button>
-            </span>
-          </div>
-        }
+            <td class="col-actions">
+              <button pButton type="button" severity="danger" [text]="true" size="small" icon="pi pi-trash" aria-label="Remove project" (click)="confirmRemoveProject(projectId)" [disabled]="isLocked() || isRemovingProject()"></button>
+            </td>
+          </tr>
+        </ng-template>
 
-        @if (tableProjectIds().length === 0) {
-          <div class="grid-empty">
-            <span class="grid-empty-icon" aria-hidden="true"><i class="pi pi-briefcase"></i></span>
-            <div class="grid-empty-copy">
-              <strong class="grid-empty-title">No projects yet</strong>
-              <span class="grid-empty-text">Create an entry with a ticket, a project, or a free-text description.</span>
-            </div>
-            <button pButton type="button" icon="pi pi-plus" label="Add Project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
-          </div>
-        }
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="9">
+              <app-empty-state icon="pi pi-briefcase" heading="No projects yet" description="Create an entry with a ticket, a project, or a free-text description.">
+                <button pButton type="button" icon="pi pi-plus" label="Add Project" (click)="openAddProjectModal()" [disabled]="isLocked() || isLoading()"></button>
+              </app-empty-state>
+            </td>
+          </tr>
+        </ng-template>
 
-        <div class="grid-row grid-row--total" role="row">
-          <span class="grid-cell grid-cell--label">Total</span>
-          @for (day of weekDays(); track day.toISOString()) {
-            <span class="grid-cell grid-cell--value" [class.grid-cell--today]="isToday(day)">{{ totalForDay(day) | number: '1.0-2' }} hr</span>
-          }
-          <span class="grid-cell grid-cell--actions"></span>
-        </div>
-      </div>
+        <ng-template #footer>
+          <tr class="total-row">
+            <th scope="row" class="col-project">Total</th>
+            @for (day of weekDays(); track day.toISOString()) {
+              <td class="col-total" [class.col-day--today]="isToday(day)">{{ totalForDay(day) | number: '1.0-2' }} hr</td>
+            }
+            <td class="col-actions"></td>
+          </tr>
+        </ng-template>
+      </p-table>
     </div>
+    <app-list-paginator
+      [total]="projectPager.total()"
+      [page]="projectPager.currentPage()"
+      [pageSize]="projectPager.pageSize()"
+      itemLabel="projects"
+      (pageChange)="projectPager.onPage($event)"
+    />
   </div>
 
   <footer class="timesheet-footer">
@@ -364,7 +369,23 @@
       </div>
     </div>
   }
-</div>
+  <section class="entry-log" aria-labelledby="entry-log-heading">
+    <h2 id="entry-log-heading" class="ds-section-title">Entry log</h2>
+    <ul class="ds-rows">
+      @for (entry of rawEntries(); track entry.id) {
+        <li [id]="'timesheet-entry-' + entry.id" class="entry-log-row" [class.entry-log-row--target]="targetEntryId() === entry.id">
+          <span class="entry-log-meta">{{ entry.workDate | date:'EEE, MMM d':'UTC' }}  |  {{ entry.hours }} hours  |  {{ entry.status }}</span>
+          @if (entry.ticket) { <p>Ticket #{{ entry.ticket.ticketNumber }}</p> }
+          <div>@if (entry.description) { {{ entry.description }} } @else { <span [innerHTML]="entry.task"></span> }</div>
+          @if (!entry.projectId) { <p class="ds-muted">No project</p> }
+          @if (!isLocked() && (entry.status === 'DRAFT' || entry.status === 'REJECTED')) { <button pButton type="button" severity="secondary" [outlined]="true" size="small" label="Edit entry" (click)="openEntryForm(entry)"></button> }
+        </li>
+      } @empty {
+        <li class="ds-muted">No entries this week.</li>
+      }
+    </ul>
+  </section>
+</app-page>
 
-<section class="m-4 md:m-8 p-4 border border-border rounded bg-surface text-body" aria-label="Entry log"><h2 class="font-semibold text-heading">Entry log</h2>@for (entry of rawEntries(); track entry.id) { <article [id]="'timesheet-entry-'+entry.id" class="p-3 border-b border-border" [class.border-primary]="targetEntryId() === entry.id"><span>{{ entry.workDate | date:'EEE, MMM d':'UTC' }}  |  {{ entry.hours }} hours  |  {{ entry.status }}</span>@if (entry.ticket) { <p>Ticket #{{ entry.ticket.ticketNumber }}</p> }<div>@if (entry.description) { {{ entry.description }} } @else { <span [innerHTML]="entry.task"></span> }</div>@if (!entry.projectId) { <p>No project</p> }@if (!isLocked() && (entry.status === 'DRAFT' || entry.status === 'REJECTED')) { <button pButton type="button" label="Edit entry" (click)="openEntryForm(entry)"></button> }</article> } @empty { <p>No entries this week.</p> }</section>
+
 @if (formOpen()) { <app-timesheet-entry-form [entry]="editingEntry()" [projects]="pickerProjects()" (saved)="entryFormSaved()" (cancelled)="formOpen.set(false)" /> }

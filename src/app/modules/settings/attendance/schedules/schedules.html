@@ -1,67 +1,53 @@
-<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
-  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+<app-page heading="Weekly schedules" subtitle="A schedule maps a shift to each weekday. The default applies to anyone without a team or personal override.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
-    <span class="mx-2 opacity-60">/</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
     <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
-    <span class="mx-2 opacity-60">/</span>
-    <span class="text-heading">Weekly schedules</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Weekly schedules</span>
   </nav>
 
-  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+  <a pageBreadcrumb routerLink="/settings/attendance" class="back-link inline-flex items-center gap-1.5 w-fit font-medium text-muted hover:text-primary transition-colors">
     <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
     Back to Attendance settings
   </a>
+  <p-button pageActions label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" />
 
-  <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-2xl font-semibold text-heading">Weekly schedules</h1>
-      <p class="text-sm text-body/70 max-w-2xl">
-        A schedule maps a shift to each weekday. The default applies to anyone without a team or personal override.
-      </p>
-    </div>
-    <p-button label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" />
-  </header>
 
   @if (error()) {
-    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+    <p-message severity="error" styleClass="ds-message">
       <span>{{ error() }}</span>
       <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
-    </div>
+    </p-message>
   }
 
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-12 text-body/70">
-      <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
-      Loading schedules…
+    <div class="ds-table-skeleton" role="status">
+      <span class="ds-sr-only">Loading schedules…</span>
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="16rem" height="0.75rem" /></div>
+      }
     </div>
   } @else if (schedules().length === 0) {
-    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
-      <i class="pi pi-calendar text-3xl text-body/40" aria-hidden="true"></i>
-      <p class="text-body font-medium">No schedules yet</p>
-      <p class="text-sm text-body/70 max-w-sm">
-        Create a schedule, then open it to set which days are working days and which shift each one uses.
-      </p>
-      <p-button label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" class="mt-2" />
-    </div>
+    <app-empty-state icon="pi pi-calendar" heading="No schedules yet" description="Create a schedule, then open it to set which days are working days and which shift each one uses.">
+      <p-button label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" />
+    </app-empty-state>
   } @else {
-    <ul class="flex flex-col gap-3" aria-label="Weekly schedules">
-      @for (schedule of schedules(); track schedule.id) {
-        <li class="rounded-base border border-border bg-surface p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div>
+    <ul class="ds-rows" aria-label="Weekly schedules">
+      @for (schedule of pager.pageRows(); track schedule.id) {
+        <li class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div class="flex flex-col gap-2 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="font-semibold text-heading truncate">{{ schedule.name }}</span>
+              <span class="font-medium text-heading truncate">{{ schedule.name }}</span>
               @if (schedule.isDefault) {
-                <span class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
-                  <i class="pi pi-star-fill text-[10px]" aria-hidden="true"></i> Default
-                </span>
+                <p-tag value="Default" icon="pi pi-star-fill" [rounded]="true" />
               }
               @if (!schedule.isActive) {
-                <span class="inline-flex items-center gap-1 rounded-full bg-badge-neutral px-2 py-0.5 text-[11px] text-badge-neutral-foreground">Inactive</span>
+                <p-tag value="Inactive" severity="secondary" [rounded]="true" />
               }
               @if (inUseCount(schedule) > 0) {
-                <span class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground" [pTooltip]="'Assigned to ' + inUseCount(schedule) + ' team(s)/employee(s)'" tooltipPosition="top">
-                  <i class="pi pi-link text-[10px]" aria-hidden="true"></i> In use
-                </span>
+                <p-tag value="In use" icon="pi pi-link" severity="info" [rounded]="true" [pTooltip]="'Assigned to ' + inUseCount(schedule) + ' team(s)/employee(s)'" tooltipPosition="top" />
               }
             </div>
 
@@ -81,7 +67,7 @@
                     >{{ dot.short.charAt(0) }}</span>
                   }
                 </div>
-                <span class="text-sm text-body/70">{{ workingCount(schedule) }} working days</span>
+                <span class="text-sm text-muted">{{ workingCount(schedule) }} working days</span>
               </div>
             } @else {
               <span class="inline-flex items-center gap-1.5 text-sm text-muted-warning-foreground">
@@ -133,8 +119,16 @@
         </li>
       }
     </ul>
+    <app-list-paginator
+      [total]="pager.total()"
+      [page]="pager.currentPage()"
+      [pageSize]="pager.pageSize()"
+      itemLabel="schedules"
+      (pageChange)="pager.onPage($event)"
+    />
+    </div>
   }
-</main>
+</app-page>
 
 <p-dialog
   [visible]="isDialogOpen()"
@@ -150,7 +144,7 @@
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
         <label for="schedule-name" class="text-sm font-medium text-heading">Name</label>
-        <span class="text-xs text-body/60" aria-live="polite">{{ nameLength() }} / 100</span>
+        <span class="text-xs text-muted" aria-live="polite">{{ nameLength() }} / 100</span>
       </div>
       <input id="schedule-name" pInputText formControlName="name" autocomplete="off" maxlength="100" placeholder="e.g. Standard week" />
       @if (form.controls.name.invalid && form.controls.name.touched) {
@@ -162,12 +156,12 @@
       <label for="schedule-default" class="flex items-center justify-between gap-3 cursor-pointer">
         <span class="flex flex-col">
           <span class="text-sm font-medium text-heading">Make this the default</span>
-          <span class="text-xs text-body/70">Applied to anyone without a team or personal schedule.</span>
+          <span class="text-xs text-muted">Applied to anyone without a team or personal schedule.</span>
         </span>
         <p-toggleSwitch inputId="schedule-default" formControlName="isDefault" />
       </label>
 
-      <p class="text-xs text-body/60">You'll set up the working days and shifts next.</p>
+      <p class="text-xs text-muted">You'll set up the working days and shifts next.</p>
     }
   </form>
 

@@ -3,7 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TitleCasePipe } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { MessageService } from 'primeng/api';
-import { TagModule } from 'primeng/tag';
+import { SkeletonModule } from 'primeng/skeleton';
+import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { Status } from '../models/status.model';
 import { Ticket, TicketFacets, TicketListParams } from '../models/ticket.model';
@@ -11,6 +12,8 @@ import { TicketsService } from '../services/tickets.service';
 import { extraAssigneeCount, safeStatusColor, visibleAssignees } from '../utils/ticket.utils';
 import { SlaBadge } from '../sla-badge/sla-badge';
 import { clientDisplayName, projectDisplayName } from '../../../shared/utils/display-name.utils';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 
 export interface BoardColumn {
   id: string | null;
@@ -45,8 +48,7 @@ export function columnRequest(filters: TicketListParams, id: string | null, page
 
 @Component({
   selector: 'app-tickets-board',
-  standalone: true,
-  imports: [CdkDrag, CdkDropList, CdkDropListGroup, TitleCasePipe, TagModule, AvatarModule, SlaBadge],
+  imports: [CdkDrag, CdkDropList, CdkDropListGroup, TitleCasePipe, SkeletonModule, ButtonModule, AvatarModule, SlaBadge, EmptyState, ListPaginator],
   templateUrl: './tickets-board.html',
   styleUrl: './tickets-board.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,6 +102,11 @@ export class TicketsBoard {
   }
 
   page(id: string | null): ColumnPage { return this.pages()[columnKey(id)] ?? EMPTY_PAGE; }
+
+  /** Total for a column's footer: the facet count while more pages exist, else what is loaded. */
+  footerTotal(column: BoardColumn, state: ColumnPage): number {
+    return state.more ? Math.max(column.total, state.tickets.length + 1) : state.tickets.length;
+  }
 
   loadMore(id: string | null, refresh = false): void {
     const current = this.page(id), generation = this.generation;

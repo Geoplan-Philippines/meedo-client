@@ -1,341 +1,93 @@
-/* ─── Page Layout ──────────────────────────────────────── */
-.tickets-page {
-  padding: 2rem 2.5rem;
-  background: var(--color-background);
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+/* ─── Toolbar state ────────────────────────────────────── */
+/* Toggle buttons in the toolbar read as "on" with the selected fill. */
+.filter-btn--active,
+.my-issues-toggle--active {
+  --p-button-secondary-background: var(--selected);
+  --p-button-secondary-border-color: var(--selected);
+  --p-button-secondary-color: var(--text-heading);
+  --p-button-secondary-hover-background: var(--selected);
+  --p-button-secondary-hover-border-color: var(--border-strong);
 }
 
-/* ─── Header ───────────────────────────────────────────── */
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.page-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  margin: 0 0 0.25rem;
-  font-family: var(--font-heading);
-  letter-spacing: -0.02em;
-}
-
-.page-subtitle {
-  font-size: 0.875rem;
-  color: var(--color-body);
-  margin: 0;
-}
-
-.add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  border: none;
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s;
-}
-
-.add-btn:hover {
-  background: var(--color-primary-hover);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
-.add-btn:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-/* ─── Table Card ───────────────────────────────────────── */
-/* Surface card: same colour + hairline border as the header and sidebar chrome
-   (--surface on --background canvas). One quiet panel, not a heavy box. */
-.table-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  overflow: hidden;
-}
-
-/* ─── Toolbar ──────────────────────────────────────────── */
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--color-border);
-  gap: 1rem;
-}
-
-.search-box {
-  position: relative;
-  flex: 1;
-  max-width: 400px;
-}
-
-.my-issues-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: transparent;
-  color: var(--color-body);
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.my-issues-toggle:hover {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
-}
-
-.my-issues-toggle--active,
-.my-issues-toggle--active:hover {
-  background: var(--color-secondary);
-  color: var(--color-secondary-foreground);
-  font-weight: 600;
-}
-
-.my-issues-toggle:active {
-  background: var(--color-secondary);
-}
-
-.my-issues-toggle:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .my-issues-toggle { transition: none; }
-}
-
-.search-icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-body);
-  font-size: 0.875rem;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.625rem 0.875rem 0.625rem 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  color: var(--color-heading);
-  /* Match the PrimeNG selects' field fill so the toolbar controls read as one set. */
-  background: var(--color-surface);
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.search-input::placeholder { color: var(--color-muted); }
-
-.search-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
-}
-
-/* ─── View Tabs (Backlog / Active / All Tickets) ───────── */
-.view-tabs {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.625rem 1.25rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.view-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.375rem 0.75rem;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-muted);
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.view-tab:hover {
-  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
-  color: var(--color-body);
-}
-
-.view-tab--active {
-  background: var(--color-secondary);
-  color: var(--color-secondary-foreground);
-  font-weight: 600;
-}
-
-.view-tab:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-.view-count {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.view-tab--active .view-count {
-  color: var(--color-secondary-foreground);
-}
-
-/* ─── Filter Button ────────────────────────────────────── */
-.filter-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  /* Vertical padding + font-size match .search-input so the button is exactly the
-     search bar's height (both box-sizing: border-box, 1px border). */
-  padding: 0.625rem 0.875rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-body);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.filter-btn i { font-size: 0.875rem; }
-
-.filter-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
-}
-
-.filter-btn:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-.filter-btn--active {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-secondary);
-}
-
-.filter-btn-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.125rem;
-  height: 1.125rem;
-  padding: 0 0.3rem;
-  border-radius: 100px;
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
+.filter-btn-count { margin-left: 0.125rem; }
 
 /* ─── Active Filter Chips ──────────────────────────────── */
+/* Wraps onto its own line under the search field. */
 .active-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--color-border);
+  flex-basis: 100%;
+  gap: 0.375rem;
 }
 
 .filter-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.5rem 0.25rem 0.625rem;
-  background: var(--color-secondary);
-  color: var(--color-secondary-foreground);
-  border: none;
-  border-radius: 100px;
-  font-family: var(--font-body);
+  gap: 0.375rem;
+  height: 1.625rem;
+  padding: 0 0.5rem 0 0.625rem;
+  background: var(--subtle);
+  color: var(--text-heading);
+  border: 1px solid var(--divider);
+  border-radius: var(--pill-radius);
+  font: inherit;
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .filter-chip:hover {
-  background: color-mix(in srgb, var(--color-secondary) 70%, var(--color-primary));
+  background: var(--hover);
+  border-color: var(--border-strong);
 }
 
-.filter-chip:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
+.filter-chip:focus-visible,
+.clear-filters:focus-visible {
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .filter-chip i {
   font-size: 0.625rem;
-  opacity: 0.7;
+  color: var(--text-muted);
 }
 
-.filter-chip:hover i { opacity: 1; }
-
-/* Icon-based chip variant (used for teams, which have no color dot). */
-.chip-icon {
-  font-size: 0.6875rem;
-  opacity: 0.75;
-}
+.chip-icon { font-size: 0.6875rem; }
 
 .chip-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--pill-radius);
   flex-shrink: 0;
 }
 
 .clear-filters {
-  padding: 0.25rem 0.4rem;
+  padding: 0.25rem 0.375rem;
   background: none;
   border: none;
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
+  border-radius: var(--radius);
+  font: inherit;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--color-muted);
+  color: var(--text-muted);
   cursor: pointer;
 }
 
-.clear-filters:hover { color: var(--color-primary); text-decoration: underline; }
-.clear-filters:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+.clear-filters:hover { color: var(--text-heading); text-decoration: underline; }
 
-/* Standalone priority dots (filter chips + options). The table's .prio-* rules
-   colour via an ancestor; here the dot carries its own colour class. */
-.prio-dot-low    { background: var(--color-success); }
-.prio-dot-medium { background: var(--color-warning); }
-.prio-dot-high   { background: var(--color-destructive); }
-.prio-dot-urgent { background: var(--color-destructive); }
+/* Standalone priority dots in the filter and compose menus. */
+.prio-dot-low    { background: var(--priority-low); }
+.prio-dot-medium { background: var(--priority-medium); }
+.prio-dot-high   { background: var(--priority-high); }
+.prio-dot-urgent { background: var(--priority-urgent); }
+
+.empty-copy {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
 
 /* ─── Filter Popover ───────────────────────────────────── */
 /* PrimeNG paints the panel surface + overlay shadow from the preset; we only
@@ -525,118 +277,15 @@
 }
 
 /* ─── Skeleton ─────────────────────────────────────────── */
-.skeleton-list { padding: 0 0.25rem; }
-
-.skeleton-row {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.skeleton-row:last-child { border-bottom: none; }
-
-/* ─── Table Overrides ──────────────────────────────────── */
-/* The table has no fill of its own — every layer is transparent so the
-   `.table-card` surface (the header/sidebar colour) shows through cleanly.
-   PrimeNG fills its rows/cells from the `content.background` token, so neutralise
-   the datatable design tokens here too. */
-:host ::ng-deep .tickets-table {
-  --p-datatable-header-background: transparent;
-  --p-datatable-header-cell-background: transparent;
-  --p-datatable-row-background: transparent;
-  --p-datatable-row-striped-background: transparent;
-  --p-datatable-footer-background: transparent;
-  --p-datatable-footer-cell-background: transparent;
-  --p-datatable-paginator-top-background: transparent;
-  --p-datatable-paginator-bottom-background: transparent;
-  background: transparent;
-}
-
-/* PrimeNG paints the header cells with `content.background` via
-   `.p-datatable-thead > tr > th` — higher specificity than a plain
-   `.tickets-table th`, and injected into <head> AFTER this stylesheet (no
-   cssLayer configured), so it wins on both counts. `!important` on the real
-   PrimeNG selectors is the only override that reliably beats it. All layers go
-   transparent so the `.table-card` surface is the single colour behind the rows. */
-:host ::ng-deep .tickets-table,
-:host ::ng-deep .tickets-table .p-datatable-header,
-:host ::ng-deep .tickets-table .p-datatable-table-container,
-:host ::ng-deep .tickets-table .p-datatable-table,
-:host ::ng-deep .tickets-table .p-datatable-thead,
-:host ::ng-deep .tickets-table .p-datatable-thead > tr,
-:host ::ng-deep .tickets-table .p-datatable-thead > tr > th,
-:host ::ng-deep .tickets-table .p-datatable-tbody,
-:host ::ng-deep .tickets-table .p-datatable-tbody > tr,
-:host ::ng-deep .tickets-table .p-datatable-tbody > tr > td {
-  background: transparent !important;
-}
-
-/* Quiet header: muted small labels, a single hairline rule — no blue fill. */
-:host ::ng-deep .tickets-table th {
-  color: var(--color-muted);
-  font-weight: 600;
-  padding: 0.5rem 0.875rem;
-  border: none;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.6875rem;
-  font-family: var(--font-body);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-:host ::ng-deep .tickets-table tbody tr {
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
-  transition: background-color 0.12s ease;
-}
-
-:host ::ng-deep .tickets-table tbody tr:last-child { border-bottom: none; }
-
-/* Subtle, on-brand hover — a faint wash, not a loud fill.
-   !important overrides PrimeNG's higher-specificity row-hover rule. */
-:host ::ng-deep .tickets-table tbody tr:hover {
-  background: color-mix(in srgb, var(--color-secondary) 45%, transparent) !important;
-}
-
-/* Whole row is the click target (keyboard path lives on .ticket-title-btn). */
-.ticket-row { cursor: pointer; }
-
-:host ::ng-deep .tickets-table td {
-  padding: 0.4375rem 0.875rem;
-  color: var(--color-body);
-  /* Single source of truth for the table's body-cell size: every primary cell
-     (title, status, priority, project, date) and the empty "—" placeholders
-     inherit 14px from here. Secondary text (ticket #number, work-order) opts
-     down to 0.75rem; nothing else in the row sets its own size. */
-  font-size: 0.875rem;
-  font-family: var(--font-body);
-  border: none;
-  vertical-align: middle;
-}
-
-/* Align the outer cell edges with the toolbar/paginator inset (1.25rem). */
-:host ::ng-deep .tickets-table th:first-child,
-:host ::ng-deep .tickets-table td:first-child { padding-left: 1.25rem; }
-
-:host ::ng-deep .tickets-table th:last-child,
-:host ::ng-deep .tickets-table td:last-child { padding-right: 1.25rem; }
-
-.th-content {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
 /* ─── Ticket Title Cell ────────────────────────────────── */
 /* Real button so the row's open action is keyboard-reachable and SR-announced;
    styled flush as text. The <tr> click handles mouse; Enter/Space here fires a
-   native click that bubbles up to it — one handler, no double-fire. */
+   native click that bubbles up to it, so there is one handler and no double-fire.
+   Number then title on one line keeps the row dense. */
 .ticket-title-btn {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.0625rem;
+  align-items: baseline;
+  gap: 0.625rem;
   width: 100%;
   min-width: 0;
   padding: 0;
@@ -650,56 +299,46 @@
 }
 
 .ticket-title-btn:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-  border-radius: var(--radius-base);
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius);
 }
 
 .ticket-title {
-  font-weight: 600;
-  color: var(--color-heading);
-  /* Inherits the 14px body-cell size; prominence comes from weight + heading colour, not size. */
-  width: 100%;
-  /* Single line — truncate with an ellipsis; the #number sits on its own line
-     below, mirroring the project cell's stack. */
+  min-width: 0;
+  font-weight: 500;
+  color: var(--text-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ticket-desc {
-  font-size: 0.8125rem;
-  color: var(--color-body);
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ─── Ticket Number ────────────────────────────────────── */
 .ticket-number {
-  font-size: 0.75rem;
-  color: var(--color-muted);
   flex-shrink: 0;
+  min-width: 2.75rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── List Status (dot + name, no fill) ────────────────── */
 .status-cell {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--pill-radius);
   flex-shrink: 0;
 }
 
 .status-name {
-  color: var(--color-body);
+  color: var(--text-body);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -709,24 +348,20 @@
 .prio {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  color: var(--color-body);
+  gap: 0.5rem;
+  color: var(--text-body);
   white-space: nowrap;
 }
 
 .prio-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--pill-radius);
   flex-shrink: 0;
 }
 
-.prio-low .prio-dot    { background: var(--color-success); }
-.prio-medium .prio-dot { background: var(--color-warning); }
-.prio-high .prio-dot   { background: var(--color-destructive); }
-.prio-urgent .prio-dot { background: var(--color-destructive); }
 .prio-urgent {
-  color: var(--color-muted-destructive-foreground);
+  color: var(--muted-destructive-foreground);
   font-weight: 600;
 }
 
@@ -736,8 +371,8 @@
 .project-cell {
   display: flex;
   flex-direction: column;
-  gap: 0.0625rem;
   min-width: 0;
+  line-height: 1.35;
 }
 
 .project-customer {
@@ -749,8 +384,9 @@
 }
 
 .project-wo {
+  max-width: 100%;
   font-size: 0.75rem;
-  color: var(--color-muted);
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -805,7 +441,7 @@
   font-family: var(--font-body);
   flex-shrink: 0;
   /* Ring in the canvas colour so overlapping avatars stay visually separated. */
-  box-shadow: 0 0 0 2px var(--color-background);
+  box-shadow: 0 0 0 2px var(--page);
 }
 
 .avatar-stack .avatar:not(:first-child) { margin-left: -0.5rem; }
@@ -854,97 +490,6 @@
   overflow: hidden;
 }
 
-/* ─── Empty State ──────────────────────────────────────── */
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.empty-icon {
-  width: 4rem;
-  height: 4rem;
-  background: var(--color-secondary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.25rem;
-  font-size: 1.5rem;
-  color: var(--color-primary);
-}
-
-.empty-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-heading);
-  margin: 0 0 0.5rem;
-  font-family: var(--font-heading);
-}
-
-.empty-body {
-  font-size: 0.875rem;
-  color: var(--color-body);
-  margin: 0;
-}
-
-/* ─── Paginator ────────────────────────────────────────── */
-:host ::ng-deep .p-paginator {
-  background: transparent;
-  border: none;
-  border-top: 1px solid var(--color-border);
-  padding: 0.75rem 1.25rem;
-  gap: 0.5rem;
-  font-family: var(--font-body);
-}
-
-:host ::ng-deep .p-paginator-current {
-  color: var(--color-body);
-  font-size: 0.8125rem;
-}
-
-:host ::ng-deep .p-paginator .p-paginator-pages .p-paginator-page {
-  background: transparent;
-  color: var(--color-secondary-foreground);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  min-width: 2rem;
-  height: 2rem;
-  font-size: 0.8125rem;
-}
-
-:host ::ng-deep .p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  border-color: var(--color-primary);
-}
-
-:host ::ng-deep .p-paginator .p-paginator-pages .p-paginator-page:hover:not(.p-highlight) {
-  background: var(--color-background);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-:host ::ng-deep .p-paginator .p-paginator-prev,
-:host ::ng-deep .p-paginator .p-paginator-next,
-:host ::ng-deep .p-paginator .p-paginator-first,
-:host ::ng-deep .p-paginator .p-paginator-last {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  color: var(--color-secondary-foreground);
-  background: transparent;
-  min-width: 2rem;
-  height: 2rem;
-}
-
-:host ::ng-deep .p-paginator .p-paginator-prev:hover,
-:host ::ng-deep .p-paginator .p-paginator-next:hover,
-:host ::ng-deep .p-paginator .p-paginator-first:hover,
-:host ::ng-deep .p-paginator .p-paginator-last:hover {
-  background: var(--color-background);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
 /* ─── Responsive ───────────────────────────────────────── */
 /* Progressive column reveal: drop the lower-priority metadata first so the
    row never overflows. Title / Status / Priority / Due always stay. */
@@ -956,38 +501,6 @@
 
 @media (max-width: 992px) {
   .hide-md { display: none; }
-}
-
-@media (max-width: 768px) {
-  .tickets-page {
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .add-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .table-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-box { max-width: 100%; }
-
-  :host ::ng-deep .tickets-table th,
-  :host ::ng-deep .tickets-table td {
-    padding: 0.75rem 0.625rem;
-  }
-
-  .ticket-desc { max-width: 160px; }
 }
 
 /* ─── Dialog Form ──────────────────────────────────────── */

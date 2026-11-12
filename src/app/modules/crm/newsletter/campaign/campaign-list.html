@@ -1,45 +1,97 @@
-<main>
-  <header>
-    <div><h1>Campaigns</h1><p>Prepare newsletter drafts. Sending is not available yet.</p></div>
-    @if (isAdmin()) { <a class="primary" routerLink="new">Create campaign</a> }
-  </header>
-  <form class="filters" (submit)="$event.preventDefault(); filter()">
-    <label for="campaign-search">Search campaigns</label>
-    <input id="campaign-search" type="search" [attr.maxlength]="searchLimit" [value]="search()" (input)="onSearch($event)" placeholder="Name or subject" />
-    <button type="submit">Search</button>
-    <label class="toggle"><input type="checkbox" [checked]="includeArchived()" (change)="onArchiveFilter($event)" /> Include archived</label>
+<app-page heading="Campaigns" subtitle="Prepare newsletter drafts. Sending is not available yet.">
+  @if (isAdmin()) {
+    <a pageActions pButton routerLink="new" icon="pi pi-plus" label="Create campaign"></a>
+  }
+
+  <form pageToolbar class="campaign-search" role="search" (submit)="$event.preventDefault(); filter()">
+    <p-iconfield class="ds-search">
+      <p-inputicon class="pi pi-search" />
+      <input
+        pInputText
+        id="campaign-search"
+        type="search"
+        aria-label="Search campaigns"
+        placeholder="Name or subject"
+        [attr.maxlength]="searchLimit"
+        [value]="search()"
+        (input)="onSearch($event)"
+      />
+    </p-iconfield>
+    <button pButton type="submit" severity="secondary" [outlined]="true" label="Search"></button>
   </form>
-  @if (actionError()) { <p role="alert" class="error">{{ actionError() }}</p> }
-  <section [attr.aria-busy]="loading()" aria-label="Campaign results">
+  <label pageToolbarEnd class="toolbar-toggle" for="campaign-archived">
+    <p-toggleswitch inputId="campaign-archived" [ngModel]="includeArchived()" (ngModelChange)="setIncludeArchived($event)" />
+    <span>Include archived</span>
+  </label>
+
+  @if (actionError()) {
+    <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ actionError() }}</p-message>
+  }
+
+  <section aria-label="Campaign results" [attr.aria-busy]="loading()">
     @if (loading()) {
-      <p role="status">Loading campaigns…</p>
+      <div class="ds-table-skeleton" role="status">
+        <span class="ds-sr-only">Loading campaigns…</span>
+        @for (row of [1, 2, 3, 4]; track row) {
+          <div class="skeleton-row">
+            <p-skeleton width="12rem" height="0.75rem" />
+            <p-skeleton width="16rem" height="0.75rem" />
+            <p-skeleton width="4rem" height="1.25rem" borderRadius="999px" />
+          </div>
+        }
+      </div>
     } @else if (error()) {
-      <p role="alert" class="error">{{ error() }}</p><button (click)="load()">Retry</button>
+      <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="error()">
+        <button pButton type="button" severity="secondary" [outlined]="true" label="Retry" (click)="load()"></button>
+      </app-empty-state>
     } @else if (!campaigns().length) {
-      <p role="status">No campaigns found. Try another search or include archived campaigns.</p>
+      <app-empty-state role="status" icon="pi pi-megaphone" heading="No campaigns found" description="Try another search or include archived campaigns." />
     } @else {
-      <div class="table-scroll"><table>
-        <thead><tr><th scope="col">Status</th><th scope="col">Name</th><th scope="col">Subject</th><th scope="col">Updated</th><th scope="col">Actions</th></tr></thead>
-        <tbody>
-          @for (campaign of campaigns(); track campaign.id) {
+      <div class="ds-table-scroll">
+        <p-table class="ds-table" [value]="campaigns()" [rowHover]="true" [tableStyle]="{ 'min-width': '44rem' }">
+          <ng-template pTemplate="header">
             <tr>
-              <td><span class="badge">{{ campaign.status === 'DRAFT' ? 'Draft' : 'Archived' }}</span></td>
-              <td>{{ campaign.name }}</td><td>{{ campaign.subject }}</td><td>{{ campaign.updatedAt | date:'mediumDate' }}</td>
+              <th scope="col">Name</th>
+              <th scope="col">Subject</th>
+              <th scope="col">Status</th>
+              <th scope="col">Updated</th>
+              <th scope="col" class="actions-col"><span class="ds-sr-only">Actions</span></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-campaign>
+            <tr>
+              <td class="campaign-name">{{ campaign.name }}</td>
+              <td class="campaign-subject">{{ campaign.subject }}</td>
+              <td>
+                <p-tag [value]="campaign.status === 'DRAFT' ? 'Draft' : 'Archived'" [severity]="campaign.status === 'DRAFT' ? 'info' : 'secondary'" [rounded]="true" />
+              </td>
+              <td class="ds-num">{{ campaign.updatedAt | date: 'mediumDate' }}</td>
               <td class="actions">
-                <a [routerLink]="[campaign.id]">{{ isAdmin() && campaign.status === 'DRAFT' ? 'Edit' : 'View' }}</a>
+                <a class="row-link" [routerLink]="[campaign.id]">{{ isAdmin() && campaign.status === 'DRAFT' ? 'Edit' : 'View' }}</a>
                 @if (isAdmin()) {
-                  <button [disabled]="busyId() !== null" (click)="changeStatus(campaign)">{{ campaign.status === 'ARCHIVED' ? 'Restore' : 'Archive' }}</button>
+                  <button
+                    pButton
+                    type="button"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    [label]="campaign.status === 'ARCHIVED' ? 'Restore' : 'Archive'"
+                    [disabled]="busyId() !== null"
+                    (click)="changeStatus(campaign)"
+                  ></button>
                 }
               </td>
             </tr>
-          }
-        </tbody>
-      </table></div>
+          </ng-template>
+        </p-table>
+      </div>
     }
+    <app-list-paginator
+      [total]="total()"
+      [page]="page()"
+      [pageSize]="limit()"
+      itemLabel="campaigns"
+      (pageChange)="onPageChange($event)"
+    />
   </section>
-  <footer aria-label="Campaign pagination">
-    <span role="status">{{ total() }} campaigns · Page {{ page() }} of {{ lastPage() || 1 }}</span>
-    <button [disabled]="loading() || page() <= 1" (click)="goTo(page() - 1)">Previous</button>
-    <button [disabled]="loading() || page() >= lastPage()" (click)="goTo(page() + 1)">Next</button>
-  </footer>
-</main>
+</app-page>

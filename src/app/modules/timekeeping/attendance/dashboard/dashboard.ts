@@ -6,7 +6,6 @@ import {
   computed,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT } from '@angular/common';
@@ -15,7 +14,7 @@ import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } from 'rxjs';
 
-import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 
@@ -31,6 +30,8 @@ import {
 import { AttendanceStatusBadge } from '../shared/attendance-status-badge';
 import { formatHours, formatLate } from '../shared/attendance-status.util';
 
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { ListPaginator, ListPageChange } from '../../../../shared/ui/list-paginator/list-paginator';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A clickable summary card: a status bucket, its count, and its tone. */
@@ -51,6 +52,8 @@ interface PeriodOption {
 @Component({
   selector: 'app-attendance-dashboard',
   imports: [
+    PageLayout,
+    ListPaginator,
     TableModule,
     ButtonModule,
     DatePickerModule,
@@ -68,8 +71,6 @@ export class AttendanceDashboard implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
 
-  private readonly rosterTable = viewChild<Table>('rosterTable');
-  private readonly tardTable = viewChild<Table>('tardTable');
 
   // Shared day context.
   readonly dateControl = new FormControl<Date>(this.startOfToday(), { nonNullable: true });
@@ -106,7 +107,8 @@ export class AttendanceDashboard implements OnInit {
   readonly isLoadingRoster = signal(false);
   readonly rosterSearch = new FormControl('', { nonNullable: true });
   readonly statusFilter = signal<BoardStatusFilter | null>(null);
-  private rosterFirst = 0;
+  readonly rosterFirst = signal(0);
+  readonly rosterPage = computed(() => Math.floor(this.rosterFirst() / this.rosterRows()) + 1);
   private rosterRequestId = 0;
 
   // Tardiness scoreboard.
@@ -122,7 +124,8 @@ export class AttendanceDashboard implements OnInit {
   readonly isLoadingTard = signal(false);
   readonly tardMeta = signal<TardinessMeta | null>(null);
   readonly tardSearch = new FormControl('', { nonNullable: true });
-  private tardFirst = 0;
+  readonly tardFirst = signal(0);
+  readonly tardPage = computed(() => Math.floor(this.tardFirst() / this.tardRows()) + 1);
   private tardRequestId = 0;
 
   private pendingRealtimeRefresh = false;
@@ -193,7 +196,7 @@ export class AttendanceDashboard implements OnInit {
   /* ─── Roster ──────────────────────────────────────────── */
 
   onRosterLazyLoad(event: TableLazyLoadEvent): void {
-    this.rosterFirst = event.first ?? 0;
+    this.rosterFirst.set(event.first ?? 0);
     this.rosterRows.set(event.rows ?? 10);
     this.fetchRoster();
   }
@@ -209,7 +212,7 @@ export class AttendanceDashboard implements OnInit {
 
     this.attendanceService
       .getBoardRoster({
-        page: Math.floor(this.rosterFirst / this.rosterRows()) + 1,
+        page: this.rosterPage(),
         limit: this.rosterRows(),
         date: this.toDateParam(this.dateControl.value),
         search: this.rosterSearch.value.trim() || undefined,
@@ -239,16 +242,28 @@ export class AttendanceDashboard implements OnInit {
   }
 
   private resetRoster(): void {
-    this.rosterFirst = 0;
-    const table = this.rosterTable();
-    if (table) table.first = 0;
+    this.rosterFirst.set(0);
     this.fetchRoster();
+  }
+
+  /** Shared list footer for the roster. */
+  onRosterPage(change: ListPageChange): void {
+    this.rosterRows.set(change.pageSize);
+    this.rosterFirst.set(change.first);
+    this.fetchRoster();
+  }
+
+  /** Shared list footer for the scoreboard. */
+  onTardPage(change: ListPageChange): void {
+    this.tardRows.set(change.pageSize);
+    this.tardFirst.set(change.first);
+    this.fetchTardiness();
   }
 
   /* ─── Tardiness scoreboard ────────────────────────────── */
 
   onTardLazyLoad(event: TableLazyLoadEvent): void {
-    this.tardFirst = event.first ?? 0;
+    this.tardFirst.set(event.first ?? 0);
     this.tardRows.set(event.rows ?? 10);
     this.fetchTardiness();
   }
@@ -265,7 +280,7 @@ export class AttendanceDashboard implements OnInit {
 
     this.attendanceService
       .getTardiness({
-        page: Math.floor(this.tardFirst / this.tardRows()) + 1,
+        page: this.tardPage(),
         limit: this.tardRows(),
         period: this.period(),
         date: this.toDateParam(this.dateControl.value),
@@ -296,9 +311,7 @@ export class AttendanceDashboard implements OnInit {
   }
 
   private resetTardiness(): void {
-    this.tardFirst = 0;
-    const table = this.tardTable();
-    if (table) table.first = 0;
+    this.tardFirst.set(0);
     this.fetchTardiness();
   }
 

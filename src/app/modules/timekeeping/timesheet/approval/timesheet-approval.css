@@ -1,266 +1,25 @@
-/* ─── Page shell ─────────────────────────────────────────────────────────── */
-
-.approval-page {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem 2.5rem;
-  background: var(--color-background);
-  color: var(--color-body);
-  overflow-y: auto;
-}
-
-/* ─── Header ─────────────────────────────────────────────────────────────── */
-
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.page-kicker {
-  display: inline-flex;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--color-primary);
-  margin-bottom: 0.2rem;
-}
-
-.page-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  font-family: var(--font-heading);
-  letter-spacing: -0.02em;
-  margin: 0 0 0.25rem;
-}
-
-.page-subtitle {
-  font-size: 0.875rem;
-  color: var(--color-body);
-  margin: 0;
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
+/* ─── Toolbar ──────────────────────────────────────────────────────────── */
 
 .week-picker-group {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: color-mix(in srgb, var(--color-secondary) 22%, var(--color-background));
-}
-
-:host ::ng-deep .week-picker-group .p-datepicker { width: 11.75rem; }
-:host ::ng-deep .week-picker-group .p-inputtext  { min-height: 2rem; font-size: 0.8rem; font-weight: 700; }
-
-:host ::ng-deep .week-picker-group .p-button {
-  min-height: 2rem;
-  padding-block: 0.35rem;
-  padding-inline: 0.65rem;
-  border-radius: var(--radius-base);
-  font-size: 0.78rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-:host ::ng-deep .week-nav-btn.p-button { width: 2rem; padding-inline: 0; }
-
-.week-range-label {
-  padding: 0 0.4rem;
-  color: var(--color-body);
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.lock-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-muted-destructive);
-  color: var(--color-destructive);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-:host ::ng-deep .header-actions .p-button {
-  white-space: nowrap;
-}
-
-/* ─── Stats Strip ────────────────────────────────────────────────────────── */
-
-/* Separate white cards — same surface + hairline border as the Attendance/Tickets stat cards. */
-.hours-strip {
-  display: flex;
-  gap: 0.75rem;
   flex-wrap: wrap;
-  flex: 0 0 auto;
-}
-
-.hours-chip {
-  flex: 1 1 0;
-  min-width: 8rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.3rem;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-}
-
-.hours-chip-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-muted);
-  white-space: nowrap;
-}
-
-.hours-chip-value {
-  font-size: 0.92rem;
-  font-weight: 700;
-  font-family: var(--font-heading);
-  color: var(--color-heading);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ─── Filter / Tab Bar (inside the white card, above the toolbar) ─────────── */
-/* Pill/fill tab style — mirrors Tickets' .view-tabs exactly. */
-
-.tabs-row {
-  padding: 0.625rem 1.25rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.status-tabs {
-  display: flex;
-  align-items: center;
   gap: 0.25rem;
 }
 
-.tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.375rem 0.75rem;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
+:host ::ng-deep .week-picker-group .p-datepicker { width: 11rem; }
+:host ::ng-deep .week-nav-btn.p-button { width: 2.25rem; padding-inline: 0; }
+
+.week-range-label {
+  padding: 0 0.375rem;
+  color: var(--text-muted);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--color-muted);
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.tab-btn:hover {
-  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
-  color: var(--color-body);
-}
-
-.tab-btn:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-.tab-btn--active {
-  background: var(--color-secondary);
-  color: var(--color-secondary-foreground);
-  font-weight: 600;
-}
-
-.tab-count {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-muted);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.tab-btn--active .tab-count {
-  color: var(--color-secondary-foreground);
-}
-
-/* ─── Table toolbar (search + project filter, inside the white card) ──────── */
-
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--color-border);
-  flex: 0 0 auto;
-}
-
-.search-box {
-  position: relative;
-  flex: 1;
-  max-width: 360px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-body);
-  font-size: 0.875rem;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.625rem 0.875rem 0.625rem 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  color: var(--color-heading);
-  background: var(--color-surface);
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.search-input::placeholder { color: var(--color-muted); }
-
-.search-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
-}
-
-:host ::ng-deep .table-toolbar .p-select {
-  width: 14rem;
-  font-size: 0.82rem;
-}
+:host ::ng-deep .project-filter { width: 14rem; }
 
 /* ─── Bulk action bar ────────────────────────────────────────────────────── */
 
@@ -269,17 +28,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.5rem 0.875rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: var(--color-secondary);
-  flex: 0 0 auto;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--selected);
 }
 
 .bulk-count {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-heading);
 }
 
 .bulk-actions {
@@ -288,75 +45,17 @@
   gap: 0.4rem;
 }
 
-/* ─── Main Split Layout ──────────────────────────────────────────────────── */
+/* ─── Table ──────────────────────────────────────────────────────────────── */
 
-.main-split {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  flex: 0 0 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* ─── Table Panel ────────────────────────────────────────────────────────── */
-
-/* White card wrapper — same surface + hairline border as the Attendance/Tickets table cards. */
-.table-panel {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: var(--color-surface);
-  min-height: 0;
-  overflow: hidden;
-}
-
-.table-wrap {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overflow-x: auto;
-}
-
-/* Quiet header: muted small labels, a single hairline rule — no blue fill.
-   !important beats PrimeNG's own thead > tr > th background token. */
-:host ::ng-deep .approval-table,
-:host ::ng-deep .approval-table .p-datatable-header,
-:host ::ng-deep .approval-table .p-datatable-thead,
-:host ::ng-deep .approval-table .p-datatable-thead > tr,
-:host ::ng-deep .approval-table .p-datatable-thead > tr > th {
-  background: var(--color-surface) !important;
-}
-
-:host ::ng-deep .approval-table thead th {
-  color: var(--color-muted);
-  font-weight: 600;
-  padding: 0.6rem 0.75rem;
-  border: none;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-:host ::ng-deep .approval-table tbody td {
-  padding: 0.625rem 0.75rem;
-  border: none;
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
-}
-
-:host ::ng-deep .approval-table tbody tr:hover {
-  background: color-mix(in srgb, var(--color-secondary) 55%, transparent);
-}
-
+/* The row whose submission dialog is open. */
 :host ::ng-deep .approval-table tbody tr.row--active {
-  background: var(--color-secondary);
+  background: var(--selected);
 }
 
-:host ::ng-deep .approval-table tbody tr.row--active td {
-  border-bottom-color: var(--color-primary);
+.approval-table .ds-row-link:focus-visible,
+:host ::ng-deep .approval-table tbody tr:focus-visible {
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: -2px;
 }
 
 .col-check {
@@ -393,15 +92,14 @@
 }
 
 .employee-avatar {
-  width: 1.875rem;
-  height: 1.875rem;
-  border-radius: 50%;
-  background: var(--color-secondary);
-  color: var(--color-primary);
-  font-size: 0.6rem;
-  font-weight: 800;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--pill-radius);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
   letter-spacing: 0.02em;
-  font-family: var(--font-heading);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -439,60 +137,6 @@
 
 /* ─── Paginator ──────────────────────────────────────────────────────────── */
 
-:host ::ng-deep .approval-table .p-paginator {
-  background: var(--color-surface);
-  border: none;
-  border-top: 1px solid var(--color-border);
-  padding: 0.75rem 1.25rem;
-  gap: 0.5rem;
-  font-family: var(--font-body);
-}
-
-:host ::ng-deep .approval-table .p-paginator-current {
-  color: var(--color-body);
-  font-size: 0.8125rem;
-}
-
-:host ::ng-deep .approval-table .p-paginator .p-paginator-pages .p-paginator-page,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-first,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-prev,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-next,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-last {
-  background: transparent;
-  color: var(--color-secondary-foreground);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  min-width: 2rem;
-  height: 2rem;
-  font-size: 0.8125rem;
-  margin: 0;
-}
-
-:host ::ng-deep .approval-table .p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  border-color: var(--color-primary);
-}
-
-:host ::ng-deep .approval-table .p-paginator .p-paginator-pages .p-paginator-page:not(.p-highlight):hover,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-first:not(:disabled):hover,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-prev:not(:disabled):hover,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-next:not(:disabled):hover,
-:host ::ng-deep .approval-table .p-paginator .p-paginator-last:not(:disabled):hover {
-  background: var(--color-secondary);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-:host ::ng-deep .approval-table .p-paginator .p-select {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-}
-
-/* ─── Status Badges ──────────────────────────────────────────────────────── */
-
-/* Dot + label, no fill — matches the Tickets status-cell pattern. */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -540,61 +184,6 @@
 }
 
 .status-badge--rejected::before { background: var(--color-destructive); }
-
-/* ─── Empty State ────────────────────────────────────────────────────────── */
-
-:host ::ng-deep .approval-table {
-  background: var(--color-surface);
-}
-
-:host ::ng-deep .approval-table:has(.empty-row) {
-  height: 100%;
-}
-
-:host ::ng-deep .approval-table .empty-row,
-:host ::ng-deep .approval-table .empty-row td {
-  height: 100%;
-  background: var(--color-surface);
-  border: none;
-}
-
-.empty-state {
-  height: 100%;
-  min-height: 20rem;
-  padding: 3rem 1rem;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  background: var(--color-surface);
-}
-
-.empty-icon {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-secondary);
-  color: var(--color-primary);
-  font-size: 1.25rem;
-}
-
-.empty-title {
-  margin: 0;
-  font-weight: 700;
-  font-family: var(--font-heading);
-  color: var(--color-heading);
-}
-
-.empty-body {
-  margin: 0;
-  color: var(--color-body);
-  font-size: 0.875rem;
-}
 
 /* ─── Submission Details Dialog ──────────────────────────────────────────── */
 
@@ -1015,36 +604,31 @@
 
 /* ─── Mobile List ────────────────────────────────────────────────────────── */
 
+/* Phones: rows on the page with dividers, same as the table. */
 .mobile-list {
   display: none;
   flex-direction: column;
-  gap: 0.625rem;
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding-bottom: 5rem;
+  margin-inline: calc(var(--page-gutter) * -1);
+  border-top: 1px solid var(--divider);
 }
 
 .mobile-card {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.875rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: var(--color-background);
+  gap: 0.625rem;
+  padding: 0.75rem var(--page-gutter);
+  border-bottom: 1px solid var(--divider);
   cursor: pointer;
-  transition: background 150ms;
+  transition: background-color var(--transition-fast);
 }
 
-.mobile-card:hover,
-.mobile-card:focus-visible {
-  background: var(--color-secondary);
-  outline: none;
+.mobile-card:hover {
+  background: var(--hover);
 }
 
 .mobile-card:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: -2px;
 }
 
 .mobile-card-top {
@@ -1153,11 +737,7 @@
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 960px) {
-  .approval-page {
-    overflow-y: auto;
-  }
-
-  .main-split {
+  .table-panel {
     display: none;
   }
 
@@ -1169,64 +749,18 @@
     display: none;
   }
 
-  .hours-strip {
-    flex-wrap: wrap;
-  }
-
-  .hours-chip {
-    min-width: calc(33.33% - 1px);
-  }
-
-  .status-tabs {
-    flex-wrap: wrap;
-  }
-
-  .table-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-box,
-  :host ::ng-deep .table-toolbar .p-select {
+  :host ::ng-deep .project-filter {
     width: 100%;
   }
 }
 
 @media (max-width: 640px) {
-  .approval-page {
-    padding: 1rem;
-    gap: 0.75rem;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .week-picker-group {
     flex-wrap: wrap;
   }
 
   :host ::ng-deep .week-picker-group .p-datepicker {
     width: 100%;
-  }
-
-  .header-actions {
-    flex-wrap: wrap;
-  }
-
-  :host ::ng-deep .header-actions .p-button {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-
-  .hours-chip {
-    min-width: calc(50% - 1px);
   }
 
   .dialog-actions {
@@ -1241,4 +775,27 @@
   .mobile-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* The employee cell is the row's keyboard target. */
+.row-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-open:focus-visible {
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius);
+}
+
+.employee-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }

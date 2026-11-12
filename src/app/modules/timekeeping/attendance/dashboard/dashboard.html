@@ -1,11 +1,5 @@
-<main class="board">
-  <header class="board-head">
-    <div class="board-heading">
-      <h1 class="board-title">Attendance board</h1>
-      <p class="board-subtitle">Who's in, who's late, who's out, graded against each schedule.</p>
-    </div>
-
-    <div class="day-nav">
+<app-page heading="Attendance board" subtitle="Who's in, who's late, who's out, graded against each schedule.">
+    <div pageActions class="day-nav">
       @if (summary(); as s) {
         <span class="as-of" [class.as-of--live]="isToday()">
           @if (isToday()) {
@@ -17,6 +11,7 @@
         </span>
       }
       <p-datepicker
+        ariaLabel="Board day"
         [formControl]="dateControl"
         dateFormat="yy-mm-dd"
         [showIcon]="true"
@@ -35,7 +30,6 @@
         ariaLabel="Next day"
       />
     </div>
-  </header>
 
   @if (accessDenied()) {
     <section class="access-denied" role="alert">
@@ -76,7 +70,7 @@
 
     <!-- ─── Roster ─────────────────────────────────────── -->
     <section class="panel">
-      <div class="table-card">
+      <div class="table-panel">
         <div class="table-toolbar">
           <div class="toolbar-lead">
             <h2 class="panel-title">Employee Status</h2>
@@ -106,17 +100,12 @@
           [value]="rosterEntries()"
           [lazy]="true"
           (onLazyLoad)="onRosterLazyLoad($event)"
-          [paginator]="true"
+          [first]="rosterFirst()"
           [rows]="rosterRows()"
-          [totalRecords]="rosterTotal()"
           [loading]="isLoadingRoster()"
-          [rowsPerPageOptions]="[10, 25, 50]"
-          [showCurrentPageReport]="true"
-          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
-          paginatorDropdownAppendTo="body"
           [rowHover]="true"
           dataKey="employeeId"
-          class="board-table"
+          class="ds-table board-table"
           [tableStyle]="{ 'width': '100%' }"
         >
           <ng-template pTemplate="header">
@@ -132,16 +121,16 @@
 
           <ng-template pTemplate="body" let-entry>
             <tr
-              class="board-row"
-              tabindex="0"
-              role="button"
-              [attr.aria-label]="'View attendance for ' + (entry.name ?? entry.email)"
+              class="board-row ds-row-link"
               (click)="openEmployee(entry)"
-              (keydown.enter)="openEmployee(entry)"
-              (keydown.space)="openEmployee(entry); $event.preventDefault()"
             >
               <td class="name-cell">
-                <span class="cell-name">{{ entry.name ?? entry.email }}</span>
+                <button
+                  type="button"
+                  class="cell-name row-open"
+                  [attr.aria-label]="'View attendance for ' + (entry.name ?? entry.email)"
+                  (click)="openEmployee(entry); $event.stopPropagation()"
+                >{{ entry.name ?? entry.email }}</button>
                 @if (entry.employeeCode) {
                   <span class="cell-sub">{{ entry.employeeCode }}</span>
                 }
@@ -180,17 +169,24 @@
             </tr>
           </ng-template>
         </p-table>
+        <app-list-paginator
+          [total]="rosterTotal()"
+          [page]="rosterPage()"
+          [pageSize]="rosterRows()"
+          itemLabel="employees"
+          (pageChange)="onRosterPage($event)"
+        />
       </div>
     </section>
 
     <!-- ─── Tardiness scoreboard ───────────────────────── -->
     <section class="panel">
-      <div class="table-card">
+      <div class="table-panel">
         <div class="table-toolbar">
           <div class="toolbar-lead">
             <h2 class="panel-title">Tardiness scoreboard</h2>
             @if (tardMeta(); as meta) {
-              <span class="window-label">{{ meta.from | date: 'MMM d' }} – {{ meta.to | date: 'MMM d' }}</span>
+              <span class="window-label">{{ meta.from | date: 'MMM d' }} to {{ meta.to | date: 'MMM d' }}</span>
             }
           </div>
 
@@ -227,16 +223,11 @@
           [value]="tardEntries()"
           [lazy]="true"
           (onLazyLoad)="onTardLazyLoad($event)"
-          [paginator]="true"
+          [first]="tardFirst()"
           [rows]="tardRows()"
-          [totalRecords]="tardTotal()"
           [loading]="isLoadingTard()"
-          [rowsPerPageOptions]="[10, 25, 50]"
-          [showCurrentPageReport]="true"
-          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
-          paginatorDropdownAppendTo="body"
           dataKey="employeeId"
-          class="board-table"
+          class="ds-table board-table"
           [tableStyle]="{ 'width': '100%' }"
         >
           <ng-template pTemplate="header">
@@ -294,7 +285,14 @@
             </tr>
           </ng-template>
         </p-table>
+        <app-list-paginator
+          [total]="tardTotal()"
+          [page]="tardPage()"
+          [pageSize]="tardRows()"
+          itemLabel="employees"
+          (pageChange)="onTardPage($event)"
+        />
       </div>
     </section>
   }
-</main>
+</app-page>

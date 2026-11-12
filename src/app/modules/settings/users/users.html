@@ -1,100 +1,94 @@
-<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
-  <p-toast />
+<p-toast />
 
-  <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-2xl font-semibold text-heading">Users</h1>
-      <p class="text-sm text-body/70">Onboard and view members in your organization.</p>
-    </div>
-    <p-button label="Onboard user" icon="pi pi-user-plus" (onClick)="openCreateDialog()" />
-  </header>
+<app-page heading="Users" subtitle="Onboard and view members in your organization.">
+  <p-button pageActions label="Onboard user" icon="pi pi-user-plus" (onClick)="openCreateDialog()" />
 
   @if (loadError()) {
-    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+    <p-message severity="error" styleClass="ds-message">
       <span>{{ loadError() }}</span>
-      <p-button
-        label="Retry"
-        icon="pi pi-refresh"
-        size="small"
-        severity="danger"
-        text
-        (onClick)="loadUsers()"
-        [disabled]="isLoading()"
-      />
-    </div>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="loadUsers()" [disabled]="isLoading()" />
+    </p-message>
   }
 
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-12 text-body/70">
-      <i class="pi pi-spin pi-spinner text-xl mr-2"></i>
-      Loading users...
+    <div class="ds-table-skeleton" role="status" aria-label="Loading users">
+      @for (row of [1, 2, 3, 4, 5]; track row) {
+        <div class="skeleton-row">
+          <p-skeleton shape="circle" size="1.75rem" />
+          <p-skeleton width="10rem" height="0.75rem" />
+          <p-skeleton width="14rem" height="0.75rem" />
+          <p-skeleton width="4rem" height="1.25rem" borderRadius="999px" />
+        </div>
+      }
     </div>
   } @else if (!loadError() && users().length === 0) {
-    <div class="rounded-base border border-border bg-background p-10 text-center flex flex-col items-center gap-2">
-      <i class="pi pi-users text-3xl text-body/40"></i>
-      <p class="text-body font-medium">No users found</p>
-      <p class="text-sm text-body/70">Onboard your first organization member.</p>
-      <p-button label="Onboard user" icon="pi pi-user-plus" (onClick)="openCreateDialog()" class="mt-2" />
-    </div>
+    <app-empty-state icon="pi pi-users" heading="No users found" description="Onboard your first organization member.">
+      <p-button label="Onboard user" icon="pi pi-user-plus" (onClick)="openCreateDialog()" />
+    </app-empty-state>
   } @else if (!loadError()) {
-    <div class="rounded-base border border-border overflow-hidden">
-      <p-table
-        [value]="users()"
-        dataKey="id"
-        styleClass="text-sm"
-        [paginator]="users().length > 10"
-        [rows]="10"
-        [rowsPerPageOptions]="[10, 25, 50]"
-        [tableStyle]="{ 'min-width': '48rem' }"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th scope="col">User</th>
-            <th scope="col">Email</th>
-            <th scope="col">Role</th>
-            <th scope="col" class="hidden md:table-cell">Joined</th>
-            <th scope="col" class="text-right" style="width: 5rem">Actions</th>
-          </tr>
-        </ng-template>
+    <div>
+      <div class="ds-table-scroll">
+        <p-table
+          class="ds-table"
+          [value]="pager.pageRows()"
+          [lazy]="true"
+          (onLazyLoad)="pager.onSort($event)"
+          dataKey="id"
+          [rowHover]="true"
+          [tableStyle]="{ 'min-width': '44rem' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" pSortableColumn="user.name">User <p-sortIcon field="user.name" /></th>
+              <th scope="col" pSortableColumn="user.email">Email <p-sortIcon field="user.email" /></th>
+              <th scope="col" pSortableColumn="role">Role <p-sortIcon field="role" /></th>
+              <th scope="col" class="hide-md" pSortableColumn="createdAt">Joined <p-sortIcon field="createdAt" /></th>
+              <th scope="col" class="text-right" style="width: 5rem"><span class="ds-sr-only">Actions</span></th>
+            </tr>
+          </ng-template>
 
-        <ng-template pTemplate="body" let-member>
-          <tr>
-            <td>
-              <div class="flex items-center gap-3">
-                <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground font-medium uppercase">
-                  {{ (member.user.name || member.user.email).charAt(0) }}
-                </span>
-                <span class="font-medium text-heading">{{ member.user.name || 'Unnamed user' }}</span>
-              </div>
-            </td>
-            <td class="text-body/70">{{ member.user.email }}</td>
-            <td>
-              <span class="inline-flex rounded-full bg-secondary px-2.5 py-1 text-xs font-medium capitalize text-secondary-foreground">
-                {{ member.role }}
-              </span>
-            </td>
-            <td class="hidden md:table-cell text-body/70">
-              {{ member.createdAt | date: 'mediumDate' }}
-            </td>
-            <td class="text-right">
-              <p-button
-                icon="pi pi-pencil"
-                severity="secondary"
-                text
-                rounded
-                size="small"
-                [ariaLabel]="'Edit ' + (member.user.name || member.user.email)"
-                [loading]="editingUserId() === member.id"
-                [disabled]="editingUserId() !== null"
-                (onClick)="openEditDialog(member)"
-              />
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
+          <ng-template pTemplate="body" let-member>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <span class="avatar bg-secondary text-secondary-foreground uppercase" aria-hidden="true">
+                    {{ (member.user.name || member.user.email).charAt(0) }}
+                  </span>
+                  <span class="font-medium text-heading">{{ member.user.name || 'Unnamed user' }}</span>
+                </div>
+              </td>
+              <td class="text-muted">{{ member.user.email }}</td>
+              <td>
+                <p-tag [value]="member.role | titlecase" [severity]="member.role === 'member' ? 'secondary' : undefined" [rounded]="true" />
+              </td>
+              <td class="hide-md text-muted ds-num">{{ member.createdAt | date: 'mediumDate' }}</td>
+              <td class="text-right">
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  text
+                  rounded
+                  size="small"
+                  [ariaLabel]="'Edit ' + (member.user.name || member.user.email)"
+                  [loading]="editingUserId() === member.id"
+                  [disabled]="editingUserId() !== null"
+                  (onClick)="openEditDialog(member)"
+                />
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+      <app-list-paginator
+        [total]="pager.total()"
+        [page]="pager.currentPage()"
+        [pageSize]="pager.pageSize()"
+        itemLabel="users"
+        (pageChange)="pager.onPage($event)"
+      />
     </div>
   }
-</main>
+</app-page>
 
 <p-dialog
   [header]="dialogMode() === 'edit' ? 'Edit user' : 'Onboard user'"
@@ -187,7 +181,7 @@
         <small class="text-destructive">Biometrics ID must be 50 characters or fewer.</small>
       }
       @if (biometricUsersError()) {
-        <small class="text-body/70">{{ biometricUsersError() }}</small>
+        <small class="text-muted">{{ biometricUsersError() }}</small>
       }
     </div>
 
@@ -220,7 +214,7 @@
         class="w-full"
       />
       @if (dialogMode() === 'edit') {
-        <small class="text-body/70">Role changes are managed separately.</small>
+        <small class="text-muted">Role changes are managed separately.</small>
       }
     </div>
   </form>

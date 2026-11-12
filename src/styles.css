@@ -2,8 +2,8 @@
 
 @import 'tailwindcss';
 @import "primeicons/primeicons.css";
-@import 'maplibre-gl/dist/maplibre-gl.css';
 @import './theme-controls.css';
+@import './design-system.css';
 
 /* Dark mode is driven by the `.app-dark` class on <html> (see ThemeService).
    The same class is used by PrimeNG (darkModeSelector in app.config.ts).
@@ -34,7 +34,25 @@
   --border: #DBE5F0;
   --border-strong: #C7D6E6;  /* inputs, popover edges, emphasized dividers */
   --input: #DBE5F0;
-  --ring: #22D3EE;
+  /* Focus ring. Cyan-700 rather than the cyan accent so the 2px ring keeps 3:1+ on the white page. */
+  --ring: #0E7490;
+
+  /* Design system: list surfaces. Lists sit directly on --page; the app
+     chrome (header + sidebar) is one quiet step darker. */
+  --page: #FFFFFF;          /* content canvas behind every list page */
+  --chrome: #F6F8FB;        /* header + sidebar */
+  --raised: #FFFFFF;        /* small lifted items on the page: board cards, stat tiles */
+  --subtle: #F3F6FA;        /* quiet fills: segmented control track, skeletons, board drop zones */
+  --hover: #F2F5F9;         /* row + nav hover */
+  --selected: #E9F0FA;      /* selected row, active nav item, current page */
+  --divider: #E6ECF2;       /* row dividers and section rules, lighter than --border */
+  --text-faint: #8696A5;    /* icons and decorative glyphs only, never running text */
+
+  /* Priority: restrained ramp, colour only where it carries meaning. */
+  --priority-urgent: #E5484D;
+  --priority-high: #E2620E;
+  --priority-medium: #D99A0B;
+  --priority-low: #7A8B9B;
 
   /* Status: solid + muted fill + muted-foreground (badge text, tuned to AA on its fill). */
   --destructive: #FF4B4B;
@@ -62,6 +80,25 @@
   --attendance-biometric: #8B5CF6;
 
   --radius: 0.25rem;
+  --card-radius: 0.375rem;   /* board cards, stat tiles, popovers */
+  --pill-radius: 999px;      /* badges, counts, avatars */
+
+  /* Layout spacing. Values are steps of Tailwind's 4px scale, named by role. */
+  --page-gutter: 2rem;       /* tw 8: page side padding on desktop */
+  --page-gutter-sm: 1rem;    /* tw 4: page side padding on phones */
+  --page-gap: 1.25rem;       /* tw 5: header -> tabs -> toolbar -> content */
+  --toolbar-gap: 0.5rem;     /* tw 2: between toolbar controls */
+  --cell-x: 0.75rem;         /* tw 3: table cell side padding */
+
+  /* Density. One row height everywhere a list renders. */
+  --row-h: 2.75rem;          /* 44px list row */
+  --row-h-head: 2.25rem;     /* 36px header row */
+  --control-h: 2.25rem;      /* 36px toolbar controls (inputs, buttons, selects) */
+
+  /* Interaction. */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --transition-fast: 120ms ease;
 }
 
 /* Dark theme: a separately tuned, near-neutral palette — NOT a mechanical
@@ -89,6 +126,20 @@
   --border-strong: #2E3A48;
   --input: #2E3A48;
   --ring: #22D3EE;
+
+  --page: #10151C;
+  --chrome: #0B0F14;
+  --raised: #161C25;
+  --subtle: #141A22;
+  --hover: #161D26;
+  --selected: #1B2533;
+  --divider: #1D252F;
+  --text-faint: #627181;
+
+  --priority-urgent: #FF6B6B;
+  --priority-high: #F28A4B;
+  --priority-medium: #F4B740;
+  --priority-low: #8697A8;
 
   --destructive: #FF6B6B;
   --muted-destructive: #2E1A1C;
@@ -132,7 +183,21 @@
   --border: #DBE5F0;
   --border-strong: #C7D6E6;
   --input: #DBE5F0;
-  --ring: #22D3EE;
+  --ring: #0E7490;
+
+  --page: #FFFFFF;
+  --chrome: #F6F8FB;
+  --raised: #FFFFFF;
+  --subtle: #F3F6FA;
+  --hover: #F2F5F9;
+  --selected: #E9F0FA;
+  --divider: #E6ECF2;
+  --text-faint: #8696A5;
+
+  --priority-urgent: #E5484D;
+  --priority-high: #E2620E;
+  --priority-medium: #D99A0B;
+  --priority-low: #7A8B9B;
 
   --destructive: #FF4B4B;
   --muted-destructive: #FFE1DE;
@@ -195,7 +260,22 @@
   --color-attendance-office: var(--attendance-office);
   --color-attendance-biometric: var(--attendance-biometric);
 
+  --color-page: var(--page);
+  --color-chrome: var(--chrome);
+  --color-raised: var(--raised);
+  --color-subtle: var(--subtle);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-divider: var(--divider);
+  --color-faint: var(--text-faint);
+  --color-priority-urgent: var(--priority-urgent);
+  --color-priority-high: var(--priority-high);
+  --color-priority-medium: var(--priority-medium);
+  --color-priority-low: var(--priority-low);
+
   --radius-base: var(--radius);
+  --radius-card: var(--card-radius);
+  --radius-pill: var(--pill-radius);
 
   --font-heading: 'Poppins', sans-serif;
   --font-body: 'Work Sans', sans-serif;

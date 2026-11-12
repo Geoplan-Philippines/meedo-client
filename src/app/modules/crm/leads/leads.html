@@ -1,171 +1,89 @@
+<app-page heading="Leads" subtitle="Track and manage your sales pipeline">
+  <button pageActions pButton type="button" class="coming-soon" icon="pi pi-plus" label="Add Lead" aria-disabled="true" title="Coming soon"></button>
 
-<div class="leads-page">
+  <app-stat-strip pageSummary label="Lead statistics" [items]="statItems()" />
 
-  <!-- Page Header -->
-  <header class="page-header">
-    <div>
-      <h1 class="page-title">Leads</h1>
-      <p class="page-subtitle">Track and manage your sales pipeline</p>
-    </div>
-    <button class="add-btn" type="button" aria-disabled="true" title="Coming soon">
-      <i class="pi pi-plus" aria-hidden="true"></i>
-      <span>Add Lead</span>
-    </button>
-  </header>
+  <p-iconfield pageToolbar class="ds-search">
+    <p-inputicon class="pi pi-search" />
+    <input
+      pInputText
+      type="search"
+      placeholder="Search by name, email, or company…"
+      aria-label="Search leads"
+      (input)="onSearch($event)"
+    />
+  </p-iconfield>
+  <button pageToolbarEnd pButton type="button" class="coming-soon" severity="secondary" [outlined]="true" icon="pi pi-filter" label="Filter" aria-disabled="true" title="Coming soon"></button>
+  <button pageToolbarEnd pButton type="button" class="coming-soon" severity="secondary" [outlined]="true" icon="pi pi-download" label="Export" aria-disabled="true" title="Coming soon"></button>
 
-  <!-- KPI Stats -->
-  <div class="stats-grid" role="list" aria-label="Lead statistics">
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--total" aria-hidden="true">
-        <i class="pi pi-users"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats()?.total ?? '—' }}</span>
-        <span class="stat-label">Total Leads</span>
-      </div>
-    </div>
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--pending" aria-hidden="true">
-        <i class="pi pi-clock"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats()?.pending ?? '—' }}</span>
-        <span class="stat-label">Pending</span>
-      </div>
-    </div>
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--pending" aria-hidden="true">
-        <i class="pi pi-phone"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats()?.contacted ?? '—' }}</span>
-        <span class="stat-label">Contacted</span>
-      </div>
-    </div>
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--qualified" aria-hidden="true">
-        <i class="pi pi-star"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats()?.qualified ?? '—' }}</span>
-        <span class="stat-label">Qualified</span>
-      </div>
-    </div>
-    <div class="stat-card" role="listitem">
-      <div class="stat-icon stat-icon--lost" aria-hidden="true">
-        <i class="pi pi-times-circle"></i>
-      </div>
-      <div class="stat-body">
-        <span class="stat-value">{{ stats()?.lost ?? '—' }}</span>
-        <span class="stat-label">Lost</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Table Card -->
-  <div class="table-card">
-
-    <!-- Toolbar -->
-    <div class="table-toolbar">
-      <div class="search-box">
-        <i class="pi pi-search search-icon" aria-hidden="true"></i>
-        <input
-          type="search"
-          class="search-input"
-          placeholder="Search by name, email, or company…"
-          aria-label="Search leads"
-          (input)="onSearch($event)"
-        />
-      </div>
-      <div class="toolbar-actions">
-        <button class="toolbar-btn" type="button" aria-disabled="true" title="Coming soon">
-          <i class="pi pi-filter" aria-hidden="true"></i>
-          <span>Filter</span>
-        </button>
-        <button class="toolbar-btn" type="button" aria-disabled="true" title="Coming soon">
-          <i class="pi pi-download" aria-hidden="true"></i>
-          <span>Export</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Skeleton Loading -->
+  <div>
     @if (isLoading()) {
-      <div class="skeleton-list" role="status" aria-label="Loading leads">
+      <div class="ds-table-skeleton" role="status" aria-label="Loading leads">
         @for (row of skeletonRows; track row) {
           <div class="skeleton-row">
-            <p-skeleton shape="circle" size="2.25rem"></p-skeleton>
-            <p-skeleton width="8rem" height="0.875rem"></p-skeleton>
-            <p-skeleton width="11rem" height="0.875rem"></p-skeleton>
-            <p-skeleton width="7rem" height="0.875rem"></p-skeleton>
-            <p-skeleton width="6rem" height="0.875rem"></p-skeleton>
-            <p-skeleton width="5rem" height="1.5rem" borderRadius="100px"></p-skeleton>
+            <p-skeleton shape="circle" size="1.75rem" />
+            <p-skeleton width="8rem" height="0.75rem" />
+            <p-skeleton width="11rem" height="0.75rem" />
+            <p-skeleton width="7rem" height="0.75rem" />
+            <p-skeleton width="5rem" height="1.25rem" borderRadius="999px" />
           </div>
         }
       </div>
     } @else {
       <p-table
-        [value]="filteredLeads()"
+        class="ds-table"
+        [value]="pager.pageRows()"
+        [lazy]="true"
+        (onLazyLoad)="pager.onSort($event)"
         [tableStyle]="{ 'width': '100%' }"
-        class="leads-table"
-        [paginator]="true"
-        [rows]="10"
-        [showCurrentPageReport]="true"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} leads"
         [rowHover]="true"
       >
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="firstName" scope="col">
-              <div class="th-content">Name <p-sortIcon field="firstName"></p-sortIcon></div>
-            </th>
-            <th pSortableColumn="email" scope="col">
-              <div class="th-content">Email <p-sortIcon field="email"></p-sortIcon></div>
-            </th>
-            <th pSortableColumn="phoneNumber" scope="col">
-              <div class="th-content">Phone <p-sortIcon field="phoneNumber"></p-sortIcon></div>
-            </th>
-            <th scope="col">
-              <div class="th-content">Company</div>
-            </th>
-            <th scope="col">
-              <div class="th-content">Message</div>
-            </th>
-            <th pSortableColumn="status" scope="col">
-              <div class="th-content">Status <p-sortIcon field="status"></p-sortIcon></div>
-            </th>
+            <th pSortableColumn="firstName" scope="col">Name <p-sortIcon field="firstName" /></th>
+            <th pSortableColumn="email" scope="col">Email <p-sortIcon field="email" /></th>
+            <th pSortableColumn="phoneNumber" scope="col" class="hide-md">Phone <p-sortIcon field="phoneNumber" /></th>
+            <th scope="col" class="hide-md">Company</th>
+            <th scope="col" class="hide-lg">Message</th>
+            <th pSortableColumn="status" scope="col">Status <p-sortIcon field="status" /></th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-lead>
-          <tr class="lead-row">
+          <tr>
             <td>
               <div class="lead-identity">
-                <div [class]="getAvatarClass(lead)" aria-hidden="true">
-                  {{ getInitials(lead) }}
-                </div>
+                <span [class]="getAvatarClass(lead)" aria-hidden="true">{{ getInitials(lead) }}</span>
                 <span class="lead-name">{{ lead.firstName }} {{ lead.lastName }}</span>
               </div>
             </td>
             <td>
               <a class="lead-email" [href]="'mailto:' + lead.email">{{ lead.email }}</a>
             </td>
-            <td class="lead-phone">{{ lead.phoneNumber || '—' }}</td>
-            <td>
+            <td class="lead-phone hide-md">
+              @if (lead.phoneNumber) { {{ lead.phoneNumber }} } @else { <span class="ds-muted">None</span> }
+            </td>
+            <td class="hide-md">
               @if (lead.company) {
-                <span class="company-chip">{{ lead.company }}</span>
+                <span class="company">{{ lead.company }}</span>
               } @else {
-                <span class="empty-cell">—</span>
+                <span class="ds-muted">None</span>
+              }
+            </td>
+            <td class="hide-lg">
+              @if (lead.message) {
+                <span class="lead-message" [title]="lead.message">{{ lead.message }}</span>
+              } @else {
+                <span class="ds-muted">None</span>
               }
             </td>
             <td>
-              <span class="lead-message" [title]="lead.message || ''">{{ lead.message || '—' }}</span>
-            </td>
-            <td>
-              <span class="status-badge" [class]="'status-badge status-' + (lead.status || 'PENDING').toLowerCase()">
-                <span class="status-dot" aria-hidden="true"></span>
-                {{ lead.status || 'pending' }}
-              </span>
+              <p-tag
+                [class]="'status-badge status-' + (lead.status || 'PENDING').toLowerCase()"
+                [severity]="statusSeverity(lead.status)"
+                [value]="(lead.status || 'pending') | titlecase"
+                [rounded]="true"
+              />
             </td>
           </tr>
         </ng-template>
@@ -173,25 +91,21 @@
         <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="6">
-              <div class="empty-state">
-                <div class="empty-icon" aria-hidden="true">
-                  <i class="pi pi-inbox"></i>
-                </div>
-                <p class="empty-title">No leads found</p>
-                <p class="empty-body">
-                  @if (searchTerm()) {
-                    No leads match "{{ searchTerm() }}". Try different keywords.
-                  } @else {
-                    Get started by adding your first lead.
-                  }
-                </p>
-              </div>
+              <app-empty-state
+                heading="No leads found"
+                [description]="searchTerm() ? 'No leads match your search. Try different keywords.' : 'Get started by adding your first lead.'"
+              />
             </td>
           </tr>
         </ng-template>
-
       </p-table>
+      <app-list-paginator
+        [total]="pager.total()"
+        [page]="pager.currentPage()"
+        [pageSize]="pager.pageSize()"
+        itemLabel="leads"
+        (pageChange)="pager.onPage($event)"
+      />
     }
-
   </div>
-</div>
+</app-page>

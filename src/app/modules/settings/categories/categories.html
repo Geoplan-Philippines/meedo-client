@@ -1,20 +1,13 @@
-<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
-  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+<app-page heading="Ticket Categories" subtitle="Manage the categories used to classify tickets.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
-    <span class="mx-2 opacity-60">/</span>
-    <span class="text-heading">Ticket Categories</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Ticket Categories</span>
   </nav>
-
-  <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-2xl font-semibold text-heading">Ticket Categories</h1>
-      <p class="text-sm text-body/70">Manage the categories used to classify tickets.</p>
-    </div>
-    <p-button label="New category" icon="pi pi-plus" (onClick)="openCreate()" />
-  </header>
+  <p-button pageActions label="New category" icon="pi pi-plus" (onClick)="openCreate()" />
 
   @if (error()) {
-    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+    <p-message severity="error" styleClass="ds-message">
       <span>{{ error() }}</span>
       <p-button
         label="Retry"
@@ -25,30 +18,29 @@
         (onClick)="load()"
         [disabled]="isLoading()"
       />
-    </div>
+    </p-message>
   }
 
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-12 text-body/70">
-      <i class="pi pi-spin pi-spinner text-xl mr-2"></i>
-      Loading ticket categories…
+    <div class="ds-table-skeleton" role="status">
+      <span class="ds-sr-only">Loading ticket categories…</span>
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="18rem" height="0.75rem" /></div>
+      }
     </div>
   } @else if (categories().length === 0) {
-    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
-      <i class="pi pi-tags text-3xl text-body/40"></i>
-      <p class="text-body font-medium">No ticket categories yet</p>
-      <p class="text-sm text-body/70">Create your first category to get started.</p>
-      <p-button label="New category" icon="pi pi-plus" (onClick)="openCreate()" class="mt-2" />
-    </div>
+    <app-empty-state icon="pi pi-tags" heading="No ticket categories yet" description="Create your first category to get started.">
+      <p-button label="New category" icon="pi pi-plus" (onClick)="openCreate()" />
+    </app-empty-state>
   } @else {
-    <div class="rounded-base border border-border overflow-hidden">
-      <p-table [value]="categories()" dataKey="id" styleClass="text-sm">
+    <div>
+      <p-table class="ds-table" [value]="pager.pageRows()" [lazy]="true" (onLazyLoad)="pager.onSort($event)" dataKey="id" [rowHover]="true">
         <ng-template pTemplate="header">
           <tr>
-            <th scope="col">Name</th>
+            <th scope="col" pSortableColumn="name">Name <p-sortIcon field="name" /></th>
             <th scope="col" class="hidden md:table-cell">Description</th>
-            <th scope="col" class="hidden md:table-cell">Updated</th>
-            <th scope="col" class="text-right">Actions</th>
+            <th scope="col" class="hidden md:table-cell" pSortableColumn="updatedAt">Updated <p-sortIcon field="updatedAt" /></th>
+            <th scope="col" class="text-right"><span class="ds-sr-only">Actions</span></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-category>
@@ -56,10 +48,10 @@
             <td>
               <span class="font-medium text-heading">{{ category.name }}</span>
             </td>
-            <td class="hidden md:table-cell text-body/70">
-              {{ category.description || '—' }}
+            <td class="hidden md:table-cell text-muted">
+              @if (category.description) { {{ category.description }} } @else { None }
             </td>
-            <td class="hidden md:table-cell text-body/70">{{ category.updatedAt | date: 'medium' }}</td>
+            <td class="hidden md:table-cell text-muted ds-num">{{ category.updatedAt | date: 'medium' }}</td>
             <td class="text-right whitespace-nowrap">
               <div class="inline-flex items-center gap-0.5">
                 <p-button
@@ -89,9 +81,16 @@
           </tr>
         </ng-template>
       </p-table>
+      <app-list-paginator
+        [total]="pager.total()"
+        [page]="pager.currentPage()"
+        [pageSize]="pager.pageSize()"
+        itemLabel="categories"
+        (pageChange)="pager.onPage($event)"
+      />
     </div>
   }
-</main>
+</app-page>
 
 <p-dialog
   [visible]="isDialogOpen()"
@@ -107,7 +106,7 @@
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
         <label for="category-name" class="text-sm font-medium text-heading">Name</label>
-        <span class="text-xs text-body/60" aria-live="polite">{{ nameLength() }} / 100</span>
+        <span class="text-xs text-muted" aria-live="polite">{{ nameLength() }} / 100</span>
       </div>
       <input id="category-name" pInputText formControlName="name" autocomplete="off" maxlength="100" />
       @if (form.controls.name.invalid && form.controls.name.touched) {
@@ -118,7 +117,7 @@
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
         <label for="category-description" class="text-sm font-medium text-heading">Description</label>
-        <span class="text-xs text-body/60" aria-live="polite">{{ descriptionLength() }} / 255</span>
+        <span class="text-xs text-muted" aria-live="polite">{{ descriptionLength() }} / 255</span>
       </div>
       <textarea
         id="category-description"

@@ -1,36 +1,22 @@
-<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
-  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+<app-page heading="Attendance" subtitle="Define how time is scheduled and counted: shifts and weekly schedules set the expected hours, holidays and the policy shape how those hours are paid, and assignments decide who follows what.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
-    <span class="mx-2 opacity-60">/</span>
-    <span class="text-heading">Attendance</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Attendance</span>
   </nav>
 
-  <header class="flex flex-col gap-1">
-    <h1 class="text-2xl font-semibold text-heading">Attendance</h1>
-    <p class="text-sm text-body/70 max-w-2xl">
-      Define how time is scheduled and counted: shifts and weekly schedules set the expected hours,
-      holidays and the policy shape how those hours are paid, and assignments decide who follows what.
-    </p>
-  </header>
-
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  <ul class="ds-rows area-list">
     @for (area of areas; track area.route) {
-      <a
-        [routerLink]="area.route"
-        class="group bg-surface border border-border rounded-base p-5 flex items-start gap-4 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        <span
-          class="inline-flex items-center justify-center w-11 h-11 rounded-base bg-secondary text-secondary-foreground shrink-0"
-        >
-          <i [class]="'pi ' + area.icon + ' text-xl'" aria-hidden="true"></i>
-        </span>
-        <span class="flex flex-col gap-1 min-w-0">
-          <span class="text-base font-semibold text-heading group-hover:text-primary transition-colors">
-            {{ area.label }}
+      <li>
+        <a [routerLink]="area.route" class="area-link">
+          <span class="area-icon" aria-hidden="true"><i [class]="'pi ' + area.icon"></i></span>
+          <span class="area-text">
+            <span class="area-label">{{ area.label }}</span>
+            <span class="area-desc">{{ area.description }}</span>
           </span>
-          <span class="text-sm text-body/70">{{ area.description }}</span>
-        </span>
-      </a>
+          <i class="pi pi-angle-right area-chevron" aria-hidden="true"></i>
+        </a>
+      </li>
     }
-  </div>
-</main>
+  </ul>
+</app-page>

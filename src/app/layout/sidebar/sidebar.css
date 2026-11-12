@@ -8,10 +8,10 @@
 .sidebar-sublist {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
-  margin: 0.125rem 0 0 1.25rem;
+  gap: 1px;
+  margin: 0.125rem 0 0 1.125rem;
   padding-left: 0.5rem;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--divider);
   list-style: none;
 }
 

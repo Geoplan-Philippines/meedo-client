@@ -30,7 +30,12 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              {
+                "input": "node_modules/maplibre-gl/dist/maplibre-gl.css",
+                "bundleName": "maplibre-gl",
+                "inject": false
+              }
             ]
           },
           "configurations": {
@@ -76,7 +81,10 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runnerConfig": true
+          }
         }
       }
     }

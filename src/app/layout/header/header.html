@@ -1,4 +1,4 @@
-<header class="app-header h-14 sm:h-16 px-3 sm:px-4 border-b border-border bg-surface flex justify-between items-center relative gap-2">
+<header class="app-header h-14 px-3 sm:px-4 border-b border-divider bg-chrome flex justify-between items-center relative gap-2">
   <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
     <p-button
       icon="pi pi-bars"
@@ -6,13 +6,13 @@
       severity="secondary"
       class="header-icon-btn shrink-0 md:hidden"
       (onClick)="layoutService.toggleSidebar()"
-      aria-label="Toggle Menu"
+      ariaLabel="Toggle menu"
     />
 
     <img
       src="/images/app-logo.png"
       alt="Meedo"
-      class="app-logo h-7 sm:h-9 w-auto object-contain min-w-0 shrink"
+      class="app-logo h-7 sm:h-8 w-auto object-contain min-w-0 shrink"
       width="455"
       height="148"
     />
@@ -40,7 +40,7 @@
       severity="secondary"
       class="header-icon-btn"
       (onClick)="themeService.toggle()"
-      [attr.aria-label]="themeService.isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
+      [ariaLabel]="themeService.isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
     />
     <app-notification-bell />
     <p-button
@@ -49,13 +49,13 @@
       severity="secondary"
       class="header-icon-btn"
       (onClick)="goToSettings()"
-      aria-label="Settings"
+      ariaLabel="Settings"
     />
     <p-avatar
       shape="circle"
       image="https://primefaces.org/cdn/primeng/images/demo/avatar/amyelsner.png"
-      class="hidden sm:inline-flex w-8 h-8 cursor-pointer border-border border-2 hover:border-primary transition-colors ml-1 lg:ml-2"
-      [attr.aria-label]="'User profile'"
+      class="hidden sm:inline-flex w-8 h-8 cursor-pointer border-divider border-2 hover:border-primary transition-colors ml-1 lg:ml-2"
+      ariaLabel="User profile"
     />
     <span class="hidden lg:inline max-w-40 truncate text-sm text-heading">{{ currentUser()?.name }}</span>
     <p-button
@@ -64,7 +64,7 @@
       severity="secondary"
       class="header-icon-btn"
       (onClick)="askLogout()"
-      aria-label="Sign out"
+      ariaLabel="Sign out"
     />
   </div>
 </header>

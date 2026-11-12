@@ -300,7 +300,22 @@ export class EmployeeDetail implements OnInit, AfterViewInit {
       });
   }
 
+  /**
+   * maplibre-gl.css is built as its own bundle (angular.json, inject: false) so the
+   * 70 KB stylesheet stays out of the app's initial CSS; this page links it on demand.
+   */
+  private ensureMapStylesheet(): void {
+    const id = 'maplibre-gl-css';
+    if (this.document.getElementById(id)) return;
+    const link = this.document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = 'maplibre-gl.css';
+    this.document.head.appendChild(link);
+  }
+
   ngAfterViewInit(): void {
+    this.ensureMapStylesheet();
     this.currentStyleUrl = this.themeService.isDark() ? DARK_STYLE_URL : LIGHT_STYLE_URL;
     this.map = new MaplibreMap({
       container: this.mapContainer().nativeElement,

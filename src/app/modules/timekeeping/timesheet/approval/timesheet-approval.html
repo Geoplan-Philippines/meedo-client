@@ -1,88 +1,78 @@
 <p-toast />
 
-<div class="approval-page">
+<app-page heading="Approvals" subtitle="Review and manage your team's timesheet submissions.">
+  <button
+    pageActions
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    icon="pi pi-refresh"
+    (click)="loadData()"
+    [loading]="isLoading()"
+    aria-label="Reload data"
+  ></button>
+  @if (isPeriodLocked()) {
+    <button pageActions pButton type="button" icon="pi pi-lock-open" label="Unlock" (click)="openUnlockDialog()" [loading]="isUnlocking()" [disabled]="isLoading()"></button>
+  } @else {
+    <button pageActions pButton type="button" severity="danger" [outlined]="true" icon="pi pi-lock" label="Lock week" (click)="lockPeriod()" [loading]="isLocking()" [disabled]="isLoading()"></button>
+  }
+  <button pageActions pButton type="button" icon="pi pi-file-excel" label="Export" (click)="exportWorkbook()" [loading]="isExporting()" [disabled]="isLoading()"></button>
 
-  <!-- ─── Header ──────────────────────────────────────────────────────── -->
-  <header class="page-header">
-    <div>
-      <h1 class="page-title">Approvals</h1>
-      <p class="page-subtitle">Review and manage your team's timesheet submissions.</p>
-    </div>
+  <app-stat-strip pageSummary label="Week statistics" [items]="weekStats()" />
 
-    <div class="header-controls">
-      <div class="week-picker-group" aria-label="Selected approval week">
-        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
-        <p-datepicker
-          inputId="approval-week"
-          [ngModel]="selectedDate()"
-          (ngModelChange)="onWeekChange($event)"
-          [showIcon]="true"
-          dateFormat="M d, yy"
-          appendTo="body"
-          ariaLabel="Select a date in the approval week"
-        />
-        <button class="week-nav-btn" pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-chevron-right" (click)="nextWeek()" [disabled]="isLoading()" aria-label="Next week"></button>
-        <span class="week-range-label">{{ weekLabel() }}</span>
-        @if (isPeriodLocked()) {
-          <span class="lock-badge" aria-label="Period is locked">
-            <i class="pi pi-lock" aria-hidden="true"></i> Locked
-          </span>
-        }
-      </div>
+  <p-tabs pageTabs #statusTabs [value]="activeTab() ?? 'ALL'" (valueChange)="setActiveTab($event === 'ALL' ? null : $any($event))" [scrollable]="true" [showNavigators]="false">
+    <p-tablist aria-label="Filter by status">
+      <p-tab value="ALL">All <p-badge [value]="tabCounts().all" [severity]="activeTab() === null ? null : 'secondary'" /></p-tab>
+      <p-tab value="SUBMITTED">Submitted <p-badge [value]="tabCounts().submitted" [severity]="activeTab() === 'SUBMITTED' ? null : 'secondary'" /></p-tab>
+      <p-tab value="APPROVED">Approved <p-badge [value]="tabCounts().approved" [severity]="activeTab() === 'APPROVED' ? null : 'secondary'" /></p-tab>
+      <p-tab value="REJECTED">Rejected <p-badge [value]="tabCounts().rejected" [severity]="activeTab() === 'REJECTED' ? null : 'secondary'" /></p-tab>
+    </p-tablist>
+  </p-tabs>
 
-      <div class="header-actions">
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          icon="pi pi-refresh"
-          (click)="loadData()"
-          [loading]="isLoading()"
-          aria-label="Reload data"
-        ></button>
-        @if (isPeriodLocked()) {
-          <button pButton type="button" icon="pi pi-lock-open" label="Unlock" (click)="openUnlockDialog()" [loading]="isUnlocking()" [disabled]="isLoading()"></button>
-        } @else {
-          <button pButton type="button" severity="danger" [outlined]="true" icon="pi pi-lock" label="Lock week" (click)="lockPeriod()" [loading]="isLocking()" [disabled]="isLoading()"></button>
-        }
-        <button pButton type="button" icon="pi pi-file-excel" label="Export" (click)="exportWorkbook()" [loading]="isExporting()" [disabled]="isLoading()"></button>
-      </div>
-    </div>
-  </header>
-
-  <!-- ─── Stats Strip ──────────────────────────────────────────────────── -->
-  <section class="hours-strip" aria-label="Week statistics">
-    <div class="hours-chip">
-      <span class="hours-chip-label">Pending Approvals</span>
-      @let pendingApprovals = (summary()?.totalsByStatus?.['SUBMITTED'] ?? 0) + (summary()?.totalsByStatus?.['DRAFT'] ?? 0);
-      <strong class="hours-chip-value">{{ pendingApprovals > 0 ? pendingApprovals : '—' }}</strong>
-    </div>
-
-    <div class="hours-chip">
-      <span class="hours-chip-label">Approved This Week</span>
-      @let approvedThisWeek = summary()?.totalsByStatus?.['APPROVED'] ?? 0;
-      <strong class="hours-chip-value">{{ approvedThisWeek > 0 ? approvedThisWeek : '—' }}</strong>
-    </div>
-
-    <div class="hours-chip">
-      <span class="hours-chip-label">Rejected</span>
-      @let rejectedCount = summary()?.totalsByStatus?.['REJECTED'] ?? 0;
-      <strong class="hours-chip-value">{{ rejectedCount > 0 ? rejectedCount : '—' }}</strong>
-    </div>
-
-    <div class="hours-chip">
-      <span class="hours-chip-label">Submitted Hours</span>
-      @let submittedHours = summary()?.totalHours ?? 0;
-      <strong class="hours-chip-value">{{ submittedHours > 0 ? (submittedHours | number: '1.0-0') + 'h' : '—' }}</strong>
-    </div>
-
-    <div class="hours-chip">
-      <span class="hours-chip-label">Overtime Hours</span>
-      @let overtimeHours = totalOvertimeHours();
-      <strong class="hours-chip-value">{{ overtimeHours > 0 ? (overtimeHours | number: '1.0-0') + 'h' : '—' }}</strong>
-    </div>
-  </section>
+  <p-iconfield pageToolbar class="ds-search">
+    <p-inputicon class="pi pi-search" />
+    <input
+      pInputText
+      type="search"
+      [ngModel]="employeeFilter()"
+      (ngModelChange)="onEmployeeFilterChange($event); pager.reset()"
+      placeholder="Search by name or department…"
+      aria-label="Search employees by name, email or department"
+    />
+  </p-iconfield>
+  <p-select
+    pageToolbar
+    [ngModel]="projectFilter()"
+    (ngModelChange)="projectFilter.set($event)"
+    [options]="projects()"
+    optionLabel="label"
+    optionValue="id"
+    [filter]="true"
+    [showClear]="true"
+    placeholder="All projects"
+    appendTo="body"
+    (onChange)="applyFilters()"
+    aria-label="Filter by project"
+    styleClass="project-filter"
+  />
+  <div pageToolbarEnd class="week-picker-group" aria-label="Selected approval week">
+    <button class="week-nav-btn" pButton type="button" severity="secondary" [text]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
+    <p-datepicker
+      inputId="approval-week"
+      [ngModel]="selectedDate()"
+      (ngModelChange)="onWeekChange($event)"
+      [showIcon]="true"
+      dateFormat="M d, yy"
+      appendTo="body"
+      ariaLabel="Select a date in the approval week"
+    />
+    <button class="week-nav-btn" pButton type="button" severity="secondary" [text]="true" icon="pi pi-chevron-right" (click)="nextWeek()" [disabled]="isLoading()" aria-label="Next week"></button>
+    <span class="week-range-label">{{ weekLabel() }}</span>
+    @if (isPeriodLocked()) {
+      <p-tag aria-label="Period is locked" value="Locked" icon="pi pi-lock" severity="warn" [rounded]="true" />
+    }
+  </div>
 
   <!-- Bulk action bar (appears when rows are selected) -->
   @if (selectedCount() > 0) {
@@ -96,88 +86,20 @@
     </div>
   }
 
-  <!-- ─── Desktop Split Layout ──────────────────────────────────────────── -->
-  <div class="main-split">
-
-    <!-- Employee Table -->
+  <div
+    class="approval-panel"
+    role="tabpanel"
+    [id]="statusTabs.id() + '_tabpanel_' + (activeTab() ?? 'ALL')"
+    [attr.aria-labelledby]="statusTabs.id() + '_tab_' + (activeTab() ?? 'ALL')"
+  >
     <section class="table-panel" aria-label="Employee timesheet list">
-      <div class="tabs-row status-tabs" role="tablist" aria-label="Filter by status">
-        <button
-          role="tab"
-          class="tab-btn"
-          [class.tab-btn--active]="activeTab() === null"
-          [attr.aria-selected]="activeTab() === null"
-          (click)="setActiveTab(null)"
-        >
-          All <span class="tab-count">{{ tabCounts().all }}</span>
-        </button>
-        <button
-          role="tab"
-          class="tab-btn"
-          [class.tab-btn--active]="activeTab() === 'SUBMITTED'"
-          [attr.aria-selected]="activeTab() === 'SUBMITTED'"
-          (click)="setActiveTab('SUBMITTED')"
-        >
-          Submitted <span class="tab-count">{{ tabCounts().submitted }}</span>
-        </button>
-        <button
-          role="tab"
-          class="tab-btn"
-          [class.tab-btn--active]="activeTab() === 'APPROVED'"
-          [attr.aria-selected]="activeTab() === 'APPROVED'"
-          (click)="setActiveTab('APPROVED')"
-        >
-          Approved <span class="tab-count">{{ tabCounts().approved }}</span>
-        </button>
-        <button
-          role="tab"
-          class="tab-btn"
-          [class.tab-btn--active]="activeTab() === 'REJECTED'"
-          [attr.aria-selected]="activeTab() === 'REJECTED'"
-          (click)="setActiveTab('REJECTED')"
-        >
-          Rejected <span class="tab-count">{{ tabCounts().rejected }}</span>
-        </button>
-      </div>
-      <div class="table-toolbar">
-        <div class="search-box">
-          <i class="pi pi-search search-icon" aria-hidden="true"></i>
-          <input
-            type="search"
-            [ngModel]="employeeFilter()"
-            (ngModelChange)="onEmployeeFilterChange($event)"
-            placeholder="Search by name or department…"
-            class="search-input"
-            aria-label="Search employees by name, email or department"
-          />
-        </div>
-        <p-select
-          [ngModel]="projectFilter()"
-          (ngModelChange)="projectFilter.set($event)"
-          [options]="projects()"
-          optionLabel="label"
-          optionValue="id"
-          [filter]="true"
-          [showClear]="true"
-          placeholder="All projects"
-          appendTo="body"
-          (onChange)="applyFilters()"
-          aria-label="Filter by project"
-        />
-      </div>
-      <div class="table-wrap">
+      <div class="ds-table-scroll">
         <p-table
           #approvalTable
-          [value]="filteredEmployees()"
+          [value]="pager.pageRows()"
           [loading]="isLoading()"
-          [paginator]="true"
-          [rows]="10"
-          [rowsPerPageOptions]="[10, 25, 50]"
-          [showCurrentPageReport]="true"
-          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
-          paginatorDropdownAppendTo="body"
           [rowHover]="true"
-          class="approval-table"
+          class="ds-table approval-table"
           [tableStyle]="{ 'min-width': '920px' }"
         >
           <ng-template pTemplate="header">
@@ -207,13 +129,8 @@
           <ng-template pTemplate="body" let-employee>
             <tr
               [class.row--active]="selectedEmployee()?.userId === employee.userId"
-              tabindex="0"
-              role="button"
-              [attr.aria-label]="'View details for ' + employee.employeeName"
               (click)="selectEmployee(employee)"
-              (keydown.enter)="selectEmployee(employee)"
-              (keydown.space)="selectEmployee(employee)"
-              style="cursor: pointer"
+              class="ds-row-link"
             >
               <td class="col-check" (click)="$event.stopPropagation()">
                 <input
@@ -226,16 +143,21 @@
                 />
               </td>
               <td>
-                <div class="employee-cell">
-                  <div class="employee-avatar" aria-hidden="true">{{ getInitials(employee.employeeName) }}</div>
-                  <div class="employee-info">
+                <button
+                  type="button"
+                  class="employee-cell row-open"
+                  [attr.aria-label]="'View details for ' + employee.employeeName"
+                  (click)="selectEmployee(employee); $event.stopPropagation()"
+                >
+                  <span class="employee-avatar" aria-hidden="true">{{ getInitials(employee.employeeName) }}</span>
+                  <span class="employee-info">
                     <strong>{{ employee.employeeName }}</strong>
                     <small>{{ employee.employeeEmail }}</small>
-                  </div>
-                </div>
+                  </span>
+                </button>
               </td>
               <td>{{ employee.department || '—' }}</td>
-              <td class="col-status"><span [class]="statusClass(employee.status)">{{ employee.status }}</span></td>
+              <td class="col-status"><p-tag [value]="employee.status | titlecase" [severity]="statusSeverity(employee.status)" [rounded]="true" /></td>
               <td class="col-num">{{ employee.totalHours | number: '1.1-1' }}h</td>
               <td class="col-num">{{ employee.regularHours | number: '1.1-1' }}h</td>
               <td class="col-num">{{ employee.overtimeHours | number: '1.1-1' }}h</td>
@@ -270,11 +192,7 @@
           <ng-template pTemplate="emptymessage">
             <tr class="empty-row">
               <td colspan="11">
-                <div class="empty-state">
-                  <div class="empty-icon"><i class="pi pi-inbox" aria-hidden="true"></i></div>
-                  <p class="empty-title">No timesheets found</p>
-                  <p class="empty-body">Try changing the week or adjusting your filters.</p>
-                </div>
+                <app-empty-state heading="No timesheets found" description="Try changing the week or adjusting your filters." />
               </td>
             </tr>
           </ng-template>
@@ -282,17 +200,12 @@
       </div>
     </section>
 
-  </div>
-
   <!-- ─── Mobile Employee List ────────────────────────────────────────── -->
   <div class="mobile-list" aria-label="Employee list">
     @if (isLoading()) {
-      <div class="empty-state">
-        <div class="empty-icon"><i class="pi pi-spin pi-spinner" aria-hidden="true"></i></div>
-        <p class="empty-title">Loading approval summary…</p>
-      </div>
+      <app-empty-state icon="pi pi-spin pi-spinner" heading="Loading approval summary…" />
     } @else {
-      @for (employee of filteredEmployees(); track employee.userId) {
+      @for (employee of pager.pageRows(); track employee.userId) {
         <article
           class="mobile-card"
           role="button"
@@ -310,7 +223,7 @@
                 <small>{{ employee.employeeEmail }}</small>
               </div>
             </div>
-            <span [class]="statusClass(employee.status)">{{ employee.status }}</span>
+            <p-tag [value]="employee.status | titlecase" [severity]="statusSeverity(employee.status)" [rounded]="true" />
           </div>
           <dl class="mobile-metrics">
             <div><dt>Total</dt><dd>{{ employee.totalHours | number: '1.1-1' }}h</dd></div>
@@ -320,13 +233,18 @@
           </dl>
         </article>
       } @empty {
-        <div class="empty-state">
-          <div class="empty-icon"><i class="pi pi-inbox" aria-hidden="true"></i></div>
-          <p class="empty-title">No timesheets found</p>
-          <p class="empty-body">Try changing the week or adjusting your filters.</p>
-        </div>
+        <app-empty-state heading="No timesheets found" description="Try changing the week or adjusting your filters." />
       }
     }
+  </div>
+
+    <app-list-paginator
+      [total]="pager.total()"
+      [page]="pager.currentPage()"
+      [pageSize]="pager.pageSize()"
+      itemLabel="employees"
+      (pageChange)="pager.onPage($event)"
+    />
   </div>
 
   <!-- ─── Submission Details Dialog ──────────────────────────────────── -->
@@ -506,6 +424,6 @@
     </div>
   }
 
-</div>
+</app-page>
 
 @if (editingEntry(); as entry) { <app-timesheet-entry-form [entry]="entry" [projects]="projects()" (saved)="entrySaved()" (cancelled)="editingEntry.set(null)" /> }

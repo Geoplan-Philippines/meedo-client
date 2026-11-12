@@ -1,26 +1,20 @@
-<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
-  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+<app-page heading="Assignments" subtitle="Decide which weekly schedule each team and person follows.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
-    <span class="mx-2 opacity-60">/</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
     <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
-    <span class="mx-2 opacity-60">/</span>
-    <span class="text-heading">Assignments</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Assignments</span>
   </nav>
 
-  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+  <a pageBreadcrumb routerLink="/settings/attendance" class="back-link inline-flex items-center gap-1.5 w-fit font-medium text-muted hover:text-primary transition-colors">
     <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
     Back to Attendance settings
   </a>
 
-  <header class="flex flex-col gap-1">
-    <h1 class="text-2xl font-semibold text-heading">Assignments</h1>
-    <p class="text-sm text-body/70 max-w-2xl">
-      Decide which weekly schedule each team and person follows.
-    </p>
-  </header>
 
   <!-- Precedence explainer -->
-  <div class="rounded-base border border-border bg-secondary/40 p-4 text-sm text-body flex items-start gap-3">
+  <div class="rounded-base bg-subtle p-3 text-sm text-body flex items-start gap-3">
     <i class="pi pi-info-circle text-primary mt-0.5" aria-hidden="true"></i>
     <div class="flex flex-col gap-1">
       <p>
@@ -30,7 +24,7 @@
         <span class="font-medium text-heading">org default</span>.
       </p>
       @if (defaultSchedule(); as def) {
-        <p class="text-body/70">Current default: <span class="font-medium text-heading">{{ def.name }}</span>.</p>
+        <p class="text-muted">Current default: <span class="font-medium text-heading">{{ def.name }}</span>.</p>
       } @else {
         <p class="inline-flex items-center gap-1.5 text-muted-warning-foreground">
           <i class="pi pi-exclamation-triangle text-xs" aria-hidden="true"></i>
@@ -41,16 +35,18 @@
   </div>
 
   @if (error()) {
-    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+    <p-message severity="error" styleClass="ds-message">
       <span>{{ error() }}</span>
       <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
-    </div>
+    </p-message>
   }
 
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-12 text-body/70">
-      <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
-      Loading assignments…
+    <div class="ds-table-skeleton" role="status">
+      <span class="ds-sr-only">Loading assignments…</span>
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="16rem" height="0.75rem" /></div>
+      }
     </div>
   } @else {
     @if (scheduleOptions().length === 0) {
@@ -62,24 +58,18 @@
 
     <!-- Teams -->
     <section class="flex flex-col gap-3" aria-labelledby="teams-heading">
-      <h2 id="teams-heading" class="text-xs font-semibold uppercase tracking-wide text-body/70">Teams</h2>
+      <h2 id="teams-heading" class="ds-section-title">Teams</h2>
       @if (teamRows().length === 0) {
-        <div class="rounded-base border border-border bg-surface p-6 text-center text-sm text-body/70">
-          No teams yet. <a routerLink="/settings/teams" class="text-primary hover:underline font-medium">Create a team</a> to assign it a schedule.
-        </div>
+        <app-empty-state icon="pi pi-sitemap" heading="No teams yet">
+          <p class="empty-copy"><a routerLink="/settings/teams" class="text-primary hover:underline font-medium">Create a team</a> to assign it a schedule.</p>
+        </app-empty-state>
       } @else {
-        <div class="flex sm:justify-end">
-          <input pInputText type="search" (input)="teamsTable.filterGlobal($any($event.target).value, 'contains')" placeholder="Search teams…" class="w-full sm:w-64" aria-label="Search teams" />
-        </div>
-        <div class="rounded-base border border-border overflow-hidden">
-          <p-table
-            #teamsTable
-            [value]="teamRows()" dataKey="id" styleClass="text-sm"
-            [globalFilterFields]="['name']"
-            [paginator]="true" [rows]="10"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} teams"
-          >
+        <p-iconfield class="section-search">
+          <p-inputicon class="pi pi-search" />
+          <input pInputText type="search" (input)="teamSearch.set($any($event.target).value); teamPager.reset()" placeholder="Search teams…" aria-label="Search teams" />
+        </p-iconfield>
+        <div>
+          <p-table class="ds-table" [value]="teamPager.pageRows()" dataKey="id" [rowHover]="true">
             <ng-template pTemplate="header">
               <tr>
                 <th scope="col">Team</th>
@@ -108,10 +98,17 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
               <tr>
-                <td colspan="2" class="text-center text-body/60 py-6">No teams match your search.</td>
+                <td colspan="2"><app-empty-state class="empty-state--compact" icon="pi pi-search" heading="No teams match your search." /></td>
               </tr>
             </ng-template>
           </p-table>
+          <app-list-paginator
+            [total]="teamPager.total()"
+            [page]="teamPager.currentPage()"
+            [pageSize]="teamPager.pageSize()"
+            itemLabel="teams"
+            (pageChange)="teamPager.onPage($event)"
+          />
         </div>
       }
     </section>
@@ -119,29 +116,21 @@
     <!-- Employees -->
     <section class="flex flex-col gap-3" aria-labelledby="employees-heading">
       <div class="flex flex-col gap-0.5">
-        <h2 id="employees-heading" class="text-xs font-semibold uppercase tracking-wide text-body/70">Employees</h2>
-        <p class="text-sm text-body/70">
+        <h2 id="employees-heading" class="ds-section-title">Employees</h2>
+        <p class="text-sm text-muted">
           {{ assignedEmployeeCount() }} of {{ employeeRows().length }} have a personal override. The rest follow their team or the default.
         </p>
       </div>
 
       @if (employeeRows().length === 0) {
-        <div class="rounded-base border border-border bg-surface p-6 text-center text-sm text-body/70">
-          No employees found in this organization.
-        </div>
+        <app-empty-state icon="pi pi-users" heading="No employees found in this organization." />
       } @else {
-        <div class="flex sm:justify-end">
-          <input pInputText type="search" (input)="empTable.filterGlobal($any($event.target).value, 'contains')" placeholder="Search by name or email…" class="w-full sm:w-72" aria-label="Search employees" />
-        </div>
-        <div class="rounded-base border border-border overflow-hidden">
-          <p-table
-            #empTable
-            [value]="employeeRows()" dataKey="userId" styleClass="text-sm"
-            [globalFilterFields]="['name', 'email']"
-            [paginator]="true" [rows]="10"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} people"
-          >
+        <p-iconfield class="section-search">
+          <p-inputicon class="pi pi-search" />
+          <input pInputText type="search" (input)="employeeSearch.set($any($event.target).value); employeePager.reset()" placeholder="Search by name or email…" aria-label="Search employees" />
+        </p-iconfield>
+        <div>
+          <p-table class="ds-table" [value]="employeePager.pageRows()" dataKey="userId" [rowHover]="true">
             <ng-template pTemplate="header">
               <tr>
                 <th scope="col">Person</th>
@@ -153,7 +142,7 @@
                 <td>
                   <div class="flex flex-col leading-tight min-w-0">
                     <span class="font-medium text-heading truncate">{{ row.name }}</span>
-                    <span class="text-xs text-body/60 truncate">{{ row.email }}</span>
+                    <span class="text-xs text-muted truncate">{{ row.email }}</span>
                   </div>
                 </td>
                 <td>
@@ -175,19 +164,26 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
               <tr>
-                <td colspan="2" class="text-center text-body/60 py-6">No people match your search.</td>
+                <td colspan="2"><app-empty-state class="empty-state--compact" icon="pi pi-search" heading="No people match your search." /></td>
               </tr>
             </ng-template>
           </p-table>
+          <app-list-paginator
+            [total]="employeePager.total()"
+            [page]="employeePager.currentPage()"
+            [pageSize]="employeePager.pageSize()"
+            itemLabel="people"
+            (pageChange)="employeePager.onPage($event)"
+          />
         </div>
       }
     </section>
 
     <!-- Effective preview -->
-    <section class="rounded-base border border-border bg-surface p-5 flex flex-col gap-4" aria-labelledby="preview-heading">
+    <section class="rounded-card border border-divider bg-raised p-5 flex flex-col gap-4" aria-labelledby="preview-heading">
       <div class="flex flex-col gap-0.5">
         <h2 id="preview-heading" class="text-base font-semibold text-heading">Check effective schedule</h2>
-        <p class="text-sm text-body/70">See exactly which schedule and shift apply to someone on a given day.</p>
+        <p class="text-sm text-muted">See exactly which schedule and shift apply to someone on a given day.</p>
       </div>
 
       <div class="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -226,16 +222,16 @@
                 </span>
               }
             </div>
-            <span class="text-sm text-body/70 tabular-nums">{{ result.date }}</span>
+            <span class="text-sm text-muted tabular-nums">{{ result.date }}</span>
           </div>
 
           <dl class="grid grid-cols-2 sm:grid-cols-4 gap-y-3 gap-x-4">
             <div class="flex flex-col gap-0.5">
-              <dt class="text-xs uppercase tracking-wide text-body/60">Schedule</dt>
+              <dt class="text-xs uppercase tracking-wide text-muted">Schedule</dt>
               <dd class="text-sm font-medium text-heading">{{ result.schedule?.name ?? 'None' }}</dd>
             </div>
             <div class="flex flex-col gap-0.5">
-              <dt class="text-xs uppercase tracking-wide text-body/60">Day</dt>
+              <dt class="text-xs uppercase tracking-wide text-muted">Day</dt>
               <dd class="text-sm font-medium text-heading">
                 @if (result.isWorkingDay === null) { Not scheduled }
                 @else if (result.isWorkingDay) { Working }
@@ -243,11 +239,11 @@
               </dd>
             </div>
             <div class="flex flex-col gap-0.5">
-              <dt class="text-xs uppercase tracking-wide text-body/60">Expected mode</dt>
+              <dt class="text-xs uppercase tracking-wide text-muted">Expected mode</dt>
               <dd class="text-sm font-medium text-heading">{{ modeLabel(result.expectedSource) }}</dd>
             </div>
             <div class="flex flex-col gap-0.5">
-              <dt class="text-xs uppercase tracking-wide text-body/60">Expected hours</dt>
+              <dt class="text-xs uppercase tracking-wide text-muted">Expected hours</dt>
               <dd class="text-sm font-medium text-heading tabular-nums">{{ hours(result.expectedHours) }}h</dd>
             </div>
           </dl>
@@ -256,7 +252,7 @@
             <div class="flex items-center gap-2.5 rounded-base border border-border bg-surface p-3">
               <span class="inline-block w-3 h-3 rounded-full border border-border shrink-0" [style.background-color]="shift.color" aria-hidden="true"></span>
               <span class="font-medium text-heading">{{ shift.name }}</span>
-              <span class="text-body/70 text-sm tabular-nums">{{ time12h(shift.startTime) }}–{{ time12h(shift.endTime) }}</span>
+              <span class="text-muted text-sm tabular-nums">{{ time12h(shift.startTime) }} to {{ time12h(shift.endTime) }}</span>
               @if (result.isFlexible) {
                 <span class="inline-flex items-center gap-1 rounded-full bg-muted-warning px-2 py-0.5 text-[11px] text-muted-warning-foreground">Flexible</span>
               }
@@ -266,4 +262,4 @@
       }
     </section>
   }
-</main>
+</app-page>

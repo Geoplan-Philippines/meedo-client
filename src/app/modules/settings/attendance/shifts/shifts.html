@@ -1,25 +1,17 @@
-<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
-  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+<app-page heading="Shifts" subtitle="A shift is a block of working hours with a break. Weekly schedules assign one to each working day.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
-    <span class="mx-2 opacity-60">/</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
     <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
-    <span class="mx-2 opacity-60">/</span>
-    <span class="text-heading">Shifts</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Shifts</span>
   </nav>
 
-  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+  <a pageBreadcrumb routerLink="/settings/attendance" class="back-link inline-flex items-center gap-1.5 w-fit font-medium text-muted hover:text-primary transition-colors">
     <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
     Back to Attendance settings
   </a>
-
-  <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-    <div class="flex flex-col gap-1">
-      <h1 class="text-2xl font-semibold text-heading">Shifts</h1>
-      <p class="text-sm text-body/70 max-w-2xl">
-        A shift is a block of working hours with a break. Weekly schedules assign one to each working day.
-      </p>
-    </div>
-    <div class="flex items-center gap-4 flex-wrap">
+  <div pageActions class="page-actions-row">
       @if (archivedCount() > 0) {
         <label for="show-archived" class="flex items-center gap-2 text-sm text-body cursor-pointer select-none">
           <p-toggleSwitch inputId="show-archived" [formControl]="showArchivedControl" />
@@ -27,33 +19,31 @@
         </label>
       }
       <p-button label="New shift" icon="pi pi-plus" (onClick)="openCreate()" />
-    </div>
-  </header>
+
+  </div>
+
 
   @if (error()) {
-    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+    <p-message severity="error" styleClass="ds-message">
       <span>{{ error() }}</span>
       <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
-    </div>
+    </p-message>
   }
 
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-12 text-body/70">
-      <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
-      Loading shifts…
+    <div class="ds-table-skeleton" role="status">
+      <span class="ds-sr-only">Loading shifts…</span>
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="16rem" height="0.75rem" /></div>
+      }
     </div>
   } @else if (visibleShifts().length === 0) {
-    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
-      <i class="pi pi-clock text-3xl text-body/40" aria-hidden="true"></i>
-      <p class="text-body font-medium">No shifts yet</p>
-      <p class="text-sm text-body/70 max-w-sm">
-        Create your first shift (for example a 9-to-6 with a one-hour break), then build weekly schedules from it.
-      </p>
-      <p-button label="New shift" icon="pi pi-plus" (onClick)="openCreate()" class="mt-2" />
-    </div>
+    <app-empty-state icon="pi pi-clock" heading="No shifts yet" description="Create your first shift (for example a 9-to-6 with a one-hour break), then build weekly schedules from it.">
+      <p-button label="New shift" icon="pi pi-plus" (onClick)="openCreate()" />
+    </app-empty-state>
   } @else {
-    <div class="rounded-base border border-border overflow-hidden">
-      <p-table [value]="visibleShifts()" dataKey="id" styleClass="text-sm">
+    <div>
+      <p-table class="ds-table" [value]="pager.pageRows()" [lazy]="true" (onLazyLoad)="pager.onSort($event)" dataKey="id" [rowHover]="true">
         <ng-template pTemplate="header">
           <tr>
             <th scope="col">Shift</th>
@@ -62,7 +52,7 @@
             <th scope="col" class="hidden md:table-cell text-right">Break</th>
             <th scope="col" class="hidden lg:table-cell text-right">Grace</th>
             <th scope="col" class="hidden sm:table-cell">Type</th>
-            <th scope="col" class="text-right">Actions</th>
+            <th scope="col" class="text-right"><span class="ds-sr-only">Actions</span></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-shift>
@@ -96,10 +86,10 @@
               }
             </td>
             <td class="text-right tabular-nums text-body">{{ workedHours(shift) }}h</td>
-            <td class="hidden md:table-cell text-right tabular-nums text-body/80">{{ shift.breakMinutes }}m</td>
-            <td class="hidden lg:table-cell text-right tabular-nums text-body/80">
+            <td class="hidden md:table-cell text-right tabular-nums text-body">{{ shift.breakMinutes }}m</td>
+            <td class="hidden lg:table-cell text-right tabular-nums text-body">
               @if (shift.graceMinutes === null) {
-                <span class="text-body/50">Policy</span>
+                <span class="text-muted">Policy</span>
               } @else {
                 {{ shift.graceMinutes }}m
               }
@@ -110,7 +100,7 @@
                   <i class="pi pi-bolt text-[10px]" aria-hidden="true"></i> Flexible
                 </span>
               } @else {
-                <span class="text-body/60 text-xs">Fixed</span>
+                <span class="text-muted text-xs">Fixed</span>
               }
             </td>
             <td class="text-right whitespace-nowrap">
@@ -139,9 +129,16 @@
           </tr>
         </ng-template>
       </p-table>
+      <app-list-paginator
+        [total]="pager.total()"
+        [page]="pager.currentPage()"
+        [pageSize]="pager.pageSize()"
+        itemLabel="shifts"
+        (pageChange)="pager.onPage($event)"
+      />
     </div>
   }
-</main>
+</app-page>
 
 <p-dialog
   [visible]="isDialogOpen()"
@@ -157,7 +154,7 @@
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
         <label for="shift-name" class="text-sm font-medium text-heading">Name</label>
-        <span class="text-xs text-body/60" aria-live="polite">{{ nameLength() }} / 100</span>
+        <span class="text-xs text-muted" aria-live="polite">{{ nameLength() }} / 100</span>
       </div>
       <input id="shift-name" pInputText formControlName="name" autocomplete="off" maxlength="100" placeholder="e.g. Day Shift" />
       @if (form.controls.name.invalid && form.controls.name.touched) {
@@ -184,7 +181,7 @@
     <label for="shift-overnight" class="flex items-center justify-between gap-3 cursor-pointer">
       <span class="flex flex-col">
         <span class="text-sm font-medium text-heading">Ends the next day</span>
-        <span class="text-xs text-body/70">Overnight shift: the end time falls after midnight.</span>
+        <span class="text-xs text-muted">Overnight shift: the end time falls after midnight.</span>
       </span>
       <p-toggleSwitch inputId="shift-overnight" formControlName="crossesMidnight" />
     </label>
@@ -197,14 +194,14 @@
       <div class="flex flex-col gap-1.5">
         <label for="shift-grace" class="text-sm font-medium text-heading">Grace (minutes)</label>
         <p-inputNumber inputId="shift-grace" formControlName="graceMinutes" [min]="0" [max]="240" [step]="5" placeholder="Use policy" styleClass="w-full" />
-        <small class="text-body/60 text-xs">Leave empty to use the org policy.</small>
+        <small class="text-muted text-xs">Leave empty to use the org policy.</small>
       </div>
     </div>
 
     <label for="shift-flexible" class="flex items-center justify-between gap-3 cursor-pointer">
       <span class="flex flex-col">
         <span class="text-sm font-medium text-heading">Flexible</span>
-        <span class="text-xs text-body/70">Start time is nominal; lateness isn't tracked.</span>
+        <span class="text-xs text-muted">Start time is nominal; lateness isn't tracked.</span>
       </span>
       <p-toggleSwitch inputId="shift-flexible" formControlName="isFlexible" />
     </label>
@@ -227,11 +224,11 @@
     </fieldset>
 
     <div class="rounded-base border border-border bg-secondary/40 p-3 flex items-center justify-between">
-      <span class="text-xs font-medium text-body/70 uppercase tracking-wide">Paid hours</span>
+      <span class="text-xs font-medium text-muted uppercase tracking-wide">Paid hours</span>
       @if (previewHours() !== null) {
         <span class="text-lg font-semibold text-heading tabular-nums">{{ previewHours() }}h</span>
       } @else {
-        <span class="text-sm text-body/50" aria-label="Enter valid times to preview">·</span>
+        <span class="text-sm text-muted" aria-label="Enter valid times to preview">·</span>
       }
     </div>
   </form>

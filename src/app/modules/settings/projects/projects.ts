@@ -9,6 +9,11 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { SkeletonModule } from 'primeng/skeleton';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
@@ -24,7 +29,12 @@ import { WorkspaceBreadcrumb } from '../../clients/workspace-breadcrumb/workspac
 import { UNASSIGNED_CLIENT_ID, workspaceLinks } from '../../clients/models/workspace.model';
 import { NewInternalRecord } from '../shared/new-internal-record';
 import { ClientTypeahead } from '../shared/client-typeahead';
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../shared/utils/client-pager';
 
+import { MessageModule } from 'primeng/message';
 /** Group of projects under one client; `clientId` null is the "Unassigned" group. */
 interface ProjectGroup {
   clientId: string | null;
@@ -48,6 +58,7 @@ const SORT_OPTIONS: { label: string; field: ProjectSortField; order: 'asc' | 'de
 @Component({
   selector: 'app-settings-projects',
   imports: [
+    MessageModule,
     ReactiveFormsModule,
     DatePipe,
     DecimalPipe,
@@ -56,6 +67,14 @@ const SORT_OPTIONS: { label: string; field: ProjectSortField; order: 'asc' | 'de
     SelectModule,
     ToggleSwitchModule,
     TooltipModule,
+    TableModule,
+    TagModule,
+    SkeletonModule,
+    IconFieldModule,
+    InputIconModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
     ArchivedTag,
     ProjectDetailDrawer,
     WorkspaceBreadcrumb,
@@ -118,8 +137,31 @@ export class Projects implements OnInit {
     effect(() => this.selectedProjectId.set(this.routeProjectId()));
   }
 
-  readonly groups = computed<ProjectGroup[]>(() => groupByClient(this.projects()));
-  readonly clientCount = computed(() => this.groups().filter((group) => group.clientId !== null).length);
+  /** Projects are paged flat, then the visible page is grouped by client. */
+  readonly pager = new ClientPager(this.projects, 25);
+  readonly groups = computed<ProjectGroup[]>(() => groupByClient(this.pager.pageRows()));
+  /** Page rows in group order, for the p-table subheader grouping. */
+  readonly groupedRows = computed(() => this.groups().flatMap((group) => group.projects));
+  private readonly groupIndex = computed(() => new Map(this.groups().map((group) => [group.clientId, group])));
+
+  groupOf(project: ProjectRecord): ProjectGroup {
+    const key = project.client ? project.client.id : null;
+    return this.groupIndex().get(key) ?? { clientId: key, name: 'Unassigned', isArchived: false, projects: [] };
+  }
+  /** Project count per client across every page, for the group headers. */
+  private readonly groupTotals = computed(() => {
+    const totals = new Map<string | null, number>();
+    for (const project of this.projects()) {
+      const key = project.client ? project.client.id : null;
+      totals.set(key, (totals.get(key) ?? 0) + 1);
+    }
+    return totals;
+  });
+
+  groupTotal(clientId: string | null): number {
+    return this.groupTotals().get(clientId) ?? 0;
+  }
+  readonly clientCount = computed(() => new Set(this.projects().flatMap((project) => (project.client ? [project.client.id] : []))).size);
   readonly hasActiveFilters = computed(() => {
     const value = this.filterValue();
     return !!(value.search.trim() || value.clientId || value.status);

@@ -31,6 +31,7 @@ import {
   WorkType,
 } from '../models/attendance.model';
 
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 /** Clock tick driving the live "elapsed" counter while clocked in. */
 const CLOCK_TICK_MS = 1_000;
 /** Minimum gap between reverse-geocode calls — OSM Nominatim allows ≤ 1 req/s. */
@@ -49,7 +50,7 @@ type PunchMode = 'in' | 'out';
 
 @Component({
   selector: 'app-attendance-timesheet',
-  imports: [ButtonModule, DialogModule, ToastModule, DatePipe, Roster, AttendanceStatusBadge],
+  imports: [PageLayout, ButtonModule, DialogModule, ToastModule, DatePipe, Roster, AttendanceStatusBadge],
   providers: [MessageService],
   templateUrl: './timesheet.html',
   styleUrl: './timesheet.css',

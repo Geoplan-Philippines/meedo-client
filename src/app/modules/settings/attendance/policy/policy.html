@@ -1,5 +1,5 @@
 <main class="p-4 md:p-8 flex flex-col gap-6 w-full max-w-4xl">
-  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+  <nav class="text-sm text-muted" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
     <span class="mx-2 opacity-60">/</span>
     <a routerLink="/settings/attendance" class="hover:text-primary transition-colors">Attendance</a>
@@ -7,7 +7,7 @@
     <span class="text-heading">Policy</span>
   </nav>
 
-  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-body/70 hover:text-primary transition-colors">
+  <a routerLink="/settings/attendance" class="inline-flex items-center gap-1.5 w-fit text-sm font-medium text-muted hover:text-primary transition-colors">
     <i class="pi pi-arrow-left text-xs" aria-hidden="true"></i>
     Back to Attendance settings
   </a>
@@ -15,7 +15,7 @@
   <header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
     <div class="flex flex-col gap-1">
       <h1 class="text-2xl font-semibold text-heading">Policy</h1>
-      <p class="text-sm text-body/70 max-w-2xl">
+      <p class="text-sm text-muted max-w-2xl">
         Organization-wide rules for how attendance is counted and paid. These apply everywhere unless a shift overrides them.
       </p>
     </div>
@@ -25,7 +25,7 @@
           <i class="pi pi-check-circle" aria-hidden="true"></i> Saved
         </span>
       } @else if (form.dirty) {
-        <span class="text-sm text-body/60" aria-live="polite">Unsaved changes</span>
+        <span class="text-sm text-muted" aria-live="polite">Unsaved changes</span>
       }
       <p-button label="Reset" severity="secondary" text (onClick)="reset()" [disabled]="!form.dirty || isSaving()" />
       <p-button label="Save policy" icon="pi pi-check" (onClick)="save()" [loading]="isSaving()" [disabled]="form.invalid || !form.dirty" />
@@ -33,13 +33,13 @@
   </header>
 
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-12 text-body/70">
+    <div class="flex items-center justify-center py-12 text-muted">
       <i class="pi pi-spin pi-spinner text-xl mr-2" aria-hidden="true"></i>
       Loading policy…
     </div>
   } @else if (loadError()) {
     <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-3">
-      <i class="pi pi-exclamation-circle text-3xl text-body/40" aria-hidden="true"></i>
+      <i class="pi pi-exclamation-circle text-3xl text-faint" aria-hidden="true"></i>
       <p class="text-body font-medium">{{ loadError() }}</p>
       <p-button label="Retry" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="load()" />
     </div>
@@ -55,18 +55,18 @@
       <section class="rounded-base border border-border bg-surface p-5 flex flex-col gap-4" aria-labelledby="p-general">
         <div class="flex flex-col gap-0.5">
           <h2 id="p-general" class="text-base font-semibold text-heading">General</h2>
-          <p class="text-sm text-body/70">Timezone and end-of-day handling.</p>
+          <p class="text-sm text-muted">Timezone and end-of-day handling.</p>
         </div>
         <div class="flex flex-col gap-1.5 sm:max-w-sm">
           <label for="pol-tz" class="text-sm font-medium text-heading">Timezone</label>
           <p-select inputId="pol-tz" formControlName="timezone" [options]="timezoneOptions" optionLabel="label" optionValue="value" [editable]="true" [filter]="true" appendTo="body" styleClass="w-full" />
-          <small class="text-body/60 text-xs">IANA name the org operates in.</small>
+          <small class="text-muted text-xs">IANA name the org operates in.</small>
         </div>
 
         <label for="pol-auto" class="flex items-center justify-between gap-3 cursor-pointer border-t border-border pt-4">
           <span class="flex flex-col">
             <span class="text-sm font-medium text-heading">Auto clock-out</span>
-            <span class="text-xs text-body/70">Close any session still open at the cutoff time.</span>
+            <span class="text-xs text-muted">Close any session still open at the cutoff time.</span>
           </span>
           <p-toggleSwitch inputId="pol-auto" formControlName="autoClockOutEnabled" />
         </label>
@@ -82,7 +82,7 @@
       <section class="rounded-base border border-border bg-surface p-5 flex flex-col gap-4" aria-labelledby="p-hours">
         <div class="flex flex-col gap-0.5">
           <h2 id="p-hours" class="text-base font-semibold text-heading">Standard hours</h2>
-          <p class="text-sm text-body/70">The baseline day and week, and the daily cap.</p>
+          <p class="text-sm text-muted">The baseline day and week, and the daily cap.</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="flex flex-col gap-1.5">
@@ -104,13 +104,13 @@
       <section class="rounded-base border border-border bg-surface p-5 flex flex-col gap-4" aria-labelledby="p-grace">
         <div class="flex flex-col gap-0.5">
           <h2 id="p-grace" class="text-base font-semibold text-heading">Grace &amp; lunch</h2>
-          <p class="text-sm text-body/70">Lateness allowance and the lunch break.</p>
+          <p class="text-sm text-muted">Lateness allowance and the lunch break.</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
             <label for="pol-grace" class="text-sm font-medium text-heading">Grace</label>
             <p-inputNumber inputId="pol-grace" formControlName="graceMinutes" [min]="0" [max]="240" [step]="5" suffix=" min" styleClass="w-full" />
-            <small class="text-body/60 text-xs">Default; a shift can override.</small>
+            <small class="text-muted text-xs">Default; a shift can override.</small>
           </div>
           <div class="flex flex-col gap-1.5">
             <label for="pol-lunch" class="text-sm font-medium text-heading">Lunch</label>
@@ -120,7 +120,7 @@
         <label for="pol-lunch-paid" class="flex items-center justify-between gap-3 cursor-pointer border-t border-border pt-4">
           <span class="flex flex-col">
             <span class="text-sm font-medium text-heading">Lunch is paid</span>
-            <span class="text-xs text-body/70">Count the lunch break as paid time.</span>
+            <span class="text-xs text-muted">Count the lunch break as paid time.</span>
           </span>
           <p-toggleSwitch inputId="pol-lunch-paid" formControlName="lunchIsPaid" />
         </label>
@@ -130,7 +130,7 @@
       <section class="rounded-base border border-border bg-surface p-5 flex flex-col gap-4" aria-labelledby="p-ot">
         <div class="flex flex-col gap-0.5">
           <h2 id="p-ot" class="text-base font-semibold text-heading">Overtime</h2>
-          <p class="text-sm text-body/70">When overtime starts and how it is multiplied.</p>
+          <p class="text-sm text-muted">When overtime starts and how it is multiplied.</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
@@ -140,7 +140,7 @@
           <div class="flex flex-col gap-1.5">
             <label for="pol-ot-min" class="text-sm font-medium text-heading">Minimum block</label>
             <p-inputNumber inputId="pol-ot-min" formControlName="minimumOvertimeMinutes" [min]="0" [max]="480" [step]="5" suffix=" min" styleClass="w-full" />
-            <small class="text-body/60 text-xs">Smallest overtime that counts.</small>
+            <small class="text-muted text-xs">Smallest overtime that counts.</small>
           </div>
           <div class="flex flex-col gap-1.5">
             <label for="pol-ot-mult" class="text-sm font-medium text-heading">Overtime rate</label>
@@ -157,13 +157,13 @@
       <section class="rounded-base border border-border bg-surface p-5 flex flex-col gap-4" aria-labelledby="p-night">
         <div class="flex flex-col gap-0.5">
           <h2 id="p-night" class="text-base font-semibold text-heading">Night differential</h2>
-          <p class="text-sm text-body/70">Extra premium for hours worked inside the night window.</p>
+          <p class="text-sm text-muted">Extra premium for hours worked inside the night window.</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="flex flex-col gap-1.5">
             <label for="pol-nd-mult" class="text-sm font-medium text-heading">Premium</label>
             <p-inputNumber inputId="pol-nd-mult" formControlName="nightDifferentialMultiplier" [min]="0" [max]="10" [minFractionDigits]="2" [maxFractionDigits]="2" [step]="0.05" styleClass="w-full" />
-            <small class="text-body/60 text-xs">Added on top (0.10 = +10%).</small>
+            <small class="text-muted text-xs">Added on top (0.10 = +10%).</small>
           </div>
           <div class="flex flex-col gap-1.5">
             <label for="pol-nd-start" class="text-sm font-medium text-heading">Window start</label>

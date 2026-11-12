@@ -1,161 +1,138 @@
 <p-toast />
 
-<div class="tickets-page">
-
+<app-page heading="Tickets" subtitle="Manage and track your support tickets">
   @if (scopeProjectId()) {
-    <app-workspace-breadcrumb [clientId]="scopeClientId()" [projectId]="scopeProjectId()" [tickets]="true" />
+    <app-workspace-breadcrumb pageBreadcrumb [clientId]="scopeClientId()" [projectId]="scopeProjectId()" [tickets]="true" />
   }
 
-  <header class="page-header">
-    <div>
-      <h1 class="page-title">Tickets</h1>
-      <p class="page-subtitle">Manage and track your support tickets</p>
-    </div>
-    <button class="add-btn" type="button" (click)="openCreateDialog()" [disabled]="!departmentLoaded()">
-      <i class="pi pi-plus" aria-hidden="true"></i>
-      <span>Create Ticket</span>
+  <button pageActions pButton type="button" class="add-btn" icon="pi pi-plus" label="Create Ticket" (click)="openCreateDialog()" [disabled]="!departmentLoaded()"></button>
+
+  <p-tabs pageTabs #viewTabs [value]="view()" (valueChange)="setView($any($event))" [scrollable]="true" [showNavigators]="false">
+    <p-tablist aria-label="Ticket views">
+      @for (tab of viewTabOptions; track tab.value) {
+        <p-tab [value]="tab.value">
+          {{ tab.label }}
+          <p-badge [value]="viewCount(tab.value)" [severity]="view() === tab.value ? null : 'secondary'" />
+        </p-tab>
+      }
+    </p-tablist>
+  </p-tabs>
+
+  <p-iconfield pageToolbar class="ds-search">
+    <p-inputicon class="pi pi-search" />
+    <input
+      pInputText
+      type="search"
+      placeholder="Search by title or description…"
+      aria-label="Search tickets"
+      [formControl]="searchControl"
+    />
+  </p-iconfield>
+  <button
+    pageToolbar
+    pButton
+    type="button"
+    class="filter-btn"
+    severity="secondary"
+    [outlined]="true"
+    [class.filter-btn--active]="activeFilterCount() > 0"
+    (click)="filterPopover.toggle($event)"
+    aria-haspopup="true"
+    aria-label="Add filter"
+  >
+    <i pButtonIcon class="pi pi-filter" aria-hidden="true"></i>
+    <span pButtonLabel>Filter</span>
+    @if (activeFilterCount() > 0) {
+      <p-badge class="filter-btn-count" [value]="activeFilterCount()" />
+    }
+  </button>
+  @if (currentMemberId()) {
+    <button
+      pageToolbar
+      pButton
+      type="button"
+      class="my-issues-toggle"
+      severity="secondary"
+      [outlined]="!myIssues()"
+      [class.my-issues-toggle--active]="myIssues()"
+      [attr.aria-pressed]="myIssues()"
+      (click)="toggleMyIssues()"
+    >
+      <i pButtonIcon class="pi pi-user" aria-hidden="true"></i>
+      <span pButtonLabel>My issues</span>
     </button>
-  </header>
-
-  <div class="table-card">
-    <div class="view-tabs" role="tablist" aria-label="Ticket views">
-      <button
-        class="view-tab"
-        type="button"
-        role="tab"
-        [class.view-tab--active]="view() === 'all'"
-        [attr.aria-selected]="view() === 'all'"
-        (click)="setView('all')"
-      >
-        All Tickets
-        <span class="view-count">{{ viewCount('all') }}</span>
-      </button>
-      <button
-        class="view-tab"
-        type="button"
-        role="tab"
-        [class.view-tab--active]="view() === 'active'"
-        [attr.aria-selected]="view() === 'active'"
-        (click)="setView('active')"
-      >
-        Active
-        <span class="view-count">{{ viewCount('active') }}</span>
-      </button>
-      <button
-        class="view-tab"
-        type="button"
-        role="tab"
-        [class.view-tab--active]="view() === 'backlog'"
-        [attr.aria-selected]="view() === 'backlog'"
-        (click)="setView('backlog')"
-      >
-        Backlog
-        <span class="view-count">{{ viewCount('backlog') }}</span>
-      </button>
-      <button
-        class="view-tab"
-        type="button"
-        role="tab"
-        [class.view-tab--active]="view() === 'closed'"
-        [attr.aria-selected]="view() === 'closed'"
-        (click)="setView('closed')"
-      >
-        Closed
-        <span class="view-count">{{ viewCount('closed') }}</span>
-      </button>
-    </div>
-
-    <div class="table-toolbar">
-      <div class="ticket-layout-toggle" role="group" aria-label="Ticket layout">
-        <button pButton type="button" label="List" icon="pi pi-list" [text]="layout() !== 'list'" [attr.aria-pressed]="layout() === 'list'" (click)="setLayout('list')"></button>
-        <button pButton type="button" label="Board" icon="pi pi-th-large" [text]="layout() !== 'board'" [attr.aria-pressed]="layout() === 'board'" (click)="setLayout('board')"></button>
-      </div>
-      <div class="search-box">
-        <i class="pi pi-search search-icon" aria-hidden="true"></i>
-        <input
-          type="search"
-          class="search-input"
-          placeholder="Search by title or description…"
-          aria-label="Search tickets"
-          [formControl]="searchControl"
-        />
-      </div>
-      @if (currentMemberId()) {
+  }
+  @if (activeFilterCount() > 0) {
+    <div pageToolbar class="active-filters" aria-label="Active filters">
+      @for (status of selectedStatusChips(); track status.id) {
         <button
-          class="my-issues-toggle"
+          class="filter-chip"
           type="button"
-          [class.my-issues-toggle--active]="myIssues()"
-          [attr.aria-pressed]="myIssues()"
-          (click)="toggleMyIssues()"
+          (click)="removeStatus(status.id)"
+          [attr.aria-label]="'Remove status filter: ' + status.name"
         >
-          <i class="pi pi-user" aria-hidden="true"></i>
-          <span>My issues</span>
+          <span class="chip-dot" [style.background-color]="safeStatusColor(status.color)" aria-hidden="true"></span>
+          {{ status.name }}
+          <i class="pi pi-times" aria-hidden="true"></i>
         </button>
       }
-      <button
-        class="filter-btn"
-        type="button"
-        [class.filter-btn--active]="activeFilterCount() > 0"
-        (click)="filterPopover.toggle($event)"
-        aria-haspopup="true"
-        aria-label="Add filter"
-      >
-        <i class="pi pi-filter" aria-hidden="true"></i>
-        <span>Filter</span>
-        @if (activeFilterCount() > 0) {
-          <span class="filter-btn-count">{{ activeFilterCount() }}</span>
-        }
-      </button>
+      @for (priority of selectedPriorityChips(); track priority.value) {
+        <button
+          class="filter-chip"
+          type="button"
+          (click)="removePriority(priority.value)"
+          [attr.aria-label]="'Remove priority filter: ' + priority.label"
+        >
+          <span [class]="'chip-dot ds-dot ds-dot--' + priority.value.toLowerCase()" aria-hidden="true"></span>
+          {{ priority.label }}
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      }
+      @for (team of selectedTeamChips(); track team.id) {
+        <button
+          class="filter-chip"
+          type="button"
+          (click)="removeTeam(team.id)"
+          [attr.aria-label]="'Remove team filter: ' + team.name"
+        >
+          <i class="pi pi-users chip-icon" aria-hidden="true"></i>
+          {{ team.name }}
+          <i class="pi pi-times" aria-hidden="true"></i>
+        </button>
+      }
+      <button class="clear-filters" type="button" (click)="clearFilters()">Clear all</button>
     </div>
+  }
 
-    @if (activeFilterCount() > 0) {
-      <div class="active-filters" aria-label="Active filters">
-        @for (status of selectedStatusChips(); track status.id) {
-          <button
-            class="filter-chip"
-            type="button"
-            (click)="removeStatus(status.id)"
-            [attr.aria-label]="'Remove status filter: ' + status.name"
-          >
-            <span class="chip-dot" [style.background-color]="safeStatusColor(status.color)" aria-hidden="true"></span>
-            {{ status.name }}
-            <i class="pi pi-times" aria-hidden="true"></i>
-          </button>
-        }
-        @for (priority of selectedPriorityChips(); track priority.value) {
-          <button
-            class="filter-chip"
-            type="button"
-            (click)="removePriority(priority.value)"
-            [attr.aria-label]="'Remove priority filter: ' + priority.label"
-          >
-            <span [class]="'chip-dot prio-dot-' + priority.value.toLowerCase()" aria-hidden="true"></span>
-            {{ priority.label }}
-            <i class="pi pi-times" aria-hidden="true"></i>
-          </button>
-        }
-        @for (team of selectedTeamChips(); track team.id) {
-          <button
-            class="filter-chip"
-            type="button"
-            (click)="removeTeam(team.id)"
-            [attr.aria-label]="'Remove team filter: ' + team.name"
-          >
-            <i class="pi pi-users chip-icon" aria-hidden="true"></i>
-            {{ team.name }}
-            <i class="pi pi-times" aria-hidden="true"></i>
-          </button>
-        }
-        <button class="clear-filters" type="button" (click)="clearFilters()">Clear all</button>
-      </div>
-    }
+  <p-selectbutton
+    pageToolbarEnd
+    aria-label="Ticket layout"
+    [options]="layoutOptions"
+    optionLabel="label"
+    optionValue="value"
+    [allowEmpty]="false"
+    [ngModel]="layout()"
+    (ngModelChange)="setLayout($event)"
+  >
+    <ng-template #item let-option>
+      <i [class]="option.icon" aria-hidden="true"></i>
+      <span>{{ option.label }}</span>
+    </ng-template>
+  </p-selectbutton>
 
-    @if (noDepartments()) {
-      <div role="status">
-        <p>You are not assigned to a department.</p>
-        <p>You can create your own tickets without a department. Existing department tickets still follow your access.</p>
-      </div>
-    }
+  @if (noDepartments()) {
+    <p-message severity="info" icon="pi pi-info-circle" styleClass="ds-message">
+      You are not assigned to a department.
+      You can create your own tickets without a department. Existing department tickets still follow your access.
+    </p-message>
+  }
+
+  <div
+    class="tickets-panel"
+    role="tabpanel"
+    [id]="viewTabs.id() + '_tabpanel_' + view()"
+    [attr.aria-labelledby]="viewTabs.id() + '_tab_' + view()"
+  >
     @if (layout() === 'board') {
       @if (!awaitingMember()) {
         <app-tickets-board [statuses]="statuses()" [filters]="boardFilters()" [revision]="boardRevision()"
@@ -164,52 +141,43 @@
     } @else {
       <p-table
         #dt
+        class="ds-table tickets-table"
         [value]="tickets()"
         [lazy]="true"
         [loading]="isLoading()"
-        [totalRecords]="totalRecords()"
-        [tableStyle]="{ 'width': '100%', 'table-layout': 'fixed' }"
-        class="tickets-table"
-        [paginator]="true"
+        [first]="firstRow()"
         [rows]="rows()"
-        [showCurrentPageReport]="true"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} tickets"
+        [tableStyle]="{ 'width': '100%', 'table-layout': 'fixed' }"
         [rowHover]="true"
         (onLazyLoad)="onLazyLoad($event)"
       >
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="title" scope="col" style="width: 28%">
-              <div class="th-content">Title <p-sortIcon field="title" /></div>
+            <th pSortableColumn="title" scope="col" style="width: 30%">
+              Title <p-sortIcon field="title" />
             </th>
-            <th scope="col" style="width: 14%">
-              <div class="th-content">Status</div>
+            <th scope="col" style="width: 14%">Status</th>
+            <th pSortableColumn="priority" scope="col" style="width: 12%">
+              Priority <p-sortIcon field="priority" />
             </th>
-            <th pSortableColumn="priority" scope="col" style="width: 14%">
-              <div class="th-content">Priority <p-sortIcon field="priority" /></div>
-            </th>
-            <th scope="col" class="hide-lg" style="width: 16%">
-              <div class="th-content">Project</div>
-            </th>
-            <th scope="col" class="hide-md" style="width: 14%">
-              <div class="th-content">Assignees</div>
-            </th>
+            <th scope="col" class="hide-lg" style="width: 18%">Project</th>
+            <th scope="col" class="hide-md" style="width: 12%">Assignees</th>
             <th pSortableColumn="dueDate" scope="col" style="width: 14%">
-              <div class="th-content">Due Date <p-sortIcon field="dueDate" /></div>
+              Due date <p-sortIcon field="dueDate" />
             </th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-ticket>
-          <tr class="ticket-row" (click)="openDetail(ticket)">
+          <tr class="ticket-row ds-row-link" (click)="openDetail(ticket)">
             <td class="title-cell">
               <button
                 class="ticket-title-btn"
                 type="button"
                 [attr.aria-label]="'Open ticket #' + ticket.ticketNumber + ': ' + ticket.title"
               >
-                <span class="ticket-title" [title]="ticket.title">{{ ticket.title }}</span>
                 <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
+                <span class="ticket-title" [title]="ticket.title">{{ ticket.title }}</span>
               </button>
             </td>
             <td>
@@ -223,12 +191,12 @@
                   <span class="status-name">{{ ticket.ticketStatus.name }}</span>
                 </span>
               } @else {
-                <span class="muted" aria-hidden="true">—</span>
+                <span class="muted">None</span>
               }
             </td>
             <td>
               <span [class]="priorityCellClass(ticket.priority)">
-                <span class="prio-dot" aria-hidden="true"></span>
+                <span [class]="'ds-dot ds-dot--' + ticket.priority.toLowerCase()" aria-hidden="true"></span>
                 {{ ticket.priority | titlecase }}
               </span>
             </td>
@@ -236,17 +204,21 @@
               @if (ticket.project; as project) {
                 <span class="project-cell">
                   <span class="project-customer" [title]="projectName(project)">{{ projectName(project) }}</span>
-                  <span class="project-wo" data-testid="ticket-client">{{ clientName(project) }}</span>
-                  <span class="project-wo">{{ project.workOrderNumber }}</span>
+                  <span class="project-wo">
+                    <span data-testid="ticket-client">{{ clientName(project) }}</span>
+                    @if (project.workOrderNumber && project.workOrderNumber !== projectName(project)) {
+                      <span> · {{ project.workOrderNumber }}</span>
+                    }
+                  </span>
                 </span>
               } @else {
-                <span class="muted" aria-hidden="true">—</span>
+                <span class="muted">None</span>
               }
             </td>
             <td class="hide-md">
               @let avatars = visibleAssignees(ticket);
               @if (avatars.length) {
-                <div class="avatar-stack" [attr.aria-label]="'Assigned to ' + getMemberNames(ticket)">
+                <div class="avatar-stack" role="img" [attr.aria-label]="'Assigned to ' + getMemberNames(ticket)">
                   @for (assignee of avatars; track $index) {
                     <span [class]="assignee.className" [title]="assignee.name" aria-hidden="true">{{ assignee.initials }}</span>
                   }
@@ -255,14 +227,14 @@
                   }
                 </div>
               } @else {
-                <span class="muted" aria-hidden="true">—</span>
+                <span class="muted">Unassigned</span>
               }
             </td>
             <td class="date-cell">
               @if (ticket.dueDate) {
                 <span [class.due-overdue]="isOverdue(ticket)">{{ ticket.dueDate | date: 'MMM d, y' }}</span>
               } @else {
-                <span class="muted" aria-hidden="true">—</span>
+                <span class="muted">No date</span>
               }
             </td>
           </tr>
@@ -271,26 +243,29 @@
         <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="6">
-              <div class="empty-state">
-                <div class="empty-icon" aria-hidden="true">
-                  <i class="pi pi-ticket"></i>
-                </div>
-                <p class="empty-title">No tickets found</p>
-                <p class="empty-body">
+              <app-empty-state icon="pi pi-ticket" heading="No tickets found">
+                <p class="empty-copy">
                   @if (searchTerm()) {
                     No tickets match "{{ searchTerm() }}". Try different keywords.
                   } @else {
                     Get started by creating your first ticket.
                   }
                 </p>
-              </div>
+              </app-empty-state>
             </td>
           </tr>
         </ng-template>
       </p-table>
+      <app-list-paginator
+        [total]="totalRecords()"
+        [page]="page()"
+        [pageSize]="rows()"
+        itemLabel="tickets"
+        (pageChange)="onPageChange($event)"
+      />
     }
   </div>
-</div>
+</app-page>
 
 <p-dialog
   [modal]="true"

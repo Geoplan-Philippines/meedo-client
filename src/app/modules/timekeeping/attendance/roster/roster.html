@@ -1,113 +1,107 @@
-<section class="roster-section">
+<section class="roster-section" aria-labelledby="roster-heading">
   <header class="section-header">
-    <h2 class="section-title">In/Out</h2>
-    <p class="section-subtitle">Log your rendered work hours.</p>
+    <h2 id="roster-heading" class="ds-section-title">In/Out</h2>
+    <p class="ds-section-sub">Log your rendered work hours.</p>
   </header>
 
-  <div class="table-card">
-    <div class="table-toolbar">
-      @if (canSearch()) {
-        <div class="search-box">
-          <i class="pi pi-search search-icon" aria-hidden="true"></i>
-          <input
-            type="search"
-            class="search-input"
-            placeholder="Search by name or code…"
-            aria-label="Search employees"
-            [formControl]="searchControl"
-          />
-        </div>
-      }
+  <div class="roster-toolbar">
+    @if (canSearch()) {
+      <p-iconfield class="roster-search">
+        <p-inputicon class="pi pi-search" />
+        <input
+          pInputText
+          type="search"
+          placeholder="Search by name or code…"
+          aria-label="Search employees"
+          [formControl]="searchControl"
+        />
+      </p-iconfield>
+    }
 
-      <div class="date-nav">
-        <p-datepicker
-          [formControl]="dateControl"
-          dateFormat="yy-mm-dd"
-          [showIcon]="true"
-          iconDisplay="input"
-          [readonlyInput]="true"
-          [maxDate]="maxDate"
-          appendTo="body"
-        />
-        <p-button icon="pi pi-chevron-left" [text]="true" severity="secondary" (onClick)="previousDay()" ariaLabel="Previous day" />
-        <p-button
-          icon="pi pi-chevron-right"
-          [text]="true"
-          severity="secondary"
-          [disabled]="isToday()"
-          (onClick)="nextDay()"
-          ariaLabel="Next day"
-        />
-      </div>
+    <div class="date-nav">
+      <p-button icon="pi pi-chevron-left" [text]="true" severity="secondary" (onClick)="previousDay()" ariaLabel="Previous day" />
+      <p-datepicker
+        [formControl]="dateControl"
+        dateFormat="yy-mm-dd"
+        [showIcon]="true"
+        iconDisplay="input"
+        [readonlyInput]="true"
+        [maxDate]="maxDate"
+        appendTo="body"
+        ariaLabel="Roster day"
+      />
+      <p-button
+        icon="pi pi-chevron-right"
+        [text]="true"
+        severity="secondary"
+        [disabled]="isToday()"
+        (onClick)="nextDay()"
+        ariaLabel="Next day"
+      />
     </div>
+  </div>
 
+  <div>
     <p-table
       #dt
+      class="ds-table"
       [value]="entries()"
       [lazy]="true"
       (onLazyLoad)="onLazyLoad($event)"
-      [paginator]="true"
+      [first]="firstRow()"
       [rows]="rows()"
-      [totalRecords]="totalRecords()"
       [loading]="isLoading()"
-      [rowsPerPageOptions]="[10, 25, 50]"
-      [showCurrentPageReport]="true"
-      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
-      paginatorDropdownAppendTo="body"
       [rowHover]="true"
       dataKey="employeeId"
-      class="roster-table"
       [tableStyle]="{ 'width': '100%' }"
     >
       <ng-template pTemplate="header">
         <tr>
-          <th scope="col"><div class="th-content">Employee Name</div></th>
-          <th scope="col" class="hide-md"><div class="th-content">Employee Code</div></th>
-          <th scope="col" class="hide-md"><div class="th-content">Department</div></th>
-          <th scope="col"><div class="th-content">First In</div></th>
-          <th scope="col"><div class="th-content">Last Out</div></th>
-          <th scope="col"><div class="th-content">Clocked Hours</div></th>
+          <th scope="col">Employee name</th>
+          <th scope="col" class="hide-md">Employee code</th>
+          <th scope="col" class="hide-md">Department</th>
+          <th scope="col">First in</th>
+          <th scope="col">Last out</th>
+          <th scope="col">Clocked hours</th>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="body" let-entry>
-        <tr
-          class="roster-row"
-          tabindex="0"
-          role="button"
-          [attr.aria-label]="'View attendance for ' + (entry.name ?? entry.email)"
-          (click)="openEmployee(entry)"
-          (keydown.enter)="openEmployee(entry)"
-          (keydown.space)="openEmployee(entry); $event.preventDefault()"
-        >
-          <td class="name-cell">{{ entry.name ?? entry.email }}</td>
-          <td class="hide-md">{{ entry.employeeCode ?? '—' }}</td>
-          <td class="hide-md">{{ entry.department ?? '—' }}</td>
-          <td class="time-cell">{{ entry.firstIn ? (entry.firstIn | date: 'h:mm a') : '—' }}</td>
-          <td class="time-cell">{{ entry.lastOut ? (entry.lastOut | date: 'h:mm a') : '—' }}</td>
-          <td class="hours-cell">{{ entry.clockedHours !== null ? entry.clockedHours + ' Hours' : '—' }}</td>
+        <tr class="roster-row ds-row-link" (click)="openEmployee(entry)">
+          <td class="name-cell">
+            <button
+              type="button"
+              class="row-open"
+              [attr.aria-label]="'View attendance for ' + (entry.name ?? entry.email)"
+              (click)="openEmployee(entry); $event.stopPropagation()"
+            >{{ entry.name ?? entry.email }}</button>
+          </td>
+          <td class="hide-md">{{ entry.employeeCode ?? 'None' }}</td>
+          <td class="hide-md">{{ entry.department ?? 'None' }}</td>
+          <td class="time-cell">{{ entry.firstIn ? (entry.firstIn | date: 'h:mm a') : 'Not yet' }}</td>
+          <td class="time-cell">{{ entry.lastOut ? (entry.lastOut | date: 'h:mm a') : 'Not yet' }}</td>
+          <td class="hours-cell">{{ entry.clockedHours !== null ? entry.clockedHours + ' Hours' : 'None' }}</td>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
         <tr>
           <td colspan="6">
-            <div class="empty-state">
-              <div class="empty-icon" aria-hidden="true">
-                <i class="pi pi-clock"></i>
-              </div>
-              <p class="empty-title">No attendance yet</p>
-              <p class="empty-body">
-                @if (canSearch() && searchControl.value) {
-                  No employees match "{{ searchControl.value }}". Try different keywords.
-                } @else {
-                  No one has clocked in for this day yet.
-                }
-              </p>
-            </div>
+            <app-empty-state
+              icon="pi pi-clock"
+              heading="No attendance yet"
+              [description]="canSearch() && searchControl.value ? 'No employees match your search. Try different keywords.' : 'No one has clocked in for this day yet.'"
+            />
           </td>
         </tr>
       </ng-template>
     </p-table>
+    <app-list-paginator
+      [total]="totalRecords()"
+      [page]="page()"
+      [pageSize]="rows()"
+      itemLabel="employees"
+      (pageChange)="onPageChange($event)"
+    />
   </div>
 </section>

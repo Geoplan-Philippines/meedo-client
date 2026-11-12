@@ -18,6 +18,13 @@ type DialogMode = 'create' | 'edit';
 import { WEEK_ORDER, dayLabelShort } from '../shared/attendance-settings.util';
 import { WeeklySchedulesService } from '../services/weekly-schedules.service';
 
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../../shared/utils/client-pager';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TagModule } from 'primeng/tag';
+import { MessageModule } from 'primeng/message';
 interface DayDot {
   day: DayOfWeek;
   short: string;
@@ -28,6 +35,12 @@ interface DayDot {
 @Component({
   selector: 'app-settings-schedules',
   imports: [
+    MessageModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    SkeletonModule,
+    TagModule,
     RouterLink,
     ReactiveFormsModule,
     ButtonModule,
@@ -44,6 +57,7 @@ export class Schedules implements OnInit {
   private readonly schedulesService = inject(WeeklySchedulesService);
 
   readonly schedules = signal<WeeklySchedule[]>([]);
+  readonly pager = new ClientPager(this.schedules);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
 

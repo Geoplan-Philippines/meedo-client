@@ -3,9 +3,9 @@ import {
   Component,
   DestroyRef,
   OnInit,
+  computed,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT } from '@angular/common';
@@ -13,18 +13,28 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } from 'rxjs';
 
-import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 
 import { AttendanceService } from '../services/attendance.service';
 import { RosterEntry } from '../models/attendance.model';
 
+import { ListPaginator, ListPageChange } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Component({
   selector: 'app-attendance-roster',
   imports: [
+    ListPaginator,
+    EmptyState,
+    IconFieldModule,
+    InputIconModule,
+    InputTextModule,
     TableModule,
     ButtonModule,
     DatePickerModule,
@@ -41,7 +51,6 @@ export class Roster implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
 
-  private readonly table = viewChild<Table>('dt');
 
   readonly entries = signal<RosterEntry[]>([]);
   readonly totalRecords = signal(0);
@@ -60,7 +69,10 @@ export class Roster implements OnInit {
   readonly maxDate = this.startOfToday();
   readonly isToday = signal(true);
 
-  private first = 0;
+  /** Index of the first row on the current page (PrimeNG's `first`). */
+  readonly firstRow = signal(0);
+  /** Current page, 1-based, for the shared list footer. */
+  readonly page = computed(() => Math.floor(this.firstRow() / this.rows()) + 1);
   private requestId = 0;
   private pendingRealtimeRefresh = false;
 
@@ -106,8 +118,15 @@ export class Roster implements OnInit {
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
-    this.first = event.first ?? 0;
+    this.firstRow.set(event.first ?? 0);
     this.rows.set(event.rows ?? 10);
+    this.fetchRoster();
+  }
+
+  /** Shared list footer: page or page size changed. */
+  onPageChange(change: ListPageChange): void {
+    this.rows.set(change.pageSize);
+    this.firstRow.set(change.first);
     this.fetchRoster();
   }
 
@@ -140,13 +159,8 @@ export class Roster implements OnInit {
   }
 
   private resetToFirstPage(): void {
-    this.first = 0;
-    // Sync the paginator UI back to page 1 without relying on table.reset(),
-    // which does not reliably re-emit (onLazyLoad) for a lazy table.
-    const table = this.table();
-    if (table) {
-      table.first = 0;
-    }
+    // Back to page 1; the shared footer and the table both read firstRow.
+    this.firstRow.set(0);
     this.fetchRoster();
   }
 
@@ -158,7 +172,7 @@ export class Roster implements OnInit {
 
     this.attendanceService
       .getRoster({
-        page: Math.floor(this.first / this.rows()) + 1,
+        page: this.page(),
         limit: this.rows(),
         date: this.toDateParam(this.dateControl.value),
         search: this.searchControl.value.trim() || undefined,

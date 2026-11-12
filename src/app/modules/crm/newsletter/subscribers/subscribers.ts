@@ -3,14 +3,26 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
+import { ButtonModule } from 'primeng/button';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
 import { CrmService } from '../../services/crm.service';
 import { getAvatarClass } from '../../../../shared/utils/avatar.utils';
 import { Subscriber } from '../../models/crm.model';
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { StatItem, StatStrip } from '../../../../shared/ui/stat-strip/stat-strip';
+import { ClientPager } from '../../../../shared/utils/client-pager';
 
 @Component({
   selector: 'app-subscribers',
   templateUrl: './subscribers.html',
-  imports: [TableModule, SkeletonModule, DatePipe],
+  imports: [
+    TableModule, SkeletonModule, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, DatePipe,
+    PageLayout, ListPaginator, EmptyState, StatStrip,
+  ],
   styleUrl: './subscribers.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,6 +47,15 @@ export class Subscribers implements OnInit {
     );
   });
 
+  readonly pager = new ClientPager(this.filteredSubscribers);
+
+  /** New-this-month and unsubscribed counts are not tracked by the API yet. */
+  readonly statItems = computed<StatItem[]>(() => [
+    { label: 'Total subscribers', value: this.totalSubscribers() },
+    { label: 'New this month', value: null },
+    { label: 'Unsubscribed', value: null },
+  ]);
+
   getInitials(subscriber: Subscriber): string {
     if (subscriber.name) {
       const parts = subscriber.name.trim().split(/\s+/).filter(Boolean);
@@ -54,6 +75,7 @@ export class Subscribers implements OnInit {
 
   onSearch(event: Event): void {
     this.searchTerm.set((event.target as HTMLInputElement).value);
+    this.pager.reset();
   }
 
   ngOnInit(): void {

@@ -44,7 +44,7 @@ describe('CampaignList', () => {
     api.list.mockReturnValue(of({ ...response(), meta: { total: 25, page: 2, limit: 10, lastPage: 3 } }));
     component.goTo(2); fixture.detectChanges();
     expect(api.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
-    expect(text()).toContain('Page 2 of 3');
+    expect(text()).toContain('Showing 11 to 20 of 25 campaigns');
   });
   it('cancels obsolete list requests when a newer filter starts', () => {
     const stale = new Subject<PaginatedApiResponse<Campaign>>(); api.list.mockReturnValueOnce(stale);

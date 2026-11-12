@@ -4,6 +4,10 @@ import { DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 
 import { TableModule } from 'primeng/table';
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../shared/utils/client-pager';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -18,6 +22,9 @@ import { Team } from './models/teams.model';
 @Component({
   selector: 'app-teams',
   imports: [
+    PageLayout,
+    ListPaginator,
+    EmptyState,
     TableModule,
     ButtonModule,
     DialogModule,
@@ -41,6 +48,7 @@ export class Teams implements OnInit {
   private readonly authService = inject(AuthService);
 
   readonly teams = signal<Team[]>([]);
+  readonly pager = new ClientPager(this.teams);
   readonly isLoading = signal(false);
   readonly dialogVisible = signal(false);
   readonly isEditing = signal(false);

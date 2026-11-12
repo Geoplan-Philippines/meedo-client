@@ -30,6 +30,12 @@ import {
   withEntryProjects,
 } from './shared/timesheet-project.util';
 
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { ClientPager } from '../../../shared/utils/client-pager';
+import { TableModule } from 'primeng/table';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { MessageModule } from 'primeng/message';
 interface TimesheetDayEntry {
   localId: string;
   entryId?: string;
@@ -127,6 +133,11 @@ function stripHtml(value: string): string {
 @Component({
   selector: 'app-timesheet',
   imports: [
+    MessageModule,
+    TableModule,
+    EmptyState,
+    PageLayout,
+    ListPaginator,
     CommonModule,
     FormsModule,
     ButtonModule,
@@ -234,6 +245,8 @@ export class Timesheet implements OnInit {
     this.addedProjectIds().forEach((id) => ids.add(id));
     return [...ids];
   });
+  /** Project rows of the week grid, paged with the shared list footer. */
+  readonly projectPager = new ClientPager(this.tableProjectIds, 25);
 
   readonly hasSubmittableEntries = computed(() => this.entries().some((entry) => entry.status === 'DRAFT'));
   readonly draftCount = computed(() => this.entries().filter((entry) => entry.status === 'DRAFT').length);

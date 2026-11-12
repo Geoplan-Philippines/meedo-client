@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -10,6 +10,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { SkeletonModule } from 'primeng/skeleton';
 import { ToastModule } from 'primeng/toast';
 import { catchError, EMPTY, forkJoin, Subject, switchMap } from 'rxjs';
 
@@ -24,12 +26,24 @@ import {
   UpdateMemberPayload,
 } from './models/users.model';
 import { UserService } from './services/user.service';
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../shared/utils/client-pager';
 
+import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-users',
   imports: [
+    MessageModule,
+    TagModule,
+    SkeletonModule,
+    TitleCasePipe,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
     TableModule,
     ButtonModule,
     DialogModule,
@@ -54,6 +68,7 @@ export class Users implements OnInit {
   private readonly authService = inject(AuthService);
 
   readonly users = signal<OrganizationMember[]>([]);
+  readonly pager = new ClientPager(this.users);
   readonly teams = signal<Team[]>([]);
   readonly biometricUsers = signal<HikvisionDirectoryUser[]>([]);
   readonly isLoadingBiometricUsers = signal(false);

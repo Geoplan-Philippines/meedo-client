@@ -1,0 +1,136 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  min-width: 0;
+  padding: 1.5rem var(--page-gutter) 0;
+  background: var(--page);
+  color: var(--text-body);
+}
+
+.page-breadcrumb {
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.page-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.375rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.page-meta {
+  margin-top: 0.375rem;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--toolbar-gap);
+}
+
+/* Headline numbers between the title and the list. */
+.page-summary {
+  margin-bottom: 1.25rem;
+}
+
+/* Tabs bleed to the content edges so the tablist rule spans the page; the
+   first tab's label still lines up with the title. */
+.page-tabs {
+  margin-inline: calc(var(--page-gutter) * -1);
+  padding-inline: calc(var(--page-gutter) - 0.75rem);
+  border-bottom: 1px solid var(--divider);
+}
+
+/* PrimeNG Toolbar: colours, padding and gap come from the preset (app.preset.ts). */
+.page-toolbar {
+  display: flex;
+}
+
+.page-toolbar ::ng-deep .p-toolbar-start,
+.page-toolbar ::ng-deep .p-toolbar-end {
+  flex-wrap: wrap;
+  gap: var(--toolbar-gap);
+  min-width: 0;
+}
+
+.page-toolbar ::ng-deep .p-toolbar-start {
+  flex: 1 1 auto;
+}
+
+.page-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--page-gap);
+  min-width: 0;
+  padding-bottom: 2rem;
+}
+
+/* Collapse slots nothing was projected into. */
+.page-breadcrumb:empty,
+.page-meta:empty,
+.page-actions:empty,
+.page-summary:empty,
+.page-tabs:empty {
+  display: none;
+}
+
+.page-toolbar ::ng-deep .p-toolbar-start:empty,
+.page-toolbar ::ng-deep .p-toolbar-end:empty {
+  display: none;
+}
+
+:host ::ng-deep .page-toolbar:not(:has(.p-toolbar-start:not(:empty))):not(:has(.p-toolbar-end:not(:empty))) {
+  display: none;
+}
+
+/* Tabs remove the tablist's own rule; the wrapper draws it full width. */
+.page-tabs ::ng-deep .p-tablist-tab-list {
+  border-bottom: 0;
+}
+
+.page-tabs ::ng-deep .p-tab {
+  font-size: 0.875rem;
+}
+
+@media (max-width: 767.98px) {
+  :host {
+    padding-top: 1rem;
+  }
+
+  .page-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+}

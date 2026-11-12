@@ -1,0 +1,39 @@
+@if (total() > 0) {
+  @if (mode() === 'more') {
+    <div class="list-footer list-footer--more">
+      <p class="list-footer-summary" aria-live="polite">{{ rangeEnd() }} of {{ total() }}</p>
+      @if (rangeEnd() < total()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          size="small"
+          class="list-footer-more"
+          [disabled]="disabled()"
+          (click)="showMore()"
+        >
+          <span pButtonLabel>Show more</span>
+          <span class="ds-sr-only"> {{ itemLabel() }}</span>
+        </button>
+      }
+    </div>
+  } @else {
+    <nav class="list-footer" [attr.aria-label]="'Pages of ' + itemLabel()">
+      <p class="list-footer-summary" aria-live="polite">
+        Showing {{ rangeStart() }} to {{ rangeEnd() }} of {{ total() }} {{ itemLabel() }}
+      </p>
+      <p-paginator
+        [first]="first()"
+        [rows]="pageSize()"
+        [totalRecords]="total()"
+        [rowsPerPageOptions]="rowsPerPage()"
+        [pageLinkSize]="5"
+        [showFirstLastIcon]="false"
+        [alwaysShow]="false"
+        dropdownAppendTo="body"
+        (onPageChange)="onPageChange($event)"
+      />
+    </nav>
+  }
+}

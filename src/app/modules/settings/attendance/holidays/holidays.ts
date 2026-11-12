@@ -26,11 +26,22 @@ import {
 } from '../shared/attendance-settings.util';
 import { HolidaysService } from '../services/holidays.service';
 
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../../shared/utils/client-pager';
+import { SkeletonModule } from 'primeng/skeleton';
+import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-settings-holidays',
   imports: [
+    MessageModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    SkeletonModule,
     RouterLink,
     DatePipe,
     ReactiveFormsModule,
@@ -52,6 +63,7 @@ export class Holidays implements OnInit {
 
   readonly year = signal(new Date().getFullYear());
   readonly holidays = signal<Holiday[]>([]);
+  readonly pager = new ClientPager(this.holidays);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
 

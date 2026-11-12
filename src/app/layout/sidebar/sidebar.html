@@ -8,24 +8,24 @@
 
 <aside
   id="app-sidebar"
-  class="sidebar-shell absolute inset-y-0 left-0 z-40 w-64 bg-surface border-r border-border transform transition-[transform,width] duration-200 ease-in-out md:relative md:translate-x-0 md:h-full md:overflow-visible overflow-y-auto"
+  class="sidebar-shell absolute inset-y-0 left-0 z-40 w-64 bg-chrome border-r border-divider transform transition-[transform,width] duration-200 ease-in-out md:relative md:translate-x-0 md:h-full md:overflow-visible overflow-y-auto"
   [class.-translate-x-full]="!layoutService.sidebarOpen()"
   [class.translate-x-0]="layoutService.sidebarOpen()"
   [attr.aria-label]="layoutService.sidebarCollapsed() ? 'Collapsed main navigation' : 'Main navigation'"
 >
-  <nav class="sidebar-nav flex flex-col gap-6 p-4 min-h-full md:h-full md:overflow-y-auto">
+  <nav class="sidebar-nav flex flex-col gap-5 px-3 py-4 min-h-full md:h-full md:overflow-y-auto">
     @for (section of sections(); track $index) {
       <div>
         @if (section.title) {
-          <h3 class="sidebar-section-title mb-2 px-3 text-[11px] font-medium tracking-wider text-muted uppercase">
+          <h3 class="sidebar-section-title mb-1 px-2.5 text-xs font-medium text-muted">
             {{ section.title }}
           </h3>
         }
-        <ul class="flex flex-col gap-0.5">
+        <ul class="flex flex-col gap-px">
           @for (item of section.items; track item.label) {
             <li>
               @if (isGroup(item)) {
-                <div class="sidebar-group-label flex items-center gap-3 px-3 py-2 text-sm text-body" [id]="'nav-group-' + item.label">
+                <div class="sidebar-group-label flex items-center gap-2.5 px-2.5 py-1.5 text-sm text-body" [id]="'nav-group-' + item.label">
                   <i [class]="'pi ' + item.icon + ' text-base w-4 text-center shrink-0 opacity-60'" aria-hidden="true"></i>
                   <span class="sidebar-label truncate">{{ item.label }}</span>
                 </div>
@@ -50,9 +50,9 @@
     [routerLink]="item.route"
     [queryParams]="item.queryParams ?? null"
     [class]="isActive(item)
-      ? 'bg-secondary text-secondary-foreground font-medium'
-      : 'text-body hover:bg-secondary/60'"
-    class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer"
+      ? 'bg-selected text-heading font-medium'
+      : 'text-body hover:bg-hover hover:text-heading'"
+    class="sidebar-link flex items-center gap-2.5 px-2.5 py-1.5 rounded-base text-sm transition-colors cursor-pointer"
     [attr.aria-current]="isActive(item) ? 'page' : null"
     [attr.title]="layoutService.sidebarCollapsed() ? item.label : null"
     (click)="layoutService.closeSidebar()"
@@ -60,6 +60,7 @@
     <i
       [class]="'pi ' + item.icon + ' text-base w-4 text-center shrink-0'"
       [class.opacity-60]="!isActive(item)"
+      [class.text-primary]="isActive(item)"
       aria-hidden="true"
     ></i>
     <span class="sidebar-label truncate">{{ item.label }}</span>

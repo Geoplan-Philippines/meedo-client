@@ -1,19 +1,13 @@
-<main class="p-4 md:p-8 flex flex-col gap-6 w-full">
-  <nav class="text-sm text-body/70" aria-label="Breadcrumb">
+<app-page heading="Statuses" subtitle="The lifecycle stages a ticket can move through. The standard set is built in; add your own to match how your team works.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
     <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
-    <span class="mx-2 opacity-60">/</span>
-    <span class="text-heading">Statuses</span>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Statuses</span>
   </nav>
-
-  <header class="flex flex-col gap-1">
-    <h1 class="text-2xl font-semibold text-heading">Statuses</h1>
-    <p class="text-sm text-body/70">
-      The lifecycle stages a ticket can move through. The standard set is built in; add your own to match how your team works.
-    </p>
-  </header>
+  <p-button pageActions label="New status" icon="pi pi-plus" (onClick)="openCreate()" />
 
   @if (error()) {
-    <div role="alert" class="rounded-base border border-destructive/30 bg-muted-destructive text-destructive p-3 text-sm flex items-center justify-between gap-3">
+    <p-message severity="error" styleClass="ds-message">
       <span>{{ error() }}</span>
       <p-button
         label="Retry"
@@ -24,27 +18,23 @@
         (onClick)="load()"
         [disabled]="isLoading()"
       />
-    </div>
+    </p-message>
   }
 
   <!-- Standard statuses: the fixed baseline every workspace ships with -->
   <section class="flex flex-col gap-3" aria-labelledby="standard-statuses-heading">
     <div class="flex flex-col gap-1">
       <div class="flex items-center gap-2">
-        <h2 id="standard-statuses-heading" class="text-xs font-semibold uppercase tracking-wide text-body/70">
-          Standard
-        </h2>
-        <span class="inline-flex items-center gap-1 rounded-full bg-badge-neutral px-2 py-0.5 text-[11px] text-badge-neutral-foreground">
-          <i class="pi pi-lock text-[10px]" aria-hidden="true"></i> Built-in
-        </span>
+        <h2 id="standard-statuses-heading" class="ds-section-title">Standard</h2>
+        <p-tag value="Built-in" icon="pi pi-lock" severity="secondary" [rounded]="true" />
       </div>
-      <p class="text-sm text-body/70">Always available. These can't be edited, archived, or deleted.</p>
+      <p class="ds-section-sub">Always available. These can't be edited, archived, or deleted.</p>
     </div>
 
-    <div class="rounded-base border border-border bg-surface overflow-hidden">
-      <ul class="divide-y divide-border">
-        @for (standard of systemStatuses(); track standard.id) {
-          <li class="flex items-center gap-3 px-4 py-3">
+    <div class="flat-list">
+      <ul>
+        @for (standard of standardPager.pageRows(); track standard.id) {
+          <li class="flat-row">
             <span
               class="inline-block w-3 h-3 rounded-full border border-border shrink-0"
               [style.background-color]="standard.color"
@@ -52,56 +42,53 @@
             ></span>
             <span class="font-medium text-heading min-w-0 truncate">{{ standard.name }}</span>
             <i
-              class="pi pi-lock ml-auto shrink-0 text-sm text-body/40"
+              class="pi pi-lock ml-auto shrink-0 text-sm text-faint"
               pTooltip="Standard status. It can't be edited or removed."
               tooltipPosition="left"
               
+              role="img"
               aria-label="Locked"
             ></i>
           </li>
         } @empty {
-          <li class="px-4 py-3 text-sm text-body/70">Loading standard statuses…</li>
+          <li class="flat-row text-muted">Loading standard statuses…</li>
         }
       </ul>
     </div>
+    <app-list-paginator
+      [total]="standardPager.total()"
+      [page]="standardPager.currentPage()"
+      [pageSize]="standardPager.pageSize()"
+      itemLabel="standard statuses"
+      (pageChange)="standardPager.onPage($event)"
+    />
   </section>
 
   <!-- Custom statuses: editable, team-defined -->
   <section class="flex flex-col gap-3" aria-labelledby="custom-statuses-heading">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div class="flex flex-col gap-1">
-        <h2 id="custom-statuses-heading" class="text-xs font-semibold uppercase tracking-wide text-body/70">
-          Custom
-        </h2>
-        <p class="text-sm text-body/70">Extra statuses tailored to your team's workflow.</p>
+        <h2 id="custom-statuses-heading" class="ds-section-title">Custom</h2>
+        <p class="ds-section-sub">Extra statuses tailored to your team's workflow.</p>
       </div>
       <div class="flex items-center gap-4 flex-wrap">
-        <label for="show-archived" class="flex items-center gap-2 text-sm text-body cursor-pointer select-none">
+        <label for="show-archived" class="ds-toggle">
           <p-toggleSwitch inputId="show-archived" [formControl]="showArchivedControl" />
           Show archived
         </label>
-        <p-button label="New status" icon="pi pi-plus" (onClick)="openCreate()" />
       </div>
     </div>
 
     @if (isLoading()) {
-    <div class="flex items-center justify-center py-12 text-body/70">
-      <i class="pi pi-spin pi-spinner text-xl mr-2"></i>
-      Loading statuses…
+    <div class="ds-table-skeleton" role="status">
+      <span class="ds-sr-only">Loading statuses…</span>
+      @for (row of [1, 2, 3]; track row) {
+        <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="4rem" height="1.25rem" borderRadius="999px" /></div>
+      }
     </div>
   } @else if (visibleStatuses().length === 0) {
-    <div class="rounded-base border border-border bg-surface p-10 text-center flex flex-col items-center gap-2">
-      <i class="pi pi-tag text-3xl text-body/40"></i>
-      <p class="text-body font-medium">
-        @if (showArchived()) {
-          No custom statuses yet
-        } @else if (customStatuses().length > 0) {
-          No active custom statuses
-        } @else {
-          No custom statuses yet
-        }
-      </p>
-      <p class="text-sm text-body/70">
+    <app-empty-state icon="pi pi-tag" [heading]="!showArchived() && customStatuses().length > 0 ? 'No active custom statuses' : 'No custom statuses yet'">
+      <p class="empty-copy">
         @if (!showArchived() && customStatuses().length > 0) {
           All custom statuses are archived. Toggle "Show archived" to view them.
         } @else {
@@ -109,18 +96,18 @@
         }
       </p>
       @if (showArchived() || statuses().length === 0) {
-        <p-button label="New status" icon="pi pi-plus" (onClick)="openCreate()" class="mt-2" />
+        <p-button label="New status" icon="pi pi-plus" (onClick)="openCreate()" />
       }
-    </div>
+    </app-empty-state>
   } @else {
-    <div class="rounded-base border border-border overflow-hidden">
-      <p-table [value]="visibleStatuses()" dataKey="id" styleClass="text-sm">
+    <div>
+      <p-table class="ds-table" [value]="pager.pageRows()" [lazy]="true" (onLazyLoad)="pager.onSort($event)" dataKey="id" [rowHover]="true">
         <ng-template pTemplate="header">
           <tr>
-            <th scope="col">Status</th>
+            <th scope="col" pSortableColumn="name">Status <p-sortIcon field="name" /></th>
             <th scope="col">State</th>
-            <th scope="col" class="hidden md:table-cell">Updated</th>
-            <th scope="col" class="text-right">Actions</th>
+            <th scope="col" class="hidden md:table-cell" pSortableColumn="updatedAt">Updated <p-sortIcon field="updatedAt" /></th>
+            <th scope="col" class="text-right"><span class="ds-sr-only">Actions</span></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-status>
@@ -137,16 +124,12 @@
             </td>
             <td>
               @if (status.isArchived) {
-                <span class="inline-flex items-center gap-1 rounded-full bg-badge-neutral px-2 py-0.5 text-xs text-badge-neutral-foreground">
-                  <i class="pi pi-inbox text-[10px]" aria-hidden="true"></i> Archived
-                </span>
+                <p-tag value="Archived" icon="pi pi-inbox" severity="secondary" [rounded]="true" />
               } @else {
-                <span class="inline-flex items-center gap-1 rounded-full bg-muted-success px-2 py-0.5 text-xs text-success">
-                  <i class="pi pi-check-circle text-[10px]" aria-hidden="true"></i> Active
-                </span>
+                <p-tag value="Active" icon="pi pi-check-circle" severity="success" [rounded]="true" />
               }
             </td>
-            <td class="hidden md:table-cell text-body/70">{{ status.updatedAt | date: 'medium' }}</td>
+            <td class="hidden md:table-cell text-muted ds-num">{{ status.updatedAt | date: 'medium' }}</td>
             <td class="text-right whitespace-nowrap">
               <div class="inline-flex items-center gap-0.5">
                 <p-button
@@ -178,10 +161,17 @@
           </tr>
         </ng-template>
       </p-table>
+      <app-list-paginator
+        [total]="pager.total()"
+        [page]="pager.currentPage()"
+        [pageSize]="pager.pageSize()"
+        itemLabel="statuses"
+        (pageChange)="pager.onPage($event)"
+      />
     </div>
   }
   </section>
-</main>
+</app-page>
 
 <p-dialog
   [visible]="isDialogOpen()"
@@ -197,7 +187,7 @@
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
         <label for="status-name" class="text-sm font-medium text-heading">Name</label>
-        <span class="text-xs text-body/60" aria-live="polite">{{ nameLength() }} / 100</span>
+        <span class="text-xs text-muted" aria-live="polite">{{ nameLength() }} / 100</span>
       </div>
       <input id="status-name" pInputText formControlName="name" autocomplete="off" maxlength="100" />
       @if (form.controls.name.invalid && form.controls.name.touched) {
@@ -229,7 +219,7 @@
     </fieldset>
 
     <div class="flex flex-col gap-1.5">
-      <span class="text-xs font-medium text-body/70 uppercase tracking-wide">Preview</span>
+      <span class="text-xs font-medium text-muted uppercase tracking-wide">Preview</span>
       <div class="rounded-base border border-border bg-surface p-3 flex items-center gap-2.5">
         <span
           class="inline-block w-3 h-3 rounded-full border border-border shrink-0"

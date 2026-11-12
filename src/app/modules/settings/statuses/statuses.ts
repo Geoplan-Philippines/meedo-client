@@ -20,6 +20,13 @@ import {
   UpdateStatusPayload,
 } from './models/status.model';
 
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../shared/utils/client-pager';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TagModule } from 'primeng/tag';
+import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
 
 /**
@@ -48,6 +55,12 @@ function colorInPalette(control: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-settings-statuses',
   imports: [
+    MessageModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    SkeletonModule,
+    TagModule,
     RouterLink,
     ReactiveFormsModule,
     DatePipe,
@@ -74,6 +87,7 @@ export class Statuses implements OnInit {
 
   /** Built-in, locked statuses. The fixed baseline, sourced from the API. */
   readonly systemStatuses = computed(() => this.statuses().filter((s) => s.isSystem));
+  readonly standardPager = new ClientPager(this.systemStatuses);
 
   /** Team-defined statuses that can be edited or archived. */
   readonly customStatuses = computed(() => this.statuses().filter((s) => !s.isSystem));
@@ -82,6 +96,7 @@ export class Statuses implements OnInit {
     const custom = this.customStatuses();
     return this.showArchived() ? custom : custom.filter((s) => !s.isArchived);
   });
+  readonly pager = new ClientPager(this.visibleStatuses);
 
   readonly isDialogOpen = signal(false);
   readonly dialogMode = signal<DialogMode>('create');

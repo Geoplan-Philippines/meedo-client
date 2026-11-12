@@ -41,6 +41,9 @@ describe('Leads', () => {
     })));
     fixture.detectChanges();
     const badges = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.status-badge')];
-    expect(badges.map(badge => badge.className)).toEqual(['pending', 'contacted', 'qualified', 'lost'].map(status => `status-badge status-${status}`));
+    expect(badges.map(badge => [...badge.classList].find(name => name.startsWith('status-') && name !== 'status-badge')))
+      .toEqual(['pending', 'contacted', 'qualified', 'lost'].map(status => `status-${status}`));
+    expect(badges.map(badge => [...badge.classList].find(name => name.startsWith('p-tag-') && name !== 'p-tag-rounded')))
+      .toEqual(['p-tag-warn', 'p-tag-info', 'p-tag-success', 'p-tag-danger']);
   });
 });

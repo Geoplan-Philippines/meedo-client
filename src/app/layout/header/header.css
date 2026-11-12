@@ -21,12 +21,6 @@
   padding: 0;
 }
 
-@media (min-width: 640px) {
-  :host ::ng-deep .header-icon-btn .p-button {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-}
 
 @media (max-width: 420px) {
   .app-logo {

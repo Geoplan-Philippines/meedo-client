@@ -26,6 +26,14 @@ import {
 import { ScheduleAssignmentsService } from '../services/schedule-assignments.service';
 import { WeeklySchedulesService } from '../services/weekly-schedules.service';
 
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../../shared/utils/client-pager';
+import { SkeletonModule } from 'primeng/skeleton';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { MessageModule } from 'primeng/message';
 interface TeamRow {
   id: string;
   name: string;
@@ -54,6 +62,13 @@ const SOURCE_LABELS: Record<AssignmentSource, string> = {
 @Component({
   selector: 'app-settings-assignments',
   imports: [
+    MessageModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    SkeletonModule,
+    IconFieldModule,
+    InputIconModule,
     RouterLink,
     FormsModule,
     ButtonModule,
@@ -76,6 +91,22 @@ export class Assignments implements OnInit {
 
   readonly teamRows = signal<TeamRow[]>([]);
   readonly employeeRows = signal<EmployeeRow[]>([]);
+
+  /** Client-side search + paging for the two assignment lists. */
+  readonly teamSearch = signal('');
+  readonly employeeSearch = signal('');
+  private readonly filteredTeamRows = computed(() => {
+    const term = this.teamSearch().trim().toLowerCase();
+    return term ? this.teamRows().filter((row) => row.name.toLowerCase().includes(term)) : this.teamRows();
+  });
+  private readonly filteredEmployeeRows = computed(() => {
+    const term = this.employeeSearch().trim().toLowerCase();
+    return term
+      ? this.employeeRows().filter((row) => `${row.name} ${row.email}`.toLowerCase().includes(term))
+      : this.employeeRows();
+  });
+  readonly teamPager = new ClientPager(this.filteredTeamRows);
+  readonly employeePager = new ClientPager(this.filteredEmployeeRows);
   readonly schedules = signal<WeeklySchedule[]>([]);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);

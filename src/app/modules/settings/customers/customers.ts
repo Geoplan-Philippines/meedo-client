@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,6 +10,11 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
 
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { ListPageChange, ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
 import { ProjectsService } from '../../tickets/services/projects.service';
@@ -19,6 +24,7 @@ import { ClientsService } from './services/clients.service';
 import { ClientListParams, ClientRecord, ClientSortField } from './models/client.model';
 import { NewInternalRecord } from '../shared/new-internal-record';
 
+import { MessageModule } from 'primeng/message';
 /** Must match the server's DISPLAY_NAME_MAX_LENGTH. */
 const DISPLAY_NAME_MAX_LENGTH = 200;
 const PAGE_SIZE = 25;
@@ -32,6 +38,12 @@ const SORTABLE: Record<string, ClientSortField> = {
 @Component({
   selector: 'app-settings-customers',
   imports: [
+    MessageModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    IconFieldModule,
+    InputIconModule,
     RouterLink,
     ReactiveFormsModule,
     ButtonModule,
@@ -65,6 +77,9 @@ export class Customers {
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly first = signal(0);
+  readonly rows = signal(PAGE_SIZE);
+  /** Current page, 1-based, for the shared list footer. */
+  readonly page = computed(() => Math.floor(this.first() / this.rows()) + 1);
 
   readonly editingId = signal<string | null>(null);
   readonly isSaving = signal(false);
@@ -128,6 +143,13 @@ export class Customers {
       sortField: SORTABLE[sortKey] ?? 'customerName',
       sortOrder: event.sortOrder === -1 ? 'desc' : 'asc',
     });
+  }
+
+  /** Shared list footer: page or page size changed. */
+  onPageChange(change: ListPageChange): void {
+    this.rows.set(change.pageSize);
+    this.first.set(change.first);
+    this.applyParams({ page: change.page, limit: change.pageSize });
   }
 
   reload(): void {

@@ -1,21 +1,15 @@
 <p-toast />
 
-<main class="attendance-page">
-  <header class="page-header">
-    <div>
-      <h1 class="page-title">Attendance</h1>
-      <p class="page-subtitle">First in, last out — across office, field, and work-from-home.</p>
-      @if (status(); as dayStatus) {
-        <div class="today-status">
-          <app-attendance-status-badge [status]="dayStatus" [showDetail]="true" />
-          @if (expectedLabel(); as expected) {
-            <span class="today-status-hint">Expected {{ expected }} · {{ expectedModeLabel() }}</span>
-          }
-        </div>
+<app-page heading="Attendance" subtitle="First in, last out, across office, field, and work-from-home.">
+  <span pageActions class="today-pill">{{ summary()?.date ?? null | date: 'fullDate' }}</span>
+  @if (status(); as dayStatus) {
+    <div pageMeta class="today-status">
+      <app-attendance-status-badge [status]="dayStatus" [showDetail]="true" />
+      @if (expectedLabel(); as expected) {
+        <span class="today-status-hint">Expected {{ expected }} · {{ expectedModeLabel() }}</span>
       }
     </div>
-    <span class="today-pill">{{ summary()?.date ?? null | date: 'fullDate' }}</span>
-  </header>
+  }
 
   <!-- ─── Today's computed summary ─────────────────────── -->
   <section class="summary-grid" aria-live="polite">
@@ -60,7 +54,6 @@
         label="Clock In"
         icon="pi pi-sign-in"
         severity="primary"
-        size="large"
         [disabled]="!hasLocation()"
         (onClick)="openTimeIn()"
       />
@@ -68,7 +61,6 @@
         label="Clock Out"
         icon="pi pi-sign-out"
         severity="secondary"
-        size="large"
         [outlined]="true"
         [disabled]="!canTimeOut() || !hasLocation()"
         (onClick)="openTimeOut()"
@@ -101,7 +93,7 @@
 
   <!-- ─── In/Out roster (own row for members, all for managers) ─── -->
   <app-attendance-roster />
-</main>
+</app-page>
 
 <!-- ─── Work Type / confirmation dialog ─────────────────── -->
 <p-dialog

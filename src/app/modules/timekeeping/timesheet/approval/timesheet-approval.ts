@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -27,9 +27,29 @@ import { TimesheetEntryForm } from '../entry-form/timesheet-entry-form';
 import { manilaTodayKey } from '../entry-form/timesheet-entry-form';
 import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { StatStrip, StatItem } from '../../../../shared/ui/stat-strip/stat-strip';
+import { ClientPager } from '../../../../shared/utils/client-pager';
+import { TagModule } from 'primeng/tag';
+import { TabsModule } from 'primeng/tabs';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { BadgeModule } from 'primeng/badge';
 @Component({
   selector: 'app-timesheet-approval',
   imports: [
+    BadgeModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    StatStrip,
+    TagModule,
+    TabsModule,
+    IconFieldModule,
+    InputIconModule,
+    TitleCasePipe,
     CommonModule,
     TimesheetEntryForm,
     FormsModule,
@@ -133,6 +153,24 @@ export class TimesheetApproval implements OnInit {
   readonly totalOvertimeHours = computed(() =>
     this.employees().reduce((sum, e) => sum + e.overtimeHours, 0),
   );
+
+  /** Employee rows for the current tab and filters, paged with the shared list footer. */
+  readonly pager = new ClientPager(this.filteredEmployees);
+
+  /** Headline numbers for the week. Zero shows as "no data", as before. */
+  readonly weekStats = computed<StatItem[]>(() => {
+    const summary = this.summary();
+    const byStatus = summary?.totalsByStatus ?? {};
+    const orNull = (value: number) => (value > 0 ? value : null);
+    const hours = (value: number) => (value > 0 ? `${Math.round(value).toLocaleString('en-US')}h` : null);
+    return [
+      { label: 'Pending approvals', value: orNull((byStatus['SUBMITTED'] ?? 0) + (byStatus['DRAFT'] ?? 0)), tone: 'warning' },
+      { label: 'Approved this week', value: orNull(byStatus['APPROVED'] ?? 0), tone: 'success' },
+      { label: 'Rejected', value: orNull(byStatus['REJECTED'] ?? 0), tone: 'danger' },
+      { label: 'Submitted hours', value: hours(summary?.totalHours ?? 0) },
+      { label: 'Overtime hours', value: hours(this.totalOvertimeHours()) },
+    ];
+  });
 
   readonly submittedEntryIds = computed(() =>
     this.employees().flatMap(e => e.entries)
@@ -433,6 +471,16 @@ export class TimesheetApproval implements OnInit {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to unlock week') });
         },
       });
+  }
+
+  statusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (status.toUpperCase()) {
+      case 'APPROVED': return 'success';
+      case 'REJECTED': return 'danger';
+      case 'SUBMITTED':
+      case 'PENDING': return 'info';
+      default: return 'secondary';
+    }
   }
 
   statusClass(status: string): string {

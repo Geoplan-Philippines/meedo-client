@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { PageLayout } from '../../shared/ui/page-layout/page-layout';
 import { catchError, EMPTY } from 'rxjs';
 
 import { ApptivoSyncPanel } from './shared/apptivo-sync-panel';
@@ -21,7 +22,7 @@ interface SettingsGroup {
 
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink, ApptivoSyncPanel],
+  imports: [RouterLink, ApptivoSyncPanel, PageLayout],
   templateUrl: './settings.html',
   styleUrl: './settings.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

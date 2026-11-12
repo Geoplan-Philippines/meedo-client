@@ -29,6 +29,12 @@ import {
 } from '../shared/attendance-settings.util';
 import { ShiftsService } from '../services/shifts.service';
 
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../../shared/utils/client-pager';
+import { SkeletonModule } from 'primeng/skeleton';
+import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
 
 /**
@@ -63,6 +69,11 @@ function endAfterStart(group: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-settings-shifts',
   imports: [
+    MessageModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    SkeletonModule,
     RouterLink,
     ReactiveFormsModule,
     TableModule,
@@ -93,6 +104,7 @@ export class Shifts implements OnInit {
   readonly visibleShifts = computed(() =>
     this.showArchived() ? this.shifts() : this.activeShifts(),
   );
+  readonly pager = new ClientPager(this.visibleShifts);
 
   readonly isDialogOpen = signal(false);
   readonly dialogMode = signal<DialogMode>('create');

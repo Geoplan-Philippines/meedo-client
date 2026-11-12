@@ -11,9 +11,9 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.0625rem 0.5rem;
-  border-radius: 100px;
+  border-radius: var(--pill-radius);
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
 }

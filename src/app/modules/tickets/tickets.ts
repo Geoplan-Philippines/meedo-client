@@ -24,6 +24,10 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import { PopoverModule } from 'primeng/popover';
+import { TabsModule } from 'primeng/tabs';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from './services/tickets.service';
@@ -32,6 +36,9 @@ import { TicketsBoard } from './tickets-board/tickets-board';
 import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
 import { ArchivedTag } from '../../shared/ui/archived-tag/archived-tag';
 import { WorkspaceBreadcrumb } from '../clients/workspace-breadcrumb/workspace-breadcrumb';
+import { PageLayout } from '../../shared/ui/page-layout/page-layout';
+import { ListPageChange, ListPaginator } from '../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { clientDisplayName, projectDisplayName } from '../../shared/utils/display-name.utils';
 import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH, MY_TICKETS_QUERY_PARAMS } from './tickets.constants';
 import { trimmedRequired } from './utils/ticket-validation';
@@ -67,9 +74,13 @@ import {
   serializeDueDate,
 } from './utils/ticket.utils';
 
+import { BadgeModule } from 'primeng/badge';
+import { MessageModule } from 'primeng/message';
 @Component({
   selector: 'app-tickets',
   imports: [
+    BadgeModule,
+    MessageModule,
     TableModule,
     ButtonModule,
     DialogModule,
@@ -80,6 +91,10 @@ import {
     DatePickerModule,
     ToastModule,
     PopoverModule,
+    TabsModule,
+    SelectButtonModule,
+    IconFieldModule,
+    InputIconModule,
     DatePipe,
     TitleCasePipe,
     FormsModule,
@@ -89,6 +104,9 @@ import {
     InputFeedback,
     ArchivedTag,
     WorkspaceBreadcrumb,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
   ],
   providers: [MessageService],
   templateUrl: './tickets.html',
@@ -142,7 +160,21 @@ export class Tickets implements OnInit {
   readonly rows = signal(10);
   readonly isLoading = signal(false);
 
-  private first = 0;
+  /** Index of the first row on the current page (PrimeNG's `first`). */
+  readonly firstRow = signal(0);
+  /** Current page, 1-based, for the shared list footer. */
+  readonly page = computed(() => Math.floor(this.firstRow() / this.rows()) + 1);
+
+  readonly viewTabOptions: { label: string; value: TicketView }[] = [
+    { label: 'All tickets', value: 'all' },
+    { label: 'Active', value: 'active' },
+    { label: 'Backlog', value: 'backlog' },
+    { label: 'Closed', value: 'closed' },
+  ];
+  readonly layoutOptions = [
+    { label: 'List', value: 'list', icon: 'pi pi-list' },
+    { label: 'Board', value: 'board', icon: 'pi pi-th-large' },
+  ];
   // Default ordering: newest tickets first, by creation time.
   private sortField: string | null = 'createdAt';
   private sortOrder: 'asc' | 'desc' | null = 'desc';
@@ -430,7 +462,7 @@ export class Tickets implements OnInit {
   }
 
   onLazyLoad(event: TableLazyLoadEvent): void {
-    this.first = event.first ?? 0;
+    this.firstRow.set(event.first ?? 0);
     this.rows.set(event.rows ?? 10);
     const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
     if (sortField) {
@@ -446,6 +478,13 @@ export class Tickets implements OnInit {
     this.fetchTickets();
   }
 
+  /** Shared list footer: page or page size changed. */
+  onPageChange(change: ListPageChange): void {
+    this.rows.set(change.pageSize);
+    this.firstRow.set(change.first);
+    this.fetchTickets();
+  }
+
   private fetchTickets(): void {
     const requestId = ++this.ticketsRequestId;
     this.isLoading.set(true);
@@ -453,7 +492,7 @@ export class Tickets implements OnInit {
     if (this.awaitingMember()) return;
     this.ticketsService
       .getAll({
-        page: Math.floor(this.first / this.rows()) + 1,
+        page: this.page(),
         limit: this.rows(),
         search: this.searchControl.value.trim() || undefined,
         view: this.view(),
@@ -485,7 +524,7 @@ export class Tickets implements OnInit {
 
   private applyFilters(): void {
     this.searchTerm.set(this.searchControl.value.trim());
-    this.first = 0;
+    this.firstRow.set(0);
     if (this.layout() === 'board') return;
     const table = this.table();
     if (table) {

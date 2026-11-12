@@ -1,0 +1,25 @@
+/* Built-in statuses: plain rows on the page with dividers, no box. */
+.flat-list {
+  margin-inline: calc(var(--page-gutter) * -1);
+  border-top: 1px solid var(--divider);
+}
+
+.flat-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flat-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--row-h);
+  padding: 0 var(--page-gutter);
+  border-bottom: 1px solid var(--divider);
+  font-size: 0.875rem;
+}
+
+.flat-row:last-child {
+  border-bottom-color: transparent;
+}

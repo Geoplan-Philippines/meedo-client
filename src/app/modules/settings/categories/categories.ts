@@ -17,11 +17,23 @@ import {
   UpdateTicketCategoryPayload,
 } from '../../tickets/models/ticket-categories.model';
 
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { ClientPager } from '../../../shared/utils/client-pager';
+import { SkeletonModule } from 'primeng/skeleton';
+
+import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-settings-categories',
   imports: [
+    MessageModule,
+    PageLayout,
+    ListPaginator,
+    EmptyState,
+    SkeletonModule,
     RouterLink,
     ReactiveFormsModule,
     DatePipe,
@@ -41,6 +53,7 @@ export class Categories implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly categories = signal<TicketCategory[]>([]);
+  readonly pager = new ClientPager(this.categories);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
 
