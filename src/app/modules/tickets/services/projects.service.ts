@@ -33,9 +33,9 @@ export class ProjectsService {
       .pipe(map((page) => ({ ...page, data: page.data.map(toPickerProject) })));
   }
 
-  /** Drop cached project pages after a sync or an admin edit so pickers show fresh names. */
+  /** Drop cached project and client pages after a sync, an admin edit or a project notification. */
   invalidate(): void {
-    this.cache.invalidate(['projects']);
+    this.cache.invalidate(['projects', 'clients']);
   }
 }
 

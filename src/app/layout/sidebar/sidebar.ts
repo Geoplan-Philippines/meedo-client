@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { NavigationEnd, Params, Router, RouterLink } from '@angular/router';
+import { PrefetchLink } from '../../shared/ui/prefetch/prefetch-link';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { LayoutService } from '../layout.service';
@@ -34,7 +35,7 @@ interface NavSection {
 
 @Component({
   selector: 'app-sidebar',
-  imports: [NgTemplateOutlet, RouterLink],
+  imports: [NgTemplateOutlet, RouterLink, PrefetchLink],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

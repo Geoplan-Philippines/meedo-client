@@ -82,12 +82,17 @@ async function resolveChildren(route: Route): Promise<Routes | undefined> {
   return Array.isArray(loaded) ? (loaded as Routes) : undefined;
 }
 
-/** Segments a route's path consumes, or null when it does not match (`:param` matches any segment). */
+/**
+ * Segments a route's path consumes, or null when it does not match (`:param`
+ * matches any segment). Like the router, a route without children must
+ * consume the whole URL, so `newsletter` does not match `newsletter/campaigns`.
+ */
 function matchPath(route: Route, segments: readonly string[]): number | null {
-  const parts = (route.path ?? '').split('/').filter(Boolean);
   if (route.path === '**') return segments.length;
+  const parts = (route.path ?? '').split('/').filter(Boolean);
+  const isLeaf = !route.children && !route.loadChildren;
   if (parts.length > segments.length) return null;
-  if (route.pathMatch === 'full' && parts.length !== segments.length) return null;
+  if ((route.pathMatch === 'full' || isLeaf) && parts.length !== segments.length) return null;
   const matches = parts.every((part, index) => part.startsWith(':') || part === segments[index]);
   return matches ? parts.length : null;
 }

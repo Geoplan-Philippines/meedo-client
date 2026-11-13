@@ -7,7 +7,8 @@ import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
 import { PageQuery, toHttpParams } from '../../../../shared/data/page-query';
-import { ListStateConfig } from '../../../../shared/data/url-list-state';
+import { ListQuery, ListStateConfig } from '../../../../shared/data/url-list-state';
+import { UNASSIGNED_CLIENT_ID } from '../../../clients/models/workspace.model';
 import { cacheContext } from '../../../../core/http/api-cache';
 import { ProjectsService } from '../../../tickets/services/projects.service';
 import {
@@ -41,6 +42,20 @@ export type ProjectPageMeta = {
 };
 
 export type ProjectPageQuery = PageQuery & Omit<ProjectListFilters, 'search' | 'sortField' | 'sortOrder'>;
+
+/**
+ * The API query for the screen. On /clients/:clientId the client comes from
+ * the path ('unassigned' = projects with no client) and replaces the filter.
+ */
+export function projectPageQuery(query: ListQuery<ProjectListFilterState>, routeClientId: string | null): ProjectPageQuery {
+  const { clientId, ...rest } = query;
+  return {
+    ...rest,
+    teamId: null,
+    unassigned: routeClientId === UNASSIGNED_CLIENT_ID,
+    clientId: routeClientId && routeClientId !== UNASSIGNED_CLIENT_ID ? routeClientId : clientId,
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class ProjectAdminService {

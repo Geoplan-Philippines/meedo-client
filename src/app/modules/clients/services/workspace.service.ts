@@ -1,5 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, effect, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ApiCache } from '../../../core/http/api-cache';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Observable, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
@@ -22,6 +24,12 @@ export class WorkspaceService {
   private identityKey: string | undefined;
 
   constructor() {
+    // Writes and project notifications clear the API cache; breadcrumb names follow.
+    inject(ApiCache)
+      .changes$.pipe(takeUntilDestroyed())
+      .subscribe((change) => {
+        if (change === null || change.has('clients') || change.has('projects')) this.invalidate();
+      });
     effect(() => {
       const userId = this.auth.currentUser?.()?.id;
       const key = `${userId ?? ''}:${this.auth.organizationId?.() ?? ''}`;

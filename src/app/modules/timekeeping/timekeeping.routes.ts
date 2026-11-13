@@ -8,11 +8,13 @@ export const timekeepingRoutes: Routes = [
   },
   {
     path: 'dashboard',
+    data: { preload: true },
     loadComponent: () =>
       import('./attendance/dashboard/dashboard').then((m) => m.AttendanceDashboard),
   },
   {
     path: 'attendance',
+    data: { preload: true },
     loadComponent: () =>
       import('./attendance/timesheet/timesheet').then((m) => m.Timesheet),
   },
@@ -28,6 +30,7 @@ export const timekeepingRoutes: Routes = [
   },
   {
     path: 'timesheet',
+    data: { preload: true },
     loadComponent: () =>
       import('./timesheet/timesheet').then((m) => m.Timesheet),
     canDeactivate: [
@@ -42,6 +45,7 @@ export const timekeepingRoutes: Routes = [
   },
   {
     path: 'timesheet/approval',
+    data: { preload: true },
     loadComponent: () =>
       import('./timesheet/approval/timesheet-approval').then((m) => m.TimesheetApproval),
   },

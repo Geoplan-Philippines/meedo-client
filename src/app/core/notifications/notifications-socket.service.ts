@@ -16,6 +16,7 @@ import { PaginatedApiResponse } from '../../shared/interface/paginated-response.
 import { AppNotification } from './notification.model';
 import { WorkspaceService } from '../../modules/clients/services/workspace.service';
 import { ProjectsService } from '../../modules/tickets/services/projects.service';
+import { ApiCache } from '../http/api-cache';
 
 export const TOAST_QUEUE_CAP = 5;
 export const PROJECT_REFRESH_DEBOUNCE_MS = 500;
@@ -27,6 +28,7 @@ export class NotificationsSocketService {
   private readonly destroy = inject(DestroyRef);
   private readonly workspace = inject(WorkspaceService);
   private readonly projects = inject(ProjectsService);
+  private readonly cache = inject(ApiCache);
   private readonly url = `${environment.apiBaseUrl}/notifications`;
   private socket?: Socket;
   private readonly toastQueue: AppNotification[] = [];
@@ -90,6 +92,9 @@ export class NotificationsSocketService {
       this.unread.set(count),
     );
     socket.on('notification:new', (item: AppNotification) => {
+      // Something changed on the server: cached ticket pages are stale, and lists on screen refresh.
+      if (item.entityType === 'ticket') this.cache.invalidate(['tickets', 'notifications']);
+      else this.cache.invalidate(['notifications']);
       if (item.entityType === 'project') {
         clearTimeout(this.projectRefreshTimer);
         this.projectRefreshTimer = setTimeout(() => {

@@ -6,7 +6,7 @@ const loadMainLayout = () => import('./layout/main-layout/main-layout').then((m)
 
 export const routes: Routes = [
   {
-    path: 'notifications', loadComponent: loadMainLayout, canActivate: [authGuard],
+    path: 'notifications', loadComponent: loadMainLayout, canActivate: [authGuard], data: { preload: true },
     loadChildren: () => import('./modules/notifications/notifications.routes').then(m => m.notificationsRoutes),
   },
   { path: '', pathMatch: 'full', redirectTo: 'timekeeping' },
@@ -20,6 +20,7 @@ export const routes: Routes = [
     path: 'tickets',
     loadComponent: loadMainLayout,
     canActivate: [authGuard],
+    data: { preload: true },
     loadChildren: () =>
       import('./modules/tickets/tickets.routes').then((m) => m.ticketsRoutes),
   },
@@ -27,6 +28,7 @@ export const routes: Routes = [
     path: 'clients',
     loadComponent: loadMainLayout,
     canActivate: [authGuard],
+    data: { preload: true },
     loadChildren: () =>
       import('./modules/clients/clients.routes').then((m) => m.clientsRoutes),
   },
@@ -34,6 +36,7 @@ export const routes: Routes = [
     path: 'timekeeping',
     loadComponent: loadMainLayout,
     canActivate: [authGuard],
+    data: { preload: true },
     loadChildren: () =>
       import('./modules/timekeeping/timekeeping.routes').then((m) => m.timekeepingRoutes)
   },
@@ -41,6 +44,7 @@ export const routes: Routes = [
     path: 'crm',
     loadComponent: loadMainLayout,
     canActivate: [authGuard],
+    data: { preload: true },
     loadChildren: () =>
       import('./modules/crm/crm.routes').then((m) => m.crmRoutes),
   },
@@ -48,6 +52,7 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: loadMainLayout,
     canActivate: [authGuard],
+    data: { preload: true },
     loadChildren: () =>
       import('./modules/settings/settings.routes').then((m) => m.settingsRoutes),
   },

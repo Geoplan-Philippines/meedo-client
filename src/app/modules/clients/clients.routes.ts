@@ -11,6 +11,7 @@ export const clientsRoutes: Routes = [
   {
     path: '',
     pathMatch: 'full',
+    data: { preload: true },
     loadComponent: () => import('../settings/customers/customers').then((m) => m.Customers),
   },
   {
@@ -21,6 +22,7 @@ export const clientsRoutes: Routes = [
   {
     path: ':clientId',
     pathMatch: 'full',
+    data: { preload: true },
     loadComponent: () => import('../settings/projects/projects').then((m) => m.Projects),
   },
   {
@@ -30,6 +32,7 @@ export const clientsRoutes: Routes = [
   },
   {
     path: ':clientId/projects/:projectId/tickets',
+    data: { preload: true },
     loadComponent: () => import('../tickets/tickets').then((m) => m.Tickets),
   },
 ];

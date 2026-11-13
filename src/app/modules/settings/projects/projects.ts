@@ -17,19 +17,19 @@ import { InputIconModule } from 'primeng/inputicon';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
-import { PROJECTS_LIST, ProjectAdminService, ProjectListFilterState, ProjectPageQuery } from './services/project-admin.service';
+import { PROJECTS_LIST, ProjectAdminService, projectPageQuery } from './services/project-admin.service';
 import { ProjectRecord, ProjectSortField } from './models/project-admin.model';
 import { ProjectDetailDrawer } from './project-detail-drawer/project-detail-drawer';
 import { WorkspaceService } from '../../clients/services/workspace.service';
 import { WorkspaceBreadcrumb } from '../../clients/workspace-breadcrumb/workspace-breadcrumb';
-import { UNASSIGNED_CLIENT_ID, workspaceLinks } from '../../clients/models/workspace.model';
+import { workspaceLinks } from '../../clients/models/workspace.model';
 import { NewInternalRecord } from '../shared/new-internal-record';
 import { ClientTypeahead } from '../shared/client-typeahead';
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { PrefetchLink } from '../../../shared/ui/prefetch/prefetch-link';
-import { ListQuery, injectListState } from '../../../shared/data/url-list-state';
+import { injectListState } from '../../../shared/data/url-list-state';
 import { pagedList } from '../../../shared/data/paged-list';
 
 import { MessageModule } from 'primeng/message';
@@ -239,20 +239,6 @@ export class Projects {
     this.projects.updateRows((rows) => rows.map((project) => (project.id === updated.id ? updated : project)));
     this.workspace.refreshProjects();
   }
-}
-
-/**
- * The API query for the screen. On /clients/:clientId the client comes from
- * the path ('unassigned' = projects with no client) and replaces the filter.
- */
-export function projectPageQuery(query: ListQuery<ProjectListFilterState>, routeClientId: string | null): ProjectPageQuery {
-  const { clientId, ...rest } = query;
-  return {
-    ...rest,
-    teamId: null,
-    unassigned: routeClientId === UNASSIGNED_CLIENT_ID,
-    clientId: routeClientId && routeClientId !== UNASSIGNED_CLIENT_ID ? routeClientId : clientId,
-  };
 }
 
 /** Groups by client, keeping the server's row order within a group. Clients A–Z, "Unassigned" last. */

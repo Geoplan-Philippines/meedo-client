@@ -49,6 +49,7 @@
   <a
     [routerLink]="item.route"
     [queryParams]="item.queryParams ?? null"
+    appPrefetch
     [class]="isActive(item)
       ? 'bg-selected text-heading font-medium'
       : 'text-body hover:bg-hover hover:text-heading'"
