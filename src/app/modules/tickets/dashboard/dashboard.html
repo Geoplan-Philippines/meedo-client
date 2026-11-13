@@ -1,119 +1,69 @@
-<main class="dashboard">
-  <header class="page-header">
-    <div>
-      <h1 class="page-title">Ticket overview</h1>
-      <p class="page-subtitle">The ticket queue at a glance.</p>
-    </div>
-    <div class="header-actions">
-      <a class="view-btn" routerLink="/tickets">
-        All tickets
-        <i class="pi pi-arrow-right" aria-hidden="true"></i>
-      </a>
-      <button type="button" class="add-btn" (click)="newTicket()">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        New ticket
-      </button>
-    </div>
-  </header>
+<app-page heading="Ticket overview" subtitle="The ticket queue at a glance.">
+  <a pageActions pButton routerLink="/tickets" severity="secondary" [outlined]="true" label="All tickets" icon="pi pi-arrow-right" iconPos="right"></a>
+  <button pageActions pButton type="button" icon="pi pi-plus" label="New ticket" (click)="newTicket()"></button>
+
+  @if (!hasError() && !isLoading() && hasTickets()) {
+    <app-stat-strip pageSummary label="Ticket summary" [items]="metrics()" />
+  }
 
   @if (hasError()) {
-    <section class="panel error-panel" role="alert">
-      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-      <div>
-        <h2 class="panel-title">Couldn't load the ticket overview</h2>
-        <p class="muted">Something went wrong fetching ticket data.</p>
-      </div>
-      <button type="button" class="view-btn" (click)="load()">
-        <i class="pi pi-refresh" aria-hidden="true"></i>
-        Retry
-      </button>
-    </section>
+    <app-empty-state
+      role="alert"
+      icon="pi pi-exclamation-triangle"
+      heading="Couldn't load the ticket overview"
+      description="Something went wrong fetching ticket data."
+    >
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
   } @else if (isLoading()) {
-    <p class="sr-only" role="status">Loading ticket overview…</p>
-
-    <section class="metric-strip" aria-hidden="true">
-      @for (i of skeletonMetrics; track i) {
-        <div class="metric">
-          <span class="sk sk-label"></span>
-          <span class="sk sk-value"></span>
-        </div>
-      }
-    </section>
-
-    <div class="grid" aria-hidden="true">
-      <section class="panel">
-        <span class="sk sk-title"></span>
-        <span class="sk sk-bar"></span>
-        @for (i of skeletonRows; track i) {
-          <span class="sk sk-row"></span>
+    <div class="overview-skeleton" role="status">
+      <span class="ds-sr-only">Loading ticket overview…</span>
+      <div class="skeleton-strip" aria-hidden="true">
+        @for (i of skeletonMetrics; track i) {
+          <div class="skeleton-stat">
+            <p-skeleton width="3.5rem" height="0.75rem" />
+            <p-skeleton width="2.5rem" height="1.5rem" />
+          </div>
         }
-      </section>
-      <section class="panel">
-        <span class="sk sk-title"></span>
-        @for (i of skeletonRows; track i) {
-          <span class="sk sk-row"></span>
-        }
-      </section>
-    </div>
-
-    <section class="panel" aria-hidden="true">
-      <span class="sk sk-title"></span>
-      @for (i of skeletonRows; track i) {
-        <span class="sk sk-row"></span>
-      }
-    </section>
-  } @else if (!hasTickets()) {
-    <section class="panel empty-state">
-      <div class="empty-icon">
-        <i class="pi pi-ticket" aria-hidden="true"></i>
       </div>
-      <h2 class="empty-title">No tickets yet</h2>
-      <p class="empty-body">
-        Once your team opens tickets, this dashboard shows the queue at a glance —
-        volume, the status mix, and what needs attention first.
-      </p>
-      <button type="button" class="add-btn" (click)="newTicket()">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        Create your first ticket
-      </button>
-    </section>
-  } @else {
-    <section class="metric-strip" aria-label="Ticket summary">
-      @for (m of metrics(); track m.key) {
-        <div class="metric" [class.metric--attention]="m.tone === 'attention' && m.value > 0">
-          <span class="metric-label">
-            @if (m.tone === 'attention') {
-              <span class="metric-dot" aria-hidden="true"></span>
+      <div class="overview-grid" aria-hidden="true">
+        @for (col of [0, 1]; track col) {
+          <div class="overview-section">
+            <p-skeleton width="8rem" height="0.875rem" />
+            @for (i of skeletonRows; track i) {
+              <p-skeleton width="100%" height="0.75rem" />
             }
-            {{ m.label }}
-          </span>
-          <span class="metric-value">{{ m.value }}</span>
-        </div>
-      }
-    </section>
-
-    <div class="grid">
-      <section class="panel status-panel">
-        <div class="panel-head">
-          <h2 class="panel-title">Queue by status</h2>
-          <span class="panel-meta">{{ statusTotal() }} tickets</span>
-        </div>
+          </div>
+        }
+      </div>
+    </div>
+  } @else if (!hasTickets()) {
+    <app-empty-state
+      icon="pi pi-ticket"
+      heading="No tickets yet"
+      description="Once your team opens tickets, this page shows the queue at a glance: volume, the status mix and what needs attention first."
+    >
+      <button pButton type="button" icon="pi pi-plus" label="Create your first ticket" (click)="newTicket()"></button>
+    </app-empty-state>
+  } @else {
+    <div class="overview-grid">
+      <section class="overview-section" aria-labelledby="status-heading">
+        <header class="section-head">
+          <h2 id="status-heading" class="ds-section-title">Queue by status</h2>
+          <span class="section-meta">{{ statusTotal() }} tickets</span>
+        </header>
 
         @if (statusSegments().length) {
           <div class="stack-bar" role="img" [attr.aria-label]="statusAriaLabel()">
             @for (seg of statusSegments(); track seg.id) {
-              <span
-                class="stack-seg"
-                [style.width.%]="seg.percent"
-                [style.background]="seg.color"
-              ></span>
+              <span class="stack-seg" [style.width.%]="seg.percent" [style.background]="seg.color"></span>
             }
           </div>
 
           <ul class="legend">
             @for (seg of statusSegments(); track seg.id) {
               <li class="legend-row">
-                <span class="legend-dot" [style.background]="seg.color" aria-hidden="true"></span>
+                <span class="ds-dot" [style.background]="seg.color" aria-hidden="true"></span>
                 <span class="legend-name">{{ seg.name }}</span>
                 <span class="legend-count">{{ seg.count }}</span>
                 <span class="legend-pct">{{ seg.percent | number: '1.0-0' }}%</span>
@@ -121,20 +71,20 @@
             }
           </ul>
         } @else {
-          <p class="muted panel-empty">No tickets have a status yet.</p>
+          <p class="empty-copy">No tickets have a status yet.</p>
         }
       </section>
 
-      <section class="panel priority-panel">
-        <div class="panel-head">
-          <h2 class="panel-title">By priority</h2>
-          <span class="panel-meta">{{ priorityTotal() }} tickets</span>
-        </div>
+      <section class="overview-section" aria-labelledby="priority-heading">
+        <header class="section-head">
+          <h2 id="priority-heading" class="ds-section-title">By priority</h2>
+          <span class="section-meta">{{ priorityTotal() }} tickets</span>
+        </header>
 
         <ul class="priority-list">
           @for (p of prioritySegments(); track p.value) {
-            <li class="priority-row" [class.priority-row--urgent]="p.value === 'URGENT'">
-              <span class="prio-dot" [style.background]="p.color" aria-hidden="true"></span>
+            <li class="priority-row">
+              <span [class]="'ds-dot ds-dot--' + p.value.toLowerCase()" aria-hidden="true"></span>
               <span class="priority-label">{{ p.label }}</span>
               <span class="priority-track" aria-hidden="true">
                 <span class="priority-fill" [style.width.%]="p.percent" [style.background]="p.color"></span>
@@ -146,31 +96,32 @@
       </section>
     </div>
 
-    <section class="panel attention-panel">
-      <div class="panel-head">
+    <section class="attention" aria-labelledby="attention-heading">
+      <header class="section-head">
         <div>
-          <h2 class="panel-title">Needs attention</h2>
-          <p class="panel-sub"><span class="sub-urgent">Urgent</span> &amp; high-priority open tickets</p>
+          <h2 id="attention-heading" class="ds-section-title">Needs attention</h2>
+          <p class="ds-section-sub">Urgent and high-priority open tickets</p>
         </div>
-        <a class="panel-link" routerLink="/tickets">
+        <a class="section-link" routerLink="/tickets">
           View all
           <i class="pi pi-arrow-right" aria-hidden="true"></i>
         </a>
-      </div>
+      </header>
 
       @if (attention().length) {
-        <ul class="attention-list">
+        <ul class="ds-rows attention-rows">
           @for (t of attention(); track t.id) {
             <li>
               <button type="button" class="attention-row" (click)="openDetail(t)">
-                <span class="prio-dot" [style.background]="priorityColor(t.priority)" aria-hidden="true"></span>
+                <span [class]="'ds-dot ds-dot--' + t.priority.toLowerCase()" aria-hidden="true"></span>
+                <span class="ds-sr-only">{{ t.priority | titlecase }} priority:</span>
                 <span class="attn-main">
                   <span class="attn-title">{{ t.title }}</span>
                   <span class="attn-number">#{{ t.ticketNumber }}</span>
                 </span>
                 @if (t.ticketStatus) {
                   <span class="attn-status">
-                    <span class="status-dot" [style.background]="statusColorOf(t)" aria-hidden="true"></span>
+                    <span class="ds-dot" [style.background]="statusColorOf(t)" aria-hidden="true"></span>
                     {{ t.ticketStatus.name }}
                   </span>
                 }
@@ -178,10 +129,11 @@
                   @if (t.dueDate) {
                     @if (isOverdue(t)) {
                       <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                      <span class="ds-sr-only">Overdue, due</span>
                     }
                     {{ t.dueDate | date: 'MMM d' }}
                   } @else {
-                    <span class="muted">No due date</span>
+                    <span class="ds-muted">No due date</span>
                   }
                 </span>
                 <span class="avatar-stack">
@@ -197,11 +149,13 @@
           }
         </ul>
       } @else {
-        <div class="attention-clear">
-          <i class="pi pi-check-circle" aria-hidden="true"></i>
-          <p>Queue clear — nothing urgent or overdue right now.</p>
-        </div>
+        <app-empty-state
+          class="empty-state--compact"
+          icon="pi pi-check-circle"
+          heading="Queue clear"
+          description="Nothing urgent or overdue right now."
+        />
       }
     </section>
   }
-</main>
+</app-page>

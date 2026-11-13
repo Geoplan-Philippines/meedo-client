@@ -1,19 +1,53 @@
-:host { display: block; color: var(--text-body); }
-main { max-width: 56rem; padding: 1.5rem; margin: auto; }
-h1 { color: var(--text-heading); font-size: 1.75rem; font-weight: 700; margin: 1rem 0 .5rem; }
-p { margin-bottom: 1rem; }
-a { color: var(--primary); text-decoration: underline; }
-form { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; margin-top: 1rem; }
-label, .label { display: block; color: var(--text-heading); font-weight: 600; margin-bottom: .375rem; }
-label span, .label span { color: var(--text-muted); font-weight: 400; }
-input { display: block; width: 100%; padding: .625rem .875rem; color: var(--text-heading); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 4px; }
-input[aria-invalid=true] { border-color: var(--destructive); }
-.feedback { display: flex; justify-content: space-between; gap: .5rem; min-height: 1.5rem; font-size: .75rem; margin: .375rem 0 .75rem; }
-.counter { color: var(--text-muted); margin-left: auto; }
-.error { color: var(--muted-destructive-foreground); }
-.actions { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
-button { padding: .625rem 1.25rem; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text-heading); cursor: pointer; }
-button.primary { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
-button:disabled { opacity: .55; cursor: default; }
-:is(input, button, a):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-app-rich-text-editor { display: block; border: 1px solid var(--border-strong); border-radius: 4px; }
+/* Campaign form on app-page: fields sit on the page, no card around the form.
+   The column is capped for reading width and stays aligned with the title. */
+.campaign-form,
+.form-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 48rem;
+}
+
+.form-skeleton { gap: 1.25rem; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.field-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.field-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.field .p-inputtext { width: 100%; }
+
+.feedback {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+  font-size: 0.75rem;
+}
+
+.feedback-error { color: var(--muted-destructive-foreground); }
+.counter { margin-left: auto; color: var(--text-muted); }
+
+/* The editor draws its own border; only its colour changes when invalid. */
+.campaign-body { display: block; }
+:host ::ng-deep .campaign-body--invalid .rte-content { border-color: var(--destructive); }
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--toolbar-gap);
+  margin-top: 0.5rem;
+}

@@ -1,70 +1,72 @@
 <p-toast />
 
 @if (loadState() === 'loading') {
-  <div class="detail-page">
-    <div class="detail-topbar">
-      <p-skeleton width="14rem" height="1rem" />
-    </div>
-    <div class="detail-body">
-      <div class="detail-main">
-        <p-skeleton width="60%" height="2rem" styleClass="mb-4" />
+  <app-page>
+    <p-skeleton pageBreadcrumb width="14rem" height="0.875rem" />
+    <p-skeleton pageTitle width="24rem" height="1.75rem" />
+    <div class="detail-body" role="status">
+      <span class="ds-sr-only">Loading ticket…</span>
+      <div class="detail-main" aria-hidden="true">
         <p-skeleton width="100%" height="1rem" styleClass="mb-2" />
         <p-skeleton width="92%" height="1rem" styleClass="mb-2" />
         <p-skeleton width="80%" height="1rem" />
       </div>
-      <aside class="detail-aside">
-        <p-skeleton width="100%" height="9rem" />
-      </aside>
+      <div class="detail-aside" aria-hidden="true">
+        @for (row of [1, 2, 3, 4]; track row) {
+          <p-skeleton width="100%" height="1rem" styleClass="mb-2" />
+        }
+      </div>
     </div>
-  </div>
+  </app-page>
 } @else if (loadState() === 'error') {
-  <div class="detail-missing" role="alert">
-    <div class="missing-icon missing-icon--error" aria-hidden="true"><i class="pi pi-exclamation-triangle"></i></div>
-    <p class="missing-title">Couldn't load this ticket</p>
-    <p class="missing-body">
-      Something went wrong while loading it{{ loadErrorStatus() ? ' (error ' + loadErrorStatus() + ')' : '' }}. Check your connection and try again.
-    </p>
-    <div class="missing-actions">
-      <button type="button" class="missing-retry" (click)="retry()">
-        <i class="pi pi-refresh" aria-hidden="true"></i> Try again
-      </button>
-      <a routerLink="/tickets" class="missing-link">
-        <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
-      </a>
-    </div>
-  </div>
+  <app-page>
+    <a pageBreadcrumb routerLink="/tickets" class="crumb-link">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
+    </a>
+    <app-empty-state
+      role="alert"
+      icon="pi pi-exclamation-triangle"
+      heading="Couldn't load this ticket"
+      [description]="'Something went wrong while loading it' + (loadErrorStatus() ? ' (error ' + loadErrorStatus() + ')' : '') + '. Check your connection and try again.'"
+    >
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Try again" class="mt-2" (click)="retry()"></button>
+    </app-empty-state>
+  </app-page>
 } @else if (ticket(); as t) {
-  <div class="detail-page">
-    <header class="detail-topbar">
-      <nav class="crumbs" aria-label="Breadcrumb">
-        <a routerLink="/tickets" class="crumb-link">Tickets</a>
-        <i class="pi pi-angle-right crumb-sep" aria-hidden="true"></i>
-        <span class="crumb-num">#{{ t.ticketNumber }}</span>
-        <span class="crumb-title" [title]="t.title">{{ t.title }}</span>
-      </nav>
-    </header>
+  <app-page>
+    <nav pageBreadcrumb class="crumbs" aria-label="Breadcrumb">
+      <a routerLink="/tickets" class="crumb-link">Tickets</a>
+      <span class="crumb-sep" aria-hidden="true">/</span>
+      <span class="crumb-current" aria-current="page">#{{ t.ticketNumber }}</span>
+    </nav>
+
+    @if (canEdit()) {
+      <app-ticket-title-editor pageTitle [value]="t.title" (titleSave)="commitTitle($event)" />
+    } @else {
+      <h1 pageTitle class="detail-title">{{ t.title }}</h1>
+    }
 
     <div class="detail-body">
-      <main class="detail-main">
-        @if (canEdit()) { <app-ticket-title-editor [value]="t.title" (titleSave)="commitTitle($event)" /> } @else { <h1>{{ t.title }}</h1> }
+      <div class="detail-main">
+        <!-- Always-on WYSIWYG markdown, autosaves on pause or blur. -->
+        @if (canEdit()) {
+          <app-markdown-editor
+            class="detail-desc"
+            [value]="t.description ?? ''"
+            [upload]="uploadAttachment"
+            placeholder="Add description…"
+            ariaLabel="Ticket description"
+            [maxLength]="descriptionMaxLength"
+            (contentSave)="onDescriptionSave($event)"
+          />
+        } @else {
+          <p class="detail-desc-text">{{ t.description }}</p>
+        }
 
-        <!-- Linear-style: always-on WYSIWYG markdown, autosaves on pause/blur. -->
-        @if (canEdit()) { <app-markdown-editor
-          class="detail-desc"
-          [value]="t.description ?? ''"
-          [upload]="uploadAttachment"
-          placeholder="Add description…"
-          ariaLabel="Ticket description"
-          [maxLength]="descriptionMaxLength"
-          (contentSave)="onDescriptionSave($event)"
-        /> } @else { <p>{{ t.description }}</p> }
+        <app-ticket-thread [ticketId]="t.id" />
+      </div>
 
-        <div class="detail-thread">
-          <app-ticket-thread [ticketId]="t.id" />
-        </div>
-      </main>
-
-      <aside class="detail-aside">
+      <aside class="detail-aside" aria-label="Ticket properties">
         <section class="aside-group">
           <h2 class="aside-label">Properties</h2>
 
@@ -72,7 +74,7 @@
             <span class="aside-key">Status</span>
             <button class="aside-edit" type="button" [disabled]="!canEdit()" (click)="statusPop.toggle($event)" aria-haspopup="true">
               @if (t.ticketStatus) {
-                <span class="status-dot" [style.background-color]="safeStatusColor(t.ticketStatus.color)" aria-hidden="true"></span>
+                <span class="ds-dot" [style.background-color]="safeStatusColor(t.ticketStatus.color)" aria-hidden="true"></span>
                 <span class="edit-val">{{ t.ticketStatus.name }}</span>
               } @else {
                 <span class="edit-val muted">Set status</span>
@@ -149,7 +151,7 @@
 
           <div class="aside-row" data-testid="ticket-client">
             <span class="aside-key">Client</span>
-            <span>{{ clientName() }}</span>
+            <span class="aside-static">{{ clientName() }}</span>
           </div>
 
           <div class="aside-row">
@@ -208,7 +210,7 @@
                     [title]="'#' + lt.ticketNumber + ' · ' + lt.title"
                   >
                     <span
-                      class="status-dot"
+                      class="ds-dot"
                       [style.background-color]="safeStatusColor(lt.ticketStatus?.color)"
                       aria-hidden="true"
                     ></span>
@@ -235,7 +237,7 @@
         </section>
       </aside>
     </div>
-  </div>
+  </app-page>
 
   <!-- ─── Inline editors (popovers) ─────────────────────── -->
   <p-popover #statusPop styleClass="detail-pop">
@@ -243,7 +245,7 @@
       @for (s of activeStatuses(); track s.id) {
         <li>
           <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.ticketStatusId === s.id" (click)="setStatus(s); statusPop.hide()">
-            <span class="status-dot" [style.background-color]="safeStatusColor(s.color)" aria-hidden="true"></span>
+            <span class="ds-dot" [style.background-color]="safeStatusColor(s.color)" aria-hidden="true"></span>
             <span class="pick-label">{{ s.name }}</span>
             @if (ticket()?.ticketStatusId === s.id) { <i class="pi pi-check pick-check" aria-hidden="true"></i> }
           </button>
@@ -270,8 +272,10 @@
 
   <p-popover #assigneePop styleClass="detail-pop" (onHide)="assigneeSearch.set('')">
     <div class="pick-search">
-      <i class="pi pi-search" aria-hidden="true"></i>
-      <input type="text" placeholder="Search members…" aria-label="Search members" [value]="assigneeSearch()" (input)="assigneeSearch.set($any($event.target).value)" />
+      <p-iconfield class="pick-field">
+        <p-inputicon class="pi pi-search" />
+        <input pInputText type="search" pSize="small" placeholder="Search members…" aria-label="Search members" [value]="assigneeSearch()" (input)="assigneeSearch.set($any($event.target).value)" />
+      </p-iconfield>
       @if (filteredMembers().length > 0) {
         <button
           type="button"
@@ -319,8 +323,10 @@
 
   <p-popover #projectPop styleClass="detail-pop" (onHide)="projectSearch.set('')">
     <div class="pick-search">
-      <i class="pi pi-search" aria-hidden="true"></i>
-      <input type="text" placeholder="Search projects…" aria-label="Search projects" [value]="projectSearch()" (input)="projectSearch.set($any($event.target).value)" />
+      <p-iconfield class="pick-field">
+        <p-inputicon class="pi pi-search" />
+        <input pInputText type="search" pSize="small" placeholder="Search projects…" aria-label="Search projects" [value]="projectSearch()" (input)="projectSearch.set($any($event.target).value)" />
+      </p-iconfield>
     </div>
     <ul class="pick-list pick-list--scroll" role="menu">
       @if (ticket()?.projectId) {
@@ -399,20 +405,24 @@
 
   <p-popover #linkPop styleClass="detail-pop" (onHide)="linkSearch.set('')">
     <div class="pick-search">
-      <i class="pi pi-search" aria-hidden="true"></i>
-      <input
-        type="text"
-        placeholder="Search tickets…"
-        aria-label="Search tickets to relate"
-        [value]="linkSearch()"
-        (input)="linkSearch.set($any($event.target).value)"
-      />
+      <p-iconfield class="pick-field">
+        <p-inputicon class="pi pi-search" />
+        <input
+          pInputText
+          type="search"
+          pSize="small"
+          placeholder="Search tickets…"
+          aria-label="Search tickets to relate"
+          [value]="linkSearch()"
+          (input)="linkSearch.set($any($event.target).value)"
+        />
+      </p-iconfield>
     </div>
     <ul class="pick-list pick-list--scroll" role="menu">
       @for (t of linkCandidates(); track t.id) {
         <li>
           <button class="pick-opt" type="button" role="menuitem" (click)="link(t); linkPop.hide()">
-            <span class="status-dot" [style.background-color]="safeStatusColor(t.ticketStatus?.color)" aria-hidden="true"></span>
+            <span class="ds-dot" [style.background-color]="safeStatusColor(t.ticketStatus?.color)" aria-hidden="true"></span>
             <span class="pick-stack">
               <span class="pick-label">{{ t.title }}</span>
               <span class="pick-sub">#{{ t.ticketNumber }}</span>
@@ -426,12 +436,14 @@
     </ul>
   </p-popover>
 } @else {
-  <div class="detail-missing">
-    <div class="missing-icon" aria-hidden="true"><i class="pi pi-inbox"></i></div>
-    <p class="missing-title">Ticket not available</p>
-    <p class="missing-body">It may have been removed, or you may not have access to its department.</p>
-    <a routerLink="/tickets" class="missing-link">
+  <app-page>
+    <a pageBreadcrumb routerLink="/tickets" class="crumb-link">
       <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to tickets
     </a>
-  </div>
+    <app-empty-state
+      icon="pi pi-inbox"
+      heading="Ticket not available"
+      description="It may have been removed, or you may not have access to its department."
+    />
+  </app-page>
 }

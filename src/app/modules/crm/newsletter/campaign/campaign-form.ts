@@ -2,8 +2,14 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
+import { SkeletonModule } from 'primeng/skeleton';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { RichTextEditor } from '../../../../shared/ui/rich-text-editor/rich-text-editor';
+import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { CampaignsService } from '../../services/campaigns.service';
 import { CAMPAIGN_LIMITS, Campaign, CampaignPayload } from './campaign.model';
 import { campaignBodyRequired, campaignTextValidator } from './campaign-validation';
@@ -11,7 +17,10 @@ import { CampaignBodyAccessibility } from './campaign-body-accessibility';
 
 @Component({
   selector: 'app-campaign-form',
-  imports: [ReactiveFormsModule, RouterLink, RichTextEditor, CampaignBodyAccessibility],
+  imports: [
+    ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, MessageModule, SkeletonModule,
+    PageLayout, EmptyState, RichTextEditor, CampaignBodyAccessibility,
+  ],
   templateUrl: './campaign-form.html',
   styleUrl: './campaign-form.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

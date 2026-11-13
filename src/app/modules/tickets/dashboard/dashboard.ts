@@ -8,16 +8,21 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, TitleCasePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import { TicketsService } from '../services/tickets.service';
 import { StatusesService } from '../services/statuses.service';
 import { Status, TicketStatusCategory } from '../models/status.model';
 import { Ticket, TicketFacets } from '../models/ticket.model';
 import { TicketStats } from '../models/ticket-stats.model';
-import { DashboardMetric, PrioritySegment, StatusSegment } from './models/dashboard.model';
+import { PrioritySegment, StatusSegment } from './models/dashboard.model';
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { StatItem, StatStrip } from '../../../shared/ui/stat-strip/stat-strip';
 import {
   AssigneeAvatar,
   visibleAssignees as visibleAssigneesUtil,
@@ -47,7 +52,7 @@ const PRIORITY_META: { value: Priority; label: string }[] = [
 
 @Component({
   selector: 'app-tickets-dashboard',
-  imports: [RouterLink, DatePipe, DecimalPipe],
+  imports: [RouterLink, DatePipe, DecimalPipe, TitleCasePipe, ButtonModule, SkeletonModule, PageLayout, EmptyState, StatStrip],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,16 +80,19 @@ export class Dashboard implements OnInit {
 
   readonly hasTickets = computed(() => (this.stats()?.total ?? this.facets()?.views.all ?? 0) > 0);
 
-  // ─── Metric strip ───────────────────────────────────────
-  readonly metrics = computed<DashboardMetric[]>(() => {
+  // ─── Headline numbers ───────────────────────────────────
+  /** Urgent and Overdue only get a red dot when the count is non-zero. */
+  readonly metrics = computed<StatItem[]>(() => {
     const stats = this.stats();
     const views = this.facets()?.views;
+    const urgent = stats?.urgent ?? 0;
+    const overdue = stats?.overdue ?? 0;
     return [
-      { key: 'total', label: 'Total', value: stats?.total ?? views?.all ?? 0, tone: 'default' },
-      { key: 'active', label: 'Active', value: views?.active ?? 0, tone: 'default' },
-      { key: 'backlog', label: 'Backlog', value: views?.backlog ?? 0, tone: 'default' },
-      { key: 'urgent', label: 'Urgent', value: stats?.urgent ?? 0, tone: 'attention' },
-      { key: 'overdue', label: 'Overdue', value: stats?.overdue ?? 0, tone: 'attention' },
+      { label: 'Total', value: stats?.total ?? views?.all ?? 0 },
+      { label: 'Active', value: views?.active ?? 0 },
+      { label: 'Backlog', value: views?.backlog ?? 0 },
+      { label: 'Urgent', value: urgent, tone: urgent > 0 ? 'danger' : undefined },
+      { label: 'Overdue', value: overdue, tone: overdue > 0 ? 'danger' : undefined },
     ];
   });
 
@@ -194,21 +202,13 @@ export class Dashboard implements OnInit {
       });
   }
 
-  /** Priority colour, mirroring the ticket list's dot mapping so a priority reads
-   *  the same in both places (low → success, medium → warning, high/urgent → destructive). */
+  /** Priority colour from the same `--priority-*` tokens the ticket list's dots use. */
   priorityColor(value: Priority): string {
-    switch (value) {
-      case 'LOW':
-        return 'var(--color-success)';
-      case 'MEDIUM':
-        return 'var(--color-warning)';
-      default:
-        return 'var(--color-destructive)';
-    }
+    return `var(--priority-${value.toLowerCase()})`;
   }
 
   safeStatusColor(color?: string | null): string {
-    return safeStatusColorUtil(color, 'var(--color-muted)');
+    return safeStatusColorUtil(color, 'var(--text-faint)');
   }
 
   statusColorOf(ticket: Ticket): string {

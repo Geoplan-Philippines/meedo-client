@@ -18,6 +18,10 @@ import { ToastModule } from 'primeng/toast';
 import { SkeletonModule } from 'primeng/skeleton';
 import { PopoverModule } from 'primeng/popover';
 import { DatePickerModule } from 'primeng/datepicker';
+import { ButtonModule } from 'primeng/button';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 
 import { TicketsService } from '../services/tickets.service';
@@ -28,6 +32,8 @@ import { StatusesService } from '../services/statuses.service';
 import { ProjectsService, filterProjects, withCurrentProject } from '../services/projects.service';
 import { SlaBadge } from '../sla-badge/sla-badge';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
+import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { clientDisplayName, projectDisplayName } from '../../../shared/utils/display-name.utils';
 import { MembersService } from '../services/members.service';
 import { TeamsService } from '../../settings/teams/services/teams.service';
@@ -66,6 +72,12 @@ type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
     SkeletonModule,
     PopoverModule,
     DatePickerModule,
+    ButtonModule,
+    IconFieldModule,
+    InputIconModule,
+    InputTextModule,
+    PageLayout,
+    EmptyState,
     TicketThread,
     MarkdownEditor,
     TicketTitleEditor,
@@ -507,7 +519,7 @@ export class TicketDetail {
   }
 
   priorityDotClass(priority?: string | null): string {
-    return `prio-dot prio-dot-${(priority ?? 'medium').toLowerCase()}`;
+    return `ds-dot ds-dot--${(priority ?? 'medium').toLowerCase()}`;
   }
 
   memberInitials(member: OrgMember): string {

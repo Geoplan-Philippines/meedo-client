@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
 import { InputFeedback } from '../../../shared/ui/input-feedback/input-feedback';
 import { TICKET_TITLE_MAX_LENGTH } from '../tickets.constants';
 
 @Component({
   selector: 'app-ticket-title-editor',
-  standalone: true,
-  imports: [FormsModule, InputFeedback],
+  imports: [FormsModule, ButtonModule, InputFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './ticket-title-editor.css',
   template: `
@@ -20,8 +20,8 @@ import { TICKET_TITLE_MAX_LENGTH } from '../tickets.constants';
       label="Title" [required]="true" [showRequired]="editing()" />
     @if (editing()) {
       <div class="actions" (mousedown)="$event.preventDefault()">
-        <button type="button" (click)="save()" [disabled]="!valid()">Save title</button>
-        <button type="button" (click)="cancel()">Cancel</button>
+        <button pButton type="button" size="small" label="Save title" (click)="save()" [disabled]="!valid()"></button>
+        <button pButton type="button" size="small" severity="secondary" [text]="true" label="Cancel" (click)="cancel()"></button>
       </div>
     }
   `,

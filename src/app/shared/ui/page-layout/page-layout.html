@@ -1,7 +1,10 @@
 <div class="page-breadcrumb"><ng-content select="[pageBreadcrumb]" /></div>
 <header class="page-head">
   <div class="page-head-text">
-    <h1 class="page-title">{{ heading() }}</h1>
+    @if (heading()) {
+      <h1 class="page-title">{{ heading() }}</h1>
+    }
+    <ng-content select="[pageTitle]" />
     @if (subtitle()) {
       <p class="page-subtitle">{{ subtitle() }}</p>
     }

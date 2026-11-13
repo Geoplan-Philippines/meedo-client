@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } from 'rxjs';
@@ -17,6 +17,10 @@ import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } fr
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 import { AttendanceService } from '../services/attendance.service';
 import {
@@ -32,6 +36,7 @@ import { formatHours, formatLate } from '../shared/attendance-status.util';
 
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator, ListPageChange } from '../../../../shared/ui/list-paginator/list-paginator';
+import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A clickable summary card: a status bucket, its count, and its tone. */
@@ -54,9 +59,15 @@ interface PeriodOption {
   imports: [
     PageLayout,
     ListPaginator,
+    EmptyState,
     TableModule,
     ButtonModule,
     DatePickerModule,
+    IconFieldModule,
+    InputIconModule,
+    InputTextModule,
+    SelectButtonModule,
+    FormsModule,
     ReactiveFormsModule,
     DatePipe,
     AttendanceStatusBadge,
@@ -112,7 +123,7 @@ export class AttendanceDashboard implements OnInit {
   private rosterRequestId = 0;
 
   // Tardiness scoreboard.
-  readonly periodOptions: readonly PeriodOption[] = [
+  readonly periodOptions: PeriodOption[] = [
     { key: 'daily', label: 'Daily' },
     { key: 'weekly', label: 'Weekly' },
     { key: 'monthly', label: 'Monthly' },

@@ -7,6 +7,7 @@ import { ToolbarModule } from 'primeng/toolbar';
  *
  * Slots (attribute selectors on projected elements):
  * - `pageBreadcrumb`  above the title
+ * - `pageTitle`       a custom title (e.g. an inline title editor) in place of `heading`; it must render the page's h1
  * - `pageMeta`        under the subtitle (status line, today's date, ...)
  * - `pageActions`     right of the title (primary action goes last)
  * - `pageSummary`     headline numbers (app-stat-strip) above the list
@@ -26,7 +27,7 @@ import { ToolbarModule } from 'primeng/toolbar';
   host: { class: 'app-page' },
 })
 export class PageLayout {
-  /** Page title, rendered as the page's only h1. */
-  readonly heading = input.required<string>();
+  /** Page title, rendered as the page's only h1. Leave it out only when a `pageTitle` element supplies the h1. */
+  readonly heading = input<string>();
   readonly subtitle = input<string | null | undefined>();
 }

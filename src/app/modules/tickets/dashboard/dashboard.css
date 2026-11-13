@@ -1,241 +1,70 @@
-/* ─── Page Layout ──────────────────────────────────────── */
-.dashboard {
-  padding: 2rem 2.5rem;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+/* Ticket overview: sections sit on the page and are split by hairlines, the same
+   way list pages are. Headline numbers use app-stat-strip; shared bits
+   (.ds-section-title, .ds-rows, .ds-dot, .avatar) come from design-system.css. */
+
+/* ─── Sections ─────────────────────────────────────────── */
+/* Section rules run edge to edge like list dividers; content keeps the gutter. */
+.overview-grid,
+.attention {
+  margin-inline: calc(var(--page-gutter) * -1);
+  padding: var(--page-gap) var(--page-gutter) 0;
+  border-top: 1px solid var(--divider);
 }
 
-/* ─── Header ───────────────────────────────────────────── */
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.page-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  margin: 0 0 0.25rem;
-  font-family: var(--font-heading);
-  letter-spacing: -0.02em;
-}
-
-.page-subtitle {
-  font-size: 0.875rem;
-  color: var(--color-body);
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  flex-shrink: 0;
-}
-
-/* ─── Buttons / Links ──────────────────────────────────── */
-.add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  border: none;
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, box-shadow 0.15s;
-}
-
-.add-btn:hover {
-  background: var(--color-primary-hover);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
-.add-btn:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-.add-btn i { font-size: 0.8125rem; }
-
-.view-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  /* Match .add-btn's size exactly; the -1px offsets this button's 1px border. */
-  padding: calc(0.625rem - 1px) 1.25rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-body);
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.view-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
-}
-
-.view-btn:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-.view-btn i { font-size: 0.6875rem; }
-
-.panel-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-primary);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.panel-link:hover { text-decoration: underline; }
-
-.panel-link:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-.panel-link i { font-size: 0.625rem; }
-
-/* ─── Metric Strip ─────────────────────────────────────── */
-/* Separated surface cards — each metric is its own bordered panel spaced by a
-   gap on the canvas (matches the attendance summary cards), not a single band. */
-.metric-strip {
+.overview-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2rem 3rem;
 }
 
-.metric {
+.overview-section {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  padding: 1rem 1.25rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
+  gap: 0.75rem;
   min-width: 0;
 }
 
-.metric-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-muted);
-}
-
-.metric-value {
-  font-family: var(--font-heading);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--color-heading);
-  font-variant-numeric: tabular-nums;
-}
-
-.metric-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-border-strong);
-  flex-shrink: 0;
-}
-
-/* Attention metrics only raise their voice when the count is non-zero. */
-.metric--attention .metric-dot { background: var(--color-destructive); }
-.metric--attention .metric-value { color: var(--color-muted-destructive-foreground); }
-
-/* ─── Panels ───────────────────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.25rem;
-  align-items: stretch;
-}
-
-.panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  padding: 1.25rem 1.5rem;
-}
-
-.panel-head {
+.section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.125rem;
 }
 
-.panel-title {
-  font-family: var(--font-heading);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-heading);
-  margin: 0;
-}
-
-.panel-meta {
+.section-meta {
   font-size: 0.75rem;
-  color: var(--color-muted);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.panel-sub {
-  font-size: 0.75rem;
-  color: var(--color-muted);
-  margin: 0.1875rem 0 0;
-}
-
-/* "Urgent" reads as the red status word in the card subtitle. */
-.panel-sub .sub-urgent {
-  color: var(--color-muted-destructive-foreground);
-  font-weight: 600;
-}
-
-.panel-empty {
+.section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   font-size: 0.8125rem;
-  padding: 0.5rem 0 0.25rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-/* ─── Status Distribution ──────────────────────────────── */
+.section-link:hover { text-decoration: underline; }
+.section-link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius);
+}
+.section-link i { font-size: 0.625rem; }
+
+/* ─── Status distribution ──────────────────────────────── */
 .stack-bar {
   display: flex;
   width: 100%;
-  height: 0.625rem;
-  border-radius: 100px;
+  height: 0.5rem;
+  border-radius: var(--pill-radius);
   overflow: hidden;
-  background: var(--color-secondary);
+  background: var(--subtle);
 }
 
 .stack-seg {
@@ -243,34 +72,28 @@
   min-width: 3px;
 }
 
-/* Hairline in the surface colour between adjacent segments (no layout impact). */
+/* Hairline in the page colour between adjacent segments (no layout impact). */
 .stack-seg:not(:last-child) {
-  box-shadow: inset -1px 0 0 var(--color-surface);
+  box-shadow: inset -1px 0 0 var(--page);
 }
 
-.legend {
-  list-style: none;
-  margin: 1.125rem 0 0;
-  padding: 0;
+.legend,
+.priority-list {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.legend-row {
+.legend-row,
+.priority-row {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.3125rem 0;
-  font-size: 0.8125rem;
-  color: var(--color-body);
-}
-
-.legend-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
+  min-height: 2rem;
+  font-size: 0.875rem;
+  color: var(--text-body);
 }
 
 .legend-name {
@@ -281,304 +104,160 @@
   white-space: nowrap;
 }
 
-.legend-count {
+.legend-count,
+.priority-count {
   font-weight: 600;
-  color: var(--color-heading);
+  color: var(--text-heading);
   font-variant-numeric: tabular-nums;
 }
 
 .legend-pct {
   width: 3rem;
   text-align: right;
-  color: var(--color-muted);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── Priority Distribution ────────────────────────────── */
-.priority-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.priority-row {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  font-size: 0.8125rem;
-  color: var(--color-body);
-}
-
-.prio-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
+/* ─── Priority distribution ────────────────────────────── */
 .priority-label {
-  width: 3.5rem;
+  width: 3.75rem;
   flex-shrink: 0;
-}
-
-.priority-row--urgent .priority-label {
-  font-weight: 600;
-  color: var(--color-muted-destructive-foreground);
 }
 
 .priority-track {
   flex: 1;
   min-width: 0;
-  height: 0.5rem;
-  background: var(--color-secondary);
-  border-radius: 100px;
+  height: 0.375rem;
+  border-radius: var(--pill-radius);
+  background: var(--subtle);
   overflow: hidden;
 }
 
 .priority-fill {
   display: block;
   height: 100%;
-  border-radius: 100px;
+  border-radius: var(--pill-radius);
 }
 
 .priority-count {
   width: 1.75rem;
-  text-align: right;
-  font-weight: 600;
-  color: var(--color-heading);
-  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  text-align: right;
 }
 
-/* ─── Needs Attention ──────────────────────────────────── */
-.attention-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* ─── Needs attention ──────────────────────────────────── */
+.attention {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
 }
 
-.attention-list li:not(:last-child) {
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
-}
+/* The whole row is one button, so it carries the padding and the click target. */
+.attention-rows > li { padding: 0; }
 
-/* Whole row is the click target; a real button keeps it keyboard-reachable. */
 .attention-row {
   display: flex;
   align-items: center;
   gap: 0.875rem;
   width: 100%;
-  padding: 0.625rem 0.5rem;
+  min-height: var(--row-h);
+  padding: 0.5rem var(--page-gutter);
+  border: 0;
   background: none;
-  border: none;
-  border-radius: var(--radius-base);
   font: inherit;
+  font-size: 0.875rem;
   text-align: left;
-  color: var(--color-body);
+  color: var(--text-body);
   cursor: pointer;
-  transition: background-color 0.12s ease;
-}
-
-.attention-row:hover {
-  background: color-mix(in srgb, var(--color-secondary) 45%, transparent);
 }
 
 .attention-row:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: -2px;
+  outline: var(--focus-ring-width) solid var(--ring);
+  outline-offset: calc(var(--focus-ring-width) * -1);
 }
 
 .attn-main {
-  flex: 1;
-  min-width: 0;
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .attn-title {
-  font-weight: 600;
-  color: var(--color-heading);
+  font-weight: 500;
+  color: var(--text-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .attn-number {
-  font-size: 0.75rem;
-  color: var(--color-muted);
   flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .attn-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8125rem;
-  color: var(--color-body);
+  gap: 0.375rem;
+  flex-shrink: 0;
   white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .attn-due {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.3rem;
+  gap: 0.3125rem;
   width: 6rem;
-  font-size: 0.8125rem;
-  color: var(--color-body);
-  white-space: nowrap;
   flex-shrink: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .attn-due i { font-size: 0.75rem; }
 
 .attn-due--overdue {
-  color: var(--color-muted-destructive-foreground);
+  color: var(--muted-destructive-foreground);
   font-weight: 600;
 }
 
-.attention-clear {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.5rem;
-  padding: 2rem 1rem;
-  color: var(--color-muted);
-  font-size: 0.875rem;
-}
-
-.attention-clear i {
-  font-size: 1.5rem;
-  color: var(--color-success);
-}
-
-.attention-clear p { margin: 0; }
-
-/* ─── Assignee Avatars ─────────────────────────────────── */
+/* Assignees overlap; the ring in the page colour keeps them apart. */
 .avatar-stack {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  width: 4.5rem;
   flex-shrink: 0;
 }
 
-.avatar {
-  width: 1.625rem;
-  height: 1.625rem;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.625rem;
-  font-weight: 700;
-  font-family: var(--font-body);
-  flex-shrink: 0;
-  /* Ring in the canvas colour so overlapping avatars stay visually separated. */
-  box-shadow: 0 0 0 2px var(--color-surface);
-}
-
+.avatar-stack .avatar { box-shadow: 0 0 0 2px var(--page); }
 .avatar-stack .avatar:not(:first-child) { margin-left: -0.5rem; }
 
-/* Avatar identity palette (.avatar-*) is defined globally in src/styles.css. */
-
-/* ─── Empty State ──────────────────────────────────────── */
-.empty-state {
+/* ─── Loading ──────────────────────────────────────────── */
+.overview-skeleton {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 3.5rem 2rem;
+  gap: var(--page-gap);
 }
 
-.empty-icon {
-  width: 3.5rem;
-  height: 3.5rem;
-  background: var(--color-secondary);
-  border-radius: 50%;
+.skeleton-strip {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.125rem;
-  font-size: 1.375rem;
-  color: var(--color-primary);
+  flex-wrap: wrap;
+  gap: 0.75rem 3rem;
 }
 
-.empty-title {
-  font-family: var(--font-heading);
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--color-heading);
-  margin: 0 0 0.5rem;
-}
-
-.empty-body {
-  font-size: 0.875rem;
-  color: var(--color-body);
-  line-height: 1.5;
-  max-width: 46ch;
-  margin: 0 0 1.5rem;
-}
-
-/* ─── Error Panel ──────────────────────────────────────── */
-.error-panel {
+.skeleton-stat {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.error-panel > i {
-  font-size: 1.25rem;
-  color: var(--color-muted-destructive-foreground);
-  flex-shrink: 0;
-}
-
-.error-panel .panel-title { margin: 0 0 0.125rem; }
-.error-panel .muted { margin: 0; font-size: 0.8125rem; }
-.error-panel .view-btn { margin-left: auto; }
-
-/* ─── Skeletons ────────────────────────────────────────── */
-.sk {
-  display: block;
-  background: color-mix(in srgb, var(--color-secondary) 60%, transparent);
-  border-radius: var(--radius-base);
-}
-
-.sk-label { width: 3.5rem; height: 0.6875rem; }
-.sk-value { width: 2.5rem; height: 1.4rem; margin-top: 0.375rem; }
-.sk-title { width: 8rem; height: 1rem; }
-.sk-bar { width: 100%; height: 0.625rem; border-radius: 100px; margin-top: 1.125rem; }
-.sk-row { width: 100%; height: 0.85rem; margin-top: 0.875rem; }
-
-/* ─── Utilities ────────────────────────────────────────── */
-.muted { color: var(--color-muted); }
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 /* ─── Motion ───────────────────────────────────────────── */
-/* Bars fill in on load to convey the data arriving; static under reduced motion. */
+/* Bars fill in on load to show the data arriving; static under reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
   .stack-seg,
   .priority-fill {
@@ -592,44 +271,15 @@
   .stack-seg:nth-child(4) { animation-delay: 180ms; }
   .stack-seg:nth-child(5) { animation-delay: 240ms; }
   .stack-seg:nth-child(n + 6) { animation-delay: 300ms; }
-
-  .sk {
-    animation: sk-pulse 1.4s ease-in-out infinite;
-  }
 }
 
 @keyframes bar-grow {
   to { transform: scaleX(1); }
 }
 
-@keyframes sk-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
 /* ─── Responsive ───────────────────────────────────────── */
 @media (max-width: 900px) {
-  .grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 768px) {
-  .dashboard {
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.875rem;
-  }
-
-  .header-actions { width: 100%; }
-  .header-actions .add-btn { flex: 1; justify-content: center; }
-
-  /* 5 metrics tile cleanly as Total (full width) + two pairs — no stray empty cell. */
-  .metric-strip { grid-template-columns: repeat(2, 1fr); }
-  .metric-strip .metric:first-child { grid-column: 1 / -1; }
+  .overview-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 640px) {
@@ -637,5 +287,5 @@
 }
 
 @media (max-width: 520px) {
-  .attention-row .avatar-stack { display: none; }
+  .avatar-stack { display: none; }
 }
