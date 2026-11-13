@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, timeout } from 'rxjs';
 
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
@@ -21,6 +21,13 @@ export const USERS_LIST: ListStateConfig = {
   sortFields: ['name', 'email', 'role', 'createdAt'],
 };
 
+/**
+ * How long the biometrics picker waits for the device list. The server gives
+ * the Hikvision device 8 s per request (two with the digest retry), so this
+ * leaves room for its own 503 before the picker gives up and says "unavailable".
+ */
+export const BIOMETRIC_USERS_TIMEOUT_MS = 20_000;
+
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly http = inject(HttpClient);
@@ -34,6 +41,7 @@ export class UserService {
         { withCredentials: true },
       )
       .pipe(
+        timeout({ first: BIOMETRIC_USERS_TIMEOUT_MS }),
         map((response) => response.data.users.map((user) => ({
           ...user,
           displayName: user.name
