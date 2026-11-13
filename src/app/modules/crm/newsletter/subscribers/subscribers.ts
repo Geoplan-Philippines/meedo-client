@@ -1,5 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -7,14 +6,15 @@ import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
-import { CrmService } from '../../services/crm.service';
+import { CrmService, SUBSCRIBERS_LIST } from '../../services/crm.service';
 import { getAvatarClass } from '../../../../shared/utils/avatar.utils';
 import { Subscriber } from '../../models/crm.model';
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { StatItem, StatStrip } from '../../../../shared/ui/stat-strip/stat-strip';
-import { ClientPager } from '../../../../shared/utils/client-pager';
+import { injectListState } from '../../../../shared/data/url-list-state';
+import { pagedList } from '../../../../shared/data/paged-list';
 
 @Component({
   selector: 'app-subscribers',
@@ -26,28 +26,23 @@ import { ClientPager } from '../../../../shared/utils/client-pager';
   styleUrl: './subscribers.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Subscribers implements OnInit {
+export class Subscribers {
   private readonly crmService = inject(CrmService);
-  private readonly destroyRef = inject(DestroyRef);
 
-  readonly subscribers = signal<Subscriber[]>([]);
-  readonly isLoading = signal(false);
-  readonly searchTerm = signal('');
+  readonly list = injectListState(SUBSCRIBERS_LIST);
+  readonly subscribers = pagedList({
+    params: () => this.list.query(),
+    load: (query) => this.crmService.listSubscribers(query),
+    refreshOn: ['crm'],
+  });
 
   readonly skeletonRows = [1, 2, 3, 4, 5];
 
-  readonly totalSubscribers = computed(() => this.subscribers().length);
-
-  readonly filteredSubscribers = computed(() => {
-    const term = this.searchTerm().toLowerCase().trim();
-    if (!term) return this.subscribers();
-    return this.subscribers().filter(s =>
-      (s.name ?? '').toLowerCase().includes(term) ||
-      s.email.toLowerCase().includes(term)
-    );
+  /** The audience size, taken from an unfiltered page; a search keeps the last known number. */
+  private readonly totalSubscribers = linkedSignal<number | null, number | null>({
+    source: () => (this.subscribers.loaded() && !this.list.search() ? this.subscribers.total() : null),
+    computation: (total, previous) => total ?? previous?.value ?? null,
   });
-
-  readonly pager = new ClientPager(this.filteredSubscribers);
 
   /** New-this-month and unsubscribed counts are not tracked by the API yet. */
   readonly statItems = computed<StatItem[]>(() => [
@@ -55,6 +50,10 @@ export class Subscribers implements OnInit {
     { label: 'New this month', value: null },
     { label: 'Unsubscribed', value: null },
   ]);
+
+  constructor() {
+    this.list.clampToTotal(this.subscribers);
+  }
 
   getInitials(subscriber: Subscriber): string {
     if (subscriber.name) {
@@ -74,23 +73,6 @@ export class Subscribers implements OnInit {
   }
 
   onSearch(event: Event): void {
-    this.searchTerm.set((event.target as HTMLInputElement).value);
-    this.pager.reset();
-  }
-
-  ngOnInit(): void {
-    this.isLoading.set(true);
-    this.crmService.getSubscribers()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: res => {
-          this.subscribers.set(res.data);
-          this.isLoading.set(false);
-        },
-        error: (err: unknown) => {
-          console.error('Error loading subscribers:', err);
-          this.isLoading.set(false);
-        },
-      });
+    this.list.setSearch((event.target as HTMLInputElement).value);
   }
 }

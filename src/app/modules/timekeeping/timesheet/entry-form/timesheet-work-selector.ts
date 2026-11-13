@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { TimesheetService } from '../services/timesheet.service';
 import { TimesheetProject, TimesheetTicket } from '../models/timesheet.model';
-import { timesheetProjectLabel } from '../shared/timesheet-project.util';
+import { TimesheetProjectPicker } from './timesheet-project-picker';
 
 export interface EntryWorkSelection {
   mode: 'ticket' | 'description';
@@ -14,7 +14,7 @@ export interface EntryWorkSelection {
 }
 
 @Component({
-  selector: 'app-timesheet-work-selector', imports: [FormsModule], changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-timesheet-work-selector', imports: [FormsModule, TimesheetProjectPicker], changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <fieldset [disabled]="readonly() || creating()">
       <legend>Work description</legend>
@@ -31,7 +31,7 @@ export interface EntryWorkSelection {
           <button type="button" (click)="quickCreate.set(!quickCreate())">Create ticket</button>
           @if (quickCreate()) {
             <section class="quick-create" aria-label="Quick create ticket"><label [for]="fieldId+'-title'">New ticket title (required)</label><input [id]="fieldId+'-title'" [(ngModel)]="newTitle" [ngModelOptions]="{standalone:true}" maxlength="200" />
-              <label [for]="fieldId+'-new-project'">Ticket project (optional)</label><select [id]="fieldId+'-new-project'" [(ngModel)]="newProjectId" [ngModelOptions]="{standalone:true}"><option value="">No project</option>@for (project of projects(); track project.id) { @if (!project.isArchived) { <option [value]="project.id">{{ projectLabel(project) }}</option> } }</select>
+              <label [for]="fieldId+'-new-project'">Ticket project (optional)</label><app-timesheet-project-picker [inputId]="fieldId+'-new-project'" [value]="newProjectId || null" placeholder="No project" ariaLabel="Ticket project" (changed)="newProjectId = $event?.id ?? ''" />
               <p>Members are assigned to their new ticket automatically. No approval is needed.</p><button type="button" (click)="createTicket()">{{ creating() ? 'Creating...' : 'Create and select ticket' }}</button>
             </section>
           }
@@ -40,7 +40,7 @@ export interface EntryWorkSelection {
         <label [for]="fieldId+'-snapshot'">Description from ticket</label><textarea [id]="fieldId+'-snapshot'" [value]="value().description" readonly></textarea>
       } @else {
         <label [for]="fieldId+'-description'">Description (required)</label><textarea [id]="fieldId+'-description'" [ngModel]="value().description" (ngModelChange)="describe($event)" [ngModelOptions]="{standalone:true}" maxlength="1000" [attr.aria-describedby]="fieldId+'-counter'" [readOnly]="readonly()"></textarea><small [id]="fieldId+'-counter'" aria-live="polite">{{ value().description.trim().length }} / 1000 characters</small>
-        <label [for]="fieldId+'-project'">Project (optional)</label><select [id]="fieldId+'-project'" [ngModel]="value().projectId || ''" (ngModelChange)="projectChanged($event)" [ngModelOptions]="{standalone:true}"><option value="">No project</option>@for (project of projects(); track project.id) { @if (!project.isArchived) { <option [value]="project.id">{{ projectLabel(project) }}</option> } }</select>
+        <label [for]="fieldId+'-project'">Project (optional)</label><app-timesheet-project-picker [inputId]="fieldId+'-project'" [value]="value().projectId" [known]="projects()" placeholder="No project" ariaLabel="Project" [disabled]="readonly()" (changed)="projectChanged($event?.id ?? '')" />
       }
       @if (error()) { <p role="alert">{{ error() }}</p> }
     </fieldset>
@@ -50,6 +50,7 @@ export interface EntryWorkSelection {
 export class TimesheetWorkSelector {
   private static nextId = 0;
   readonly fieldId = 'timesheet-work-' + TimesheetWorkSelector.nextId++;
+  /** `projects`: projects already known from loaded entries, so the current one keeps its label. */
   readonly value = input.required<EntryWorkSelection>(); readonly projects = input<TimesheetProject[]>([]); readonly readonly = input(false);
   readonly changed = output<EntryWorkSelection>();
   private readonly api = inject(TimesheetService); private readonly destroy = inject(DestroyRef);
@@ -57,7 +58,6 @@ export class TimesheetWorkSelector {
   readonly tickets = signal<TimesheetTicket[]>([]); readonly loading = signal(false); readonly creating = signal(false); readonly error = signal('');
   readonly quickCreate = signal(false); readonly page = signal(1); readonly lastPage = signal(0);
   search = ''; newTitle = ''; newProjectId = '';
-  readonly projectLabel = timesheetProjectLabel;
   constructor() { effect(() => { const value = this.value(); this.mode.set(value.mode); this.selected.set(value.ticket); if (value.ticket && !this.tickets().some(ticket => ticket.id === value.ticketId)) this.tickets.update(items => [{ ...value.ticket!, projectId: value.projectId }, ...items]); }); }
   setMode(mode: EntryWorkSelection['mode']) { this.mode.set(mode); this.error.set(''); this.changed.emit({ ...this.value(), mode, ticketId: null, ticket: null, description: mode === 'ticket' ? '' : this.value().description }); if (mode === 'ticket') this.load(1); }
   describe(description: string) { this.changed.emit({ ...this.value(), mode: 'description', ticketId: null, ticket: null, description }); }

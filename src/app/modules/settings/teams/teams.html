@@ -6,19 +6,44 @@
     <p-button pageActions label="New Team" icon="pi pi-plus" (onClick)="openCreateDialog()" />
   }
 
+  <p-iconfield pageToolbar class="ds-search" role="search" aria-label="Filter teams">
+    <p-inputicon class="pi pi-search" />
+    <input
+      pInputText
+      type="search"
+      placeholder="Search teams"
+      aria-label="Search teams by name"
+      autocomplete="off"
+      maxlength="100"
+      [value]="list.searchInput()"
+      (input)="onSearch($event)"
+    />
+  </p-iconfield>
+
+  @if (teams.error()) {
+    <p-message severity="error" styleClass="ds-message">
+      <span>Failed to load teams. Please try again.</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="loadTeams()" [disabled]="teams.loading()" />
+    </p-message>
+  }
+
   <div>
     <p-table
       class="ds-table"
-      [value]="pager.pageRows()"
+      [value]="teams.rows()"
+      dataKey="id"
       [lazy]="true"
-      (onLazyLoad)="pager.onSort($event)"
-      [loading]="isLoading()"
+      (onLazyLoad)="list.onLazyLoad($event)"
+      [sortField]="list.sortField()"
+      [sortOrder]="list.tableSortOrder()"
+      [loading]="teams.loading()"
       [rowHover]="true"
       [tableStyle]="{ 'width': '100%' }"
     >
       <ng-template pTemplate="header">
         <tr>
           <th scope="col" pSortableColumn="name">Name <p-sortIcon field="name" /></th>
+          <th scope="col" pSortableColumn="memberCount" class="w-32">Members <p-sortIcon field="memberCount" /></th>
           <th scope="col" pSortableColumn="createdAt">Created <p-sortIcon field="createdAt" /></th>
           @if (isAdmin()) {
             <th scope="col" class="text-right" style="width: 8rem"><span class="ds-sr-only">Actions</span></th>
@@ -29,6 +54,7 @@
       <ng-template pTemplate="body" let-team>
         <tr>
           <td class="font-medium text-heading">{{ team.name }}</td>
+          <td class="ds-num">{{ team.memberCount ?? 0 }}</td>
           <td class="text-muted ds-num">{{ team.createdAt | date: 'mediumDate' }}</td>
           @if (isAdmin()) {
             <td class="text-right">
@@ -53,18 +79,18 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td [attr.colspan]="isAdmin() ? 3 : 2">
+          <td [attr.colspan]="isAdmin() ? 4 : 3">
             <app-empty-state icon="pi pi-sitemap" heading="No teams found" />
           </td>
         </tr>
       </ng-template>
     </p-table>
     <app-list-paginator
-      [total]="pager.total()"
-      [page]="pager.currentPage()"
-      [pageSize]="pager.pageSize()"
+      [total]="teams.total()"
+      [page]="list.page()"
+      [pageSize]="list.pageSize()"
       itemLabel="teams"
-      (pageChange)="pager.onPage($event)"
+      (pageChange)="list.onPage($event)"
     />
   </div>
 </app-page>

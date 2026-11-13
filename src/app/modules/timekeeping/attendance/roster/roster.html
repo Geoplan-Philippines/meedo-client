@@ -13,7 +13,10 @@
           type="search"
           placeholder="Search by name or code…"
           aria-label="Search employees"
-          [formControl]="searchControl"
+          [value]="list.searchInput()"
+          (input)="onSearch($event)"
+          autocomplete="off"
+          maxlength="100"
         />
       </p-iconfield>
     }
@@ -21,7 +24,8 @@
     <div class="date-nav">
       <p-button icon="pi pi-chevron-left" [text]="true" severity="secondary" (onClick)="previousDay()" ariaLabel="Previous day" />
       <p-datepicker
-        [formControl]="dateControl"
+        [ngModel]="selectedDate()"
+        (ngModelChange)="setDate($event)"
         dateFormat="yy-mm-dd"
         [showIcon]="true"
         iconDisplay="input"
@@ -46,10 +50,6 @@
       #dt
       class="ds-table"
       [value]="entries()"
-      [lazy]="true"
-      (onLazyLoad)="onLazyLoad($event)"
-      [first]="firstRow()"
-      [rows]="rows()"
       [loading]="isLoading()"
       [rowHover]="true"
       dataKey="employeeId"
@@ -90,7 +90,7 @@
             <app-empty-state
               icon="pi pi-clock"
               heading="No attendance yet"
-              [description]="canSearch() && searchControl.value ? 'No employees match your search. Try different keywords.' : 'No one has clocked in for this day yet.'"
+              [description]="canSearch() && list.search() ? 'No employees match your search. Try different keywords.' : 'No one has clocked in for this day yet.'"
             />
           </td>
         </tr>
@@ -98,10 +98,10 @@
     </p-table>
     <app-list-paginator
       [total]="totalRecords()"
-      [page]="page()"
-      [pageSize]="rows()"
+      [page]="list.page()"
+      [pageSize]="list.pageSize()"
       itemLabel="employees"
-      (pageChange)="onPageChange($event)"
+      (pageChange)="list.onPage($event)"
     />
   </div>
 </section>

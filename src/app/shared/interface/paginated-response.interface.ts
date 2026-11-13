@@ -7,6 +7,11 @@ export interface PaginationMeta {
   lastPage: number;
 }
 
-export interface PaginatedApiResponse<T> extends ApiResponse<T[]> {
-    meta: PaginationMeta;
+/**
+ * The shape every list endpoint answers with. `M` adds endpoint-specific
+ * meta, e.g. per-client totals on the projects list or week totals on
+ * timesheet approvals.
+ */
+export interface PaginatedApiResponse<T, M extends object = object> extends ApiResponse<T[]> {
+  meta: PaginationMeta & M;
 }

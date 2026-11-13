@@ -64,7 +64,7 @@
     <div class="ds-table-scroll">
       <p-table
         class="ds-table week-table"
-        [value]="projectPager.pageRows()"
+        [value]="tableProjectIds()"
         [rowHover]="true"
         [tableStyle]="{ 'min-width': '58rem', 'table-layout': 'fixed' }"
         aria-label="Weekly timesheet grid"
@@ -147,13 +147,6 @@
         </ng-template>
       </p-table>
     </div>
-    <app-list-paginator
-      [total]="projectPager.total()"
-      [page]="projectPager.currentPage()"
-      [pageSize]="projectPager.pageSize()"
-      itemLabel="projects"
-      (pageChange)="projectPager.onPage($event)"
-    />
   </div>
 
   <footer class="timesheet-footer">
@@ -185,19 +178,12 @@
         <div class="modal-body">
           <label class="modal-field">
             <span>Project</span>
-            <p-select
-              [ngModel]="addProject.projectId"
-              (ngModelChange)="onAddProjectChange($event)"
-              [options]="projectOptions()"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              scrollHeight="min(18rem, 45vh)"
-              panelStyleClass="timesheet-project-panel"
-              placeholder="Select a project"
-              appendTo="body"
+            <app-timesheet-project-picker
+              [value]="addProject.projectId"
+              [clearable]="false"
+              ariaLabel="Project to add"
               styleClass="entry-select"
+              (changed)="onAddProjectChange($event)"
             />
           </label>
         </div>
@@ -322,7 +308,7 @@
                   </div>
                 </div>
 
-                <app-timesheet-work-selector [value]="workForRow(row, modal.projectId)" [projects]="pickerProjects()" [readonly]="modal.readonly || row.readonly" (changed)="setRowWork(row, $event)" />
+                <app-timesheet-work-selector [value]="workForRow(row, modal.projectId)" [projects]="projects()" [readonly]="modal.readonly || row.readonly" (changed)="setRowWork(row, $event)" />
                 @if (rowTaskInvalid(row)) { <p role="alert">Choose a ticket or enter a description of at most 1000 characters.</p> }
 
               </div>
@@ -388,4 +374,4 @@
 </app-page>
 
 
-@if (formOpen()) { <app-timesheet-entry-form [entry]="editingEntry()" [projects]="pickerProjects()" (saved)="entryFormSaved()" (cancelled)="formOpen.set(false)" /> }
+@if (formOpen()) { <app-timesheet-entry-form [entry]="editingEntry()" [projects]="projects()" (saved)="entryFormSaved()" (cancelled)="formOpen.set(false)" /> }

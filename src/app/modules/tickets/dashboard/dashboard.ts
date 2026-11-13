@@ -165,7 +165,7 @@ export class Dashboard implements OnInit {
     forkJoin({
       stats: this.ticketsService.getStats(),
       facets: this.ticketsService.getFacets({ view: 'all' }),
-      statuses: this.statusesService.getAll(),
+      statuses: this.statusesService.options(),
       // The triage list: open work that's urgent or high, most-due first.
       attention: this.ticketsService.getAll({
         page: 1,

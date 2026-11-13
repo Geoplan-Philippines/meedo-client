@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
   FormGroup,
+  FormsModule,
   ReactiveFormsModule,
   ValidationErrors,
   Validators,
@@ -27,12 +28,13 @@ import {
   formatTime12h,
   shiftWorkedHours,
 } from '../shared/attendance-settings.util';
-import { ShiftsService } from '../services/shifts.service';
+import { SHIFTS_LIST, ShiftsService } from '../services/shifts.service';
 
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../../shared/utils/client-pager';
+import { injectListState } from '../../../../shared/data/url-list-state';
+import { pagedList } from '../../../../shared/data/paged-list';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
@@ -76,6 +78,7 @@ function endAfterStart(group: AbstractControl): ValidationErrors | null {
     SkeletonModule,
     RouterLink,
     ReactiveFormsModule,
+    FormsModule,
     TableModule,
     ButtonModule,
     DialogModule,
@@ -88,23 +91,20 @@ function endAfterStart(group: AbstractControl): ValidationErrors | null {
   styleUrl: './shifts.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Shifts implements OnInit {
+export class Shifts {
   private readonly shiftsService = inject(ShiftsService);
 
-  readonly shifts = signal<Shift[]>([]);
-  readonly isLoading = signal(false);
+  /** Save and archive failures; load failures come from the list. */
   readonly error = signal<string | null>(null);
 
-  readonly showArchivedControl = new FormControl(false, { nonNullable: true });
-  readonly showArchived = toSignal(this.showArchivedControl.valueChanges, { initialValue: false });
-
-  readonly activeShifts = computed(() => this.shifts().filter((s) => !s.isArchived));
-  readonly archivedCount = computed(() => this.shifts().filter((s) => s.isArchived).length);
-
-  readonly visibleShifts = computed(() =>
-    this.showArchived() ? this.shifts() : this.activeShifts(),
-  );
-  readonly pager = new ClientPager(this.visibleShifts);
+  readonly list = injectListState(SHIFTS_LIST);
+  readonly shifts = pagedList({
+    params: () => this.list.query(),
+    load: (query) => this.shiftsService.list(query),
+    refreshOn: ['attendance'],
+  });
+  readonly showArchived = computed(() => this.list.filters().includeArchived);
+  readonly archivedCount = computed(() => this.shifts.meta()?.archivedCount ?? 0);
 
   readonly isDialogOpen = signal(false);
   readonly dialogMode = signal<DialogMode>('create');
@@ -171,7 +171,8 @@ export class Shifts implements OnInit {
             : this.shiftsService.archive(shift.id);
           return request$.pipe(
             tap((updated) => {
-              this.shifts.update((list) => list.map((s) => (s.id === updated.id ? updated : s)));
+              this.shifts.updateRows((rows) => rows.map((s) => (s.id === updated.id ? updated : s)));
+              this.shifts.reload();
             }),
             catchError(() => {
               const action = shift.isArchived ? 'restore' : 'archive';
@@ -184,25 +185,17 @@ export class Shifts implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe();
+
+    this.list.clampToTotal(this.shifts);
   }
 
-  ngOnInit(): void {
-    this.load();
+  setShowArchived(value: boolean): void {
+    this.list.setFilter('includeArchived', value);
   }
 
   load(): void {
-    this.isLoading.set(true);
     this.error.set(null);
-    this.shiftsService.list().subscribe({
-      next: (data) => {
-        this.shifts.set(data);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load shifts. Please try again.');
-        this.isLoading.set(false);
-      },
-    });
+    this.shifts.reload();
   }
 
   workedHours(shift: Shift): string {
@@ -273,8 +266,8 @@ export class Shifts implements OnInit {
 
     if (this.dialogMode() === 'create') {
       this.shiftsService.create(payload).subscribe({
-        next: (created) => {
-          this.shifts.update((list) => [...list, created]);
+        next: () => {
+          this.shifts.reload();
           this.isSaving.set(false);
           this.isDialogOpen.set(false);
         },
@@ -291,7 +284,7 @@ export class Shifts implements OnInit {
     const update: UpdateShiftPayload = payload;
     this.shiftsService.update(editing.id, update).subscribe({
       next: (updated) => {
-        this.shifts.update((list) => list.map((s) => (s.id === updated.id ? updated : s)));
+        this.shifts.updateRows((rows) => rows.map((s) => (s.id === updated.id ? updated : s)));
         this.isSaving.set(false);
         this.isDialogOpen.set(false);
       },

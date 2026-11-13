@@ -4,17 +4,19 @@ import {
   DestroyRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } from 'rxjs';
+import { auditTime, finalize, fromEvent } from 'rxjs';
 
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 
@@ -31,7 +33,10 @@ import { AttendanceStatusBadge } from '../shared/attendance-status-badge';
 import { formatHours, formatLate } from '../shared/attendance-status.util';
 
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
-import { ListPaginator, ListPageChange } from '../../../../shared/ui/list-paginator/list-paginator';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { injectListState } from '../../../../shared/data/url-list-state';
+
+const PERIODS: readonly string[] = ['daily', 'weekly', 'monthly'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A clickable summary card: a status bucket, its count, and its tone. */
@@ -57,7 +62,7 @@ interface PeriodOption {
     TableModule,
     ButtonModule,
     DatePickerModule,
-    ReactiveFormsModule,
+    FormsModule,
     DatePipe,
     AttendanceStatusBadge,
   ],
@@ -73,9 +78,15 @@ export class AttendanceDashboard implements OnInit {
 
 
   // Shared day context.
-  readonly dateControl = new FormControl<Date>(this.startOfToday(), { nonNullable: true });
+  /** The day (`?date=`) is shared by the summary, the roster and the scoreboard. */
+  private readonly day = injectListState({ filters: { date: null as string | null } });
   readonly maxDate = this.startOfToday();
-  readonly isToday = signal(true);
+  readonly selectedDate = computed(() => {
+    const value = this.day.filters().date;
+    const date = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : this.maxDate;
+    return Number.isNaN(date.getTime()) || date > this.maxDate ? this.maxDate : date;
+  });
+  readonly isToday = computed(() => this.isSameDay(this.selectedDate(), this.maxDate));
 
   /** True once any request returns 403: the viewer isn't an org admin. */
   readonly accessDenied = signal(false);
@@ -101,14 +112,14 @@ export class AttendanceDashboard implements OnInit {
   });
 
   // Roster (member-centric, filterable by status).
+  /** Page, size, search and status live in the URL (`rosterPage`, `rosterQ`, `rosterStatus`...). */
+  readonly rosterList = injectListState({ pageSize: 10, prefix: 'roster', filters: { status: null as string | null } });
   readonly rosterEntries = signal<BoardRosterEntry[]>([]);
   readonly rosterTotal = signal(0);
-  readonly rosterRows = signal(10);
+  readonly rosterRows = this.rosterList.pageSize;
   readonly isLoadingRoster = signal(false);
-  readonly rosterSearch = new FormControl('', { nonNullable: true });
-  readonly statusFilter = signal<BoardStatusFilter | null>(null);
-  readonly rosterFirst = signal(0);
-  readonly rosterPage = computed(() => Math.floor(this.rosterFirst() / this.rosterRows()) + 1);
+  readonly statusFilter = computed(() => this.rosterList.filters().status as BoardStatusFilter | null);
+  readonly rosterPage = this.rosterList.page;
   private rosterRequestId = 0;
 
   // Tardiness scoreboard.
@@ -117,40 +128,52 @@ export class AttendanceDashboard implements OnInit {
     { key: 'weekly', label: 'Weekly' },
     { key: 'monthly', label: 'Monthly' },
   ];
-  readonly period = signal<TardinessPeriod>('weekly');
+  /** Page, size, search and period live in the URL (`latePage`, `lateQ`, `latePeriod`...). */
+  readonly tardList = injectListState({ pageSize: 10, prefix: 'late', filters: { period: 'weekly' } });
+  readonly period = computed(() => (PERIODS.includes(this.tardList.filters().period) ? this.tardList.filters().period : 'weekly') as TardinessPeriod);
   readonly tardEntries = signal<TardinessEntry[]>([]);
   readonly tardTotal = signal(0);
-  readonly tardRows = signal(10);
+  readonly tardRows = this.tardList.pageSize;
   readonly isLoadingTard = signal(false);
   readonly tardMeta = signal<TardinessMeta | null>(null);
-  readonly tardSearch = new FormControl('', { nonNullable: true });
-  readonly tardFirst = signal(0);
-  readonly tardPage = computed(() => Math.floor(this.tardFirst() / this.tardRows()) + 1);
+  readonly tardPage = this.tardList.page;
   private tardRequestId = 0;
 
   private pendingRealtimeRefresh = false;
 
   constructor() {
-    this.rosterSearch.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.resetRoster());
+    // Each part reloads when its URL state (or the shared day) changes.
+    effect(() => {
+      this.selectedDate();
+      untracked(() => this.loadSummary());
+    });
+    effect(() => {
+      this.rosterList.query();
+      this.selectedDate();
+      untracked(() => this.fetchRoster());
+    });
+    effect(() => {
+      this.tardList.query();
+      this.period();
+      this.selectedDate();
+      untracked(() => this.fetchTardiness());
+    });
+  }
 
-    this.tardSearch.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.resetTardiness());
+  onRosterSearch(event: Event): void {
+    this.rosterList.setSearch((event.target as HTMLInputElement).value);
+  }
 
-    this.dateControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((value) => {
-        this.isToday.set(this.isSameDay(value, this.maxDate));
-        this.loadSummary();
-        this.resetRoster();
-        this.resetTardiness();
-      });
+  onTardSearch(event: Event): void {
+    this.tardList.setSearch((event.target as HTMLInputElement).value);
+  }
+
+  setDate(date: Date | null): void {
+    if (!date) return;
+    this.day.setFilter('date', this.isSameDay(date, this.maxDate) ? null : this.toDateParam(date));
   }
 
   ngOnInit(): void {
-    this.loadSummary();
 
     fromEvent(this.document, 'visibilitychange')
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -163,7 +186,7 @@ export class AttendanceDashboard implements OnInit {
     this.attendanceService.updates$
       .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe((update) => {
-        const selectedDate = this.toDateParam(this.dateControl.value);
+        const selectedDate = this.toDateParam(this.selectedDate());
         const targeted = Boolean(update.affected?.length);
         const affectsSelectedDate =
           update.affected?.some((target) => target.date === selectedDate) ?? false;
@@ -182,7 +205,7 @@ export class AttendanceDashboard implements OnInit {
   loadSummary(): void {
     this.isLoadingSummary.set(true);
     this.attendanceService
-      .getBoardSummary(this.toDateParam(this.dateControl.value))
+      .getBoardSummary(this.toDateParam(this.selectedDate()))
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoadingSummary.set(false)),
@@ -195,15 +218,8 @@ export class AttendanceDashboard implements OnInit {
 
   /* ─── Roster ──────────────────────────────────────────── */
 
-  onRosterLazyLoad(event: TableLazyLoadEvent): void {
-    this.rosterFirst.set(event.first ?? 0);
-    this.rosterRows.set(event.rows ?? 10);
-    this.fetchRoster();
-  }
-
   toggleStatusFilter(key: BoardStatusFilter): void {
-    this.statusFilter.update((current) => (current === key ? null : key));
-    this.resetRoster();
+    this.rosterList.setFilter('status', this.statusFilter() === key ? null : key);
   }
 
   private fetchRoster(silent = false): void {
@@ -214,8 +230,8 @@ export class AttendanceDashboard implements OnInit {
       .getBoardRoster({
         page: this.rosterPage(),
         limit: this.rosterRows(),
-        date: this.toDateParam(this.dateControl.value),
-        search: this.rosterSearch.value.trim() || undefined,
+        date: this.toDateParam(this.selectedDate()),
+        search: this.rosterList.search() || undefined,
         status: this.statusFilter() ?? undefined,
       })
       .pipe(
@@ -241,37 +257,11 @@ export class AttendanceDashboard implements OnInit {
       });
   }
 
-  private resetRoster(): void {
-    this.rosterFirst.set(0);
-    this.fetchRoster();
-  }
-
-  /** Shared list footer for the roster. */
-  onRosterPage(change: ListPageChange): void {
-    this.rosterRows.set(change.pageSize);
-    this.rosterFirst.set(change.first);
-    this.fetchRoster();
-  }
-
-  /** Shared list footer for the scoreboard. */
-  onTardPage(change: ListPageChange): void {
-    this.tardRows.set(change.pageSize);
-    this.tardFirst.set(change.first);
-    this.fetchTardiness();
-  }
-
   /* ─── Tardiness scoreboard ────────────────────────────── */
-
-  onTardLazyLoad(event: TableLazyLoadEvent): void {
-    this.tardFirst.set(event.first ?? 0);
-    this.tardRows.set(event.rows ?? 10);
-    this.fetchTardiness();
-  }
 
   setPeriod(period: TardinessPeriod): void {
     if (this.period() === period) return;
-    this.period.set(period);
-    this.resetTardiness();
+    this.tardList.setFilter('period', period);
   }
 
   private fetchTardiness(silent = false): void {
@@ -283,8 +273,8 @@ export class AttendanceDashboard implements OnInit {
         page: this.tardPage(),
         limit: this.tardRows(),
         period: this.period(),
-        date: this.toDateParam(this.dateControl.value),
-        search: this.tardSearch.value.trim() || undefined,
+        date: this.toDateParam(this.selectedDate()),
+        search: this.tardList.search() || undefined,
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -310,11 +300,6 @@ export class AttendanceDashboard implements OnInit {
       });
   }
 
-  private resetTardiness(): void {
-    this.tardFirst.set(0);
-    this.fetchTardiness();
-  }
-
   /* ─── Day navigation ──────────────────────────────────── */
 
   previousDay(): void {
@@ -328,7 +313,7 @@ export class AttendanceDashboard implements OnInit {
 
   openEmployee(entry: BoardRosterEntry): void {
     this.router.navigate(['/timekeeping/attendance', entry.employeeId], {
-      queryParams: { date: this.toDateParam(this.dateControl.value) },
+      queryParams: { date: this.toDateParam(this.selectedDate()) },
       // Identity for the detail header; the day-summary endpoint only returns times.
       state: { employee: entry },
     });
@@ -367,9 +352,9 @@ export class AttendanceDashboard implements OnInit {
   }
 
   private shiftDay(deltaDays: number): void {
-    const next = new Date(this.dateControl.value.getTime() + deltaDays * DAY_MS);
+    const next = new Date(this.selectedDate().getTime() + deltaDays * DAY_MS);
     next.setHours(0, 0, 0, 0);
-    this.dateControl.setValue(next);
+    this.setDate(next);
   }
 
   /** Local YYYY-MM-DD so the day matches the company-timezone day on the server. */

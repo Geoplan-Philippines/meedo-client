@@ -1,11 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { EMPTY } from 'rxjs';
+import { EMPTY, Observable } from 'rxjs';
 import { expand, map, reduce } from 'rxjs/operators';
 
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
+import { toHttpParams } from '../../../../shared/data/page-query';
+import { PickerQuery } from '../../../../shared/data/paged-search';
+import { cacheContext } from '../../../../core/http/api-cache';
 import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 import {
   BulkApproveResult,
@@ -17,8 +20,10 @@ import {
   TimesheetEntryPayload,
   TimesheetPeriodLock,
   TimesheetProject,
-  TimesheetSummary,
+  TimesheetSummaryEmployee,
   TimesheetSummaryFilters,
+  TimesheetSummaryMeta,
+  TimesheetSummaryPageQuery,
 } from '../models/timesheet.model';
 
 @Injectable({ providedIn: 'root' })
@@ -80,41 +85,30 @@ export class TimesheetService {
   }
 
   /**
-   * Every project for timesheet pickers. Archived projects are left out unless
+   * One page of projects for timesheet pickers, searched on the server and
+   * labelled "Client — Project · WO". Archived projects are left out unless
    * `includeArchived` (filters over existing entries need them; new entries cannot use them).
    */
-  getProjects(includeArchived = false) {
-    return this.fetchProjectsPage(1, includeArchived).pipe(
-      expand((response) =>
-        response.meta.page < response.meta.lastPage
-          ? this.fetchProjectsPage(response.meta.page + 1, includeArchived)
-          : EMPTY,
-      ),
-      reduce((all, response) => all.concat(response.data), [] as TimesheetProject[]),
-      map((projects) =>
-        projects.map((project) => {
-          const customerName = project.customerName?.trim() || project.client?.customerName?.trim() || '';
-          const label = timesheetProjectLabel({ ...project, customerName });
-          return { ...project, customerName, label: project.isArchived ? `${label} (Archived)` : label };
-        }),
-      ),
-    );
-  }
-
-  private fetchProjectsPage(page: number, includeArchived: boolean) {
-    return this.http.get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
-      params: { page, limit: 50, ...(includeArchived ? { includeArchived: true } : {}) },
-      withCredentials: true,
-    });
-  }
-
-  getSummary(filters: TimesheetSummaryFilters) {
+  searchProjects(query: PickerQuery & { includeArchived?: boolean }): Observable<PaginatedApiResponse<TimesheetProject>> {
     return this.http
-      .get<ApiResponse<TimesheetSummary>>(`${this.baseUrl}/summary`, {
-        params: this.summaryParams(filters),
+      .get<PaginatedApiResponse<TimesheetProject>>(`${this.baseUrl}/projects`, {
+        params: toHttpParams(query),
+        context: cacheContext('projects'),
         withCredentials: true,
       })
-      .pipe(map((response) => response.data));
+      .pipe(map((page) => ({ ...page, data: page.data.map(withProjectLabel) })));
+  }
+
+  /**
+   * Approvals: one page of employees for the week (with their entries), plus
+   * week totals and tab counts in `meta`. Search, tab and paging run on the server.
+   */
+  getSummaryPage(query: TimesheetSummaryPageQuery): Observable<PaginatedApiResponse<TimesheetSummaryEmployee, TimesheetSummaryMeta>> {
+    return this.http.get<PaginatedApiResponse<TimesheetSummaryEmployee, TimesheetSummaryMeta>>(`${this.baseUrl}/summary`, {
+      params: toHttpParams(query),
+      context: cacheContext('timesheet'),
+      withCredentials: true,
+    });
   }
 
   bulkApprove(entryIds: string[]) {
@@ -199,4 +193,11 @@ export class TimesheetService {
 
     return params;
   }
+}
+
+/** Adds the picker label; archived projects say so. */
+function withProjectLabel(project: TimesheetProject): TimesheetProject {
+  const customerName = project.customerName?.trim() || project.client?.customerName?.trim() || '';
+  const label = timesheetProjectLabel({ ...project, customerName });
+  return { ...project, customerName, label: project.isArchived ? `${label} (Archived)` : label };
 }

@@ -6,6 +6,27 @@
   </nav>
   <p-button pageActions label="New category" icon="pi pi-plus" (onClick)="openCreate()" />
 
+  <p-iconfield pageToolbar class="ds-search" role="search" aria-label="Filter categories">
+    <p-inputicon class="pi pi-search" />
+    <input
+      pInputText
+      type="search"
+      placeholder="Search categories"
+      aria-label="Search categories by name or description"
+      autocomplete="off"
+      maxlength="100"
+      [value]="list.searchInput()"
+      (input)="onSearch($event)"
+    />
+  </p-iconfield>
+
+  @if (categories.error() && !error()) {
+    <p-message severity="error" styleClass="ds-message">
+      <span>Failed to load ticket categories. Please try again.</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="categories.loading()" />
+    </p-message>
+  }
+
   @if (error()) {
     <p-message severity="error" styleClass="ds-message">
       <span>{{ error() }}</span>
@@ -16,25 +37,35 @@
         severity="danger"
         text
         (onClick)="load()"
-        [disabled]="isLoading()"
+        [disabled]="categories.loading()"
       />
     </p-message>
   }
 
-  @if (isLoading()) {
+  @if (!categories.loaded() && !categories.error()) {
     <div class="ds-table-skeleton" role="status">
       <span class="ds-sr-only">Loading ticket categories…</span>
       @for (row of [1, 2, 3, 4]; track row) {
         <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="18rem" height="0.75rem" /></div>
       }
     </div>
-  } @else if (categories().length === 0) {
+  } @else if (categories.loaded() && categories.total() === 0 && !list.search()) {
     <app-empty-state icon="pi pi-tags" heading="No ticket categories yet" description="Create your first category to get started.">
       <p-button label="New category" icon="pi pi-plus" (onClick)="openCreate()" />
     </app-empty-state>
   } @else {
     <div>
-      <p-table class="ds-table" [value]="pager.pageRows()" [lazy]="true" (onLazyLoad)="pager.onSort($event)" dataKey="id" [rowHover]="true">
+      <p-table
+        class="ds-table"
+        [value]="categories.rows()"
+        [lazy]="true"
+        (onLazyLoad)="list.onLazyLoad($event)"
+        [sortField]="list.sortField()"
+        [sortOrder]="list.tableSortOrder()"
+        [loading]="categories.loading()"
+        dataKey="id"
+        [rowHover]="true"
+      >
         <ng-template pTemplate="header">
           <tr>
             <th scope="col" pSortableColumn="name">Name <p-sortIcon field="name" /></th>
@@ -80,13 +111,18 @@
             </td>
           </tr>
         </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4"><app-empty-state icon="pi pi-tags" heading="No categories match your search" /></td>
+          </tr>
+        </ng-template>
       </p-table>
       <app-list-paginator
-        [total]="pager.total()"
-        [page]="pager.currentPage()"
-        [pageSize]="pager.pageSize()"
+        [total]="categories.total()"
+        [page]="list.page()"
+        [pageSize]="list.pageSize()"
         itemLabel="categories"
-        (pageChange)="pager.onPage($event)"
+        (pageChange)="list.onPage($event)"
       />
     </div>
   }

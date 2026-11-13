@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -10,7 +10,7 @@ import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 
-import { TicketCategoriesService } from '../../tickets/services/ticket-categories.service';
+import { CATEGORIES_LIST, TicketCategoriesService } from '../../tickets/services/ticket-categories.service';
 import {
   CreateTicketCategoryPayload,
   TicketCategory,
@@ -20,10 +20,13 @@ import {
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../shared/utils/client-pager';
+import { injectListState } from '../../../shared/data/url-list-state';
+import { pagedList } from '../../../shared/data/paged-list';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import { MessageModule } from 'primeng/message';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 type DialogMode = 'create' | 'edit';
 
 @Component({
@@ -43,18 +46,24 @@ type DialogMode = 'create' | 'edit';
     InputTextModule,
     TextareaModule,
     TooltipModule,
+    IconFieldModule,
+    InputIconModule,
   ],
   templateUrl: './categories.html',
   styleUrl: './categories.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Categories implements OnInit {
+export class Categories {
   private readonly ticketCategoriesService = inject(TicketCategoriesService);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly categories = signal<TicketCategory[]>([]);
-  readonly pager = new ClientPager(this.categories);
-  readonly isLoading = signal(false);
+  readonly list = injectListState(CATEGORIES_LIST);
+  readonly categories = pagedList({
+    params: () => this.list.query(),
+    load: (query) => this.ticketCategoriesService.list(query),
+    refreshOn: ['lookups'],
+  });
+  /** Save and delete failures; load failures come from the list itself. */
   readonly error = signal<string | null>(null);
 
   readonly isDialogOpen = signal(false);
@@ -87,26 +96,17 @@ export class Categories implements OnInit {
     return this.form.invalid;
   });
 
-  ngOnInit(): void {
-    this.load();
+  constructor() {
+    this.list.clampToTotal(this.categories);
   }
 
   load(): void {
-    this.isLoading.set(true);
     this.error.set(null);
-    this.ticketCategoriesService
-      .list()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data) => {
-          this.categories.set(data);
-          this.isLoading.set(false);
-        },
-        error: () => {
-          this.error.set('Failed to load ticket categories. Please try again.');
-          this.isLoading.set(false);
-        },
-      });
+    this.categories.reload();
+  }
+
+  onSearch(event: Event): void {
+    this.list.setSearch((event.target as HTMLInputElement).value);
   }
 
   openCreate(): void {
@@ -151,8 +151,8 @@ export class Categories implements OnInit {
         .create(payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: (created) => {
-            this.categories.update((list) => [...list, created]);
+          next: () => {
+            this.categories.reload();
             this.isSaving.set(false);
             this.isDialogOpen.set(false);
           },
@@ -178,7 +178,7 @@ export class Categories implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {
-          this.categories.update((list) => list.map((c) => (c.id === updated.id ? updated : c)));
+          this.categories.updateRows((rows) => rows.map((c) => (c.id === updated.id ? updated : c)));
           this.isSaving.set(false);
           this.isDialogOpen.set(false);
         },
@@ -208,7 +208,7 @@ export class Categories implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.categories.update((list) => list.filter((c) => c.id !== target.id));
+          this.categories.reload();
           this.isDeleting.set(false);
           this.categoryToDelete.set(null);
         },

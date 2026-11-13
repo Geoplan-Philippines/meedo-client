@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,12 +25,13 @@ import { TicketDepartmentService } from '../services/ticket-department.service';
 import { TicketAttachmentsService } from '../services/attachments.service';
 import { TicketCategoriesService } from '../services/ticket-categories.service';
 import { StatusesService } from '../services/statuses.service';
-import { ProjectsService, filterProjects, withCurrentProject } from '../services/projects.service';
+import { ProjectsService, withCurrentProject } from '../services/projects.service';
 import { SlaBadge } from '../sla-badge/sla-badge';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
 import { clientDisplayName, projectDisplayName } from '../../../shared/utils/display-name.utils';
-import { MembersService } from '../services/members.service';
-import { TeamsService } from '../../settings/teams/services/teams.service';
+import { MemberDirectoryService } from '../../../core/members/member-directory.service';
+import { WorkspaceService } from '../../clients/services/workspace.service';
+import { pagedSearch } from '../../../shared/data/paged-search';
 import { AuthService } from '../../../core/auth/auth.service';
 import { TicketThread } from '../ticket-thread/ticket-thread';
 import { MarkdownEditor } from '../../../shared/ui/markdown-editor/markdown-editor';
@@ -86,8 +87,8 @@ export class TicketDetail {
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
   private readonly projectsService = inject(ProjectsService);
-  private readonly membersService = inject(MembersService);
-  private readonly teamsService = inject(TeamsService);
+  private readonly directory = inject(MemberDirectoryService);
+  private readonly workspace = inject(WorkspaceService);
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
@@ -101,12 +102,15 @@ export class TicketDetail {
 
   readonly statuses = signal<Status[]>([]);
   readonly categories = signal<TicketCategory[]>([]);
-  readonly projects = signal<Project[]>([]);
   readonly teams = signal<Team[]>([]);
-  readonly members = signal<OrgMember[]>([]);
 
-  readonly assigneeSearch = signal('');
-  readonly projectSearch = signal('');
+  /** Assignee picker: the ticket's team members when it has a team, else the organization; searched on the server. */
+  readonly assignees = pagedSearch<OrgMember>({
+    fetch: (query) => this.directory.list({ ...query, sortField: 'name', sortOrder: 'asc', teamId: this.ticket()?.teamId ?? undefined }),
+  });
+  /** Project picker; the API only returns projects the user may see. */
+  readonly projectPicker = pagedSearch<Project>({ fetch: (query) => this.projectsService.search(query) });
+
   readonly linkSearch = signal('');
   readonly linkResults = signal<Ticket[]>([]);
 
@@ -131,38 +135,27 @@ export class TicketDetail {
 
   readonly activeStatuses = computed(() => this.statuses().filter((status) => !status.isArchived));
 
+  readonly filteredMembers = this.assignees.items;
+
   /**
-   * Resolves the auth-user IDs that belong to the ticket's current team.
-   * Uses switchMap so changing the team automatically cancels the previous request.
-   * null = no team selected → show all org members.
+   * Whether a member may see the ticket's project. Members only get their own
+   * projects from the API, so a ticket on someone else's project keeps its
+   * project read-only. Admins see every project.
    */
-  private readonly teamMemberUserIds = toSignal(
-    toObservable(computed(() => this.ticket()?.teamId ?? null)).pipe(
-      switchMap((teamId) => {
-        if (!teamId) return of(null);
-        return this.teamsService.listTeamMembers(teamId).pipe(
-          map((rows) => new Set(rows.map((r) => r.userId))),
-          // On failure fall back to an empty set (no members), never null — a
-          // team with no members must show no assignees, not the whole org.
-          catchError(() => of(new Set<string>())),
-        );
-      }),
-    ),
-    { initialValue: null as Set<string> | null },
+  private readonly projectAccess = rxResource({
+    params: () => {
+      const projectId = this.ticket()?.projectId;
+      return !this.authService.isAdmin() && projectId ? projectId : undefined;
+    },
+    stream: ({ params }) => this.workspace.project(params),
+  });
+  private readonly projectVisible = computed(() =>
+    this.authService.isAdmin() || (this.projectAccess.hasValue() && this.projectAccess.value() !== null),
   );
 
-  readonly filteredMembers = computed(() => {
-    const query = this.assigneeSearch().trim().toLowerCase();
-    const teamUserIds = this.teamMemberUserIds();
-    let list = this.members();
-    if (teamUserIds) list = list.filter((member) => teamUserIds.has(member.userId));
-    if (query) list = list.filter((member) => member.displayName.toLowerCase().includes(query));
-    return list;
-  });
-
-  /** Active projects plus the ticket's own project when the sync archived it (shown tagged). */
-  readonly projectMatches = computed(() =>
-    filterProjects(withCurrentProject(this.projects(), this.ticket()?.project, this.authService.isAdmin()), this.projectSearch()),
+  /** Search results plus the ticket's own project (archived, or not on this page). */
+  readonly projectOptions = computed(() =>
+    withCurrentProject(this.projectPicker.items(), this.ticket()?.project, this.projectVisible()),
   );
 
   readonly categoryName = computed(() => {
@@ -215,6 +208,11 @@ export class TicketDetail {
   private readonly today = startOfToday();
 
   constructor() {
+    // A new team re-scopes the assignee search.
+    toObservable(computed(() => this.ticket()?.teamId ?? null))
+      .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.assignees.reset());
+
     // Seed from the row we navigated from so the page renders instantly.
     const seeded = this.router.getCurrentNavigation()?.extras.state?.['ticket'] as Ticket | undefined;
     if (seeded) {
@@ -253,24 +251,18 @@ export class TicketDetail {
     // Keep showing a seeded ticket while it refreshes; otherwise show the skeleton.
     this.loadState.set(hasSeed ? 'ready' : 'loading');
 
-    const organizationId = this.authService.organizationId();
-
-    // Options for the inline editors.
+    // Options for the inline editors (projects and assignees are searched when their pickers open).
     forkJoin({
-      statuses: this.statusesService.getAll(),
-      categories: this.categoriesService.getAll(),
-      projects: this.projectsService.getAll(),
+      statuses: this.statusesService.options(),
+      categories: this.categoriesService.options(),
       department: this.departmentService.load(),
-      members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.statuses.set(res.statuses);
           this.categories.set(res.categories);
-          this.projects.set(res.projects);
           this.teams.set(res.department.teams);
-          this.members.set(res.members);
         },
         error: (err: unknown) => console.error('Error loading ticket options:', err),
       });
@@ -308,8 +300,7 @@ export class TicketDetail {
 
   // ─── Inline property edits (optimistic + PATCH) ─────────
   readonly canEdit = computed(() => this.authService.isAdmin() || this.ticket()?.createdById === this.authService.currentUser()?.id);
-  readonly canEditProject = computed(() => this.canEdit() && (this.authService.isAdmin() ||
-    !this.ticket()?.projectId || this.projects().some(project => project.id === this.ticket()?.projectId)));
+  readonly canEditProject = computed(() => this.canEdit() && (!this.ticket()?.projectId || this.projectVisible()));
   readonly clientName = computed(() => clientDisplayName(this.ticket()?.project?.client) || 'No client');
 
   private applyPatch(payload: UpdateTicketPayload, optimistic: Partial<Ticket>): void {
@@ -352,7 +343,7 @@ export class TicketDetail {
   }
 
   setProject(project: Project): void {
-    if (!this.canEditProject() || !this.projectMatches().items.some(option => option.id === project.id)) return;
+    if (!this.canEditProject() || !this.projectOptions().some(option => option.id === project.id)) return;
     this.applyPatch(
       { projectId: project.id },
       {

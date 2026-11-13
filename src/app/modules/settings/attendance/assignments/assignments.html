@@ -34,9 +34,9 @@
     </div>
   </div>
 
-  @if (error()) {
+  @if (error() || loadFailed()) {
     <p-message severity="error" styleClass="ds-message">
-      <span>{{ error() }}</span>
+      <span>{{ error() || 'Failed to load assignments. Please try again.' }}</span>
       <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
     </p-message>
   }
@@ -59,17 +59,17 @@
     <!-- Teams -->
     <section class="flex flex-col gap-3" aria-labelledby="teams-heading">
       <h2 id="teams-heading" class="ds-section-title">Teams</h2>
-      @if (teamRows().length === 0) {
+      @if (teams.total() === 0 && !teamList.search()) {
         <app-empty-state icon="pi pi-sitemap" heading="No teams yet">
           <p class="empty-copy"><a routerLink="/settings/teams" class="text-primary hover:underline font-medium">Create a team</a> to assign it a schedule.</p>
         </app-empty-state>
       } @else {
         <p-iconfield class="section-search">
           <p-inputicon class="pi pi-search" />
-          <input pInputText type="search" (input)="teamSearch.set($any($event.target).value); teamPager.reset()" placeholder="Search teams…" aria-label="Search teams" />
+          <input pInputText type="search" [value]="teamList.searchInput()" (input)="onTeamSearch($event)" placeholder="Search teams…" aria-label="Search teams" autocomplete="off" maxlength="100" />
         </p-iconfield>
         <div>
-          <p-table class="ds-table" [value]="teamPager.pageRows()" dataKey="id" [rowHover]="true">
+          <p-table class="ds-table" [value]="teams.rows()" [loading]="teams.loading()" dataKey="id" [rowHover]="true">
             <ng-template pTemplate="header">
               <tr>
                 <th scope="col">Team</th>
@@ -81,11 +81,11 @@
                 <td class="font-medium text-heading">{{ row.name }}</td>
                 <td>
                   <p-select
-                    [ngModel]="row.scheduleId"
+                    [ngModel]="row.weeklyScheduleId"
                     [options]="scheduleOptions()"
                     optionLabel="label" optionValue="value"
                     placeholder="Uses org default"
-                    [showClear]="row.scheduleId !== null"
+                    [showClear]="row.weeklyScheduleId !== null"
                     [disabled]="isSaving(row.id) || scheduleOptions().length === 0"
                     [loading]="isSaving(row.id)"
                     appendTo="body" styleClass="w-full"
@@ -103,11 +103,11 @@
             </ng-template>
           </p-table>
           <app-list-paginator
-            [total]="teamPager.total()"
-            [page]="teamPager.currentPage()"
-            [pageSize]="teamPager.pageSize()"
+            [total]="teams.total()"
+            [page]="teamList.page()"
+            [pageSize]="teamList.pageSize()"
             itemLabel="teams"
-            (pageChange)="teamPager.onPage($event)"
+            (pageChange)="teamList.onPage($event)"
           />
         </div>
       }
@@ -118,19 +118,19 @@
       <div class="flex flex-col gap-0.5">
         <h2 id="employees-heading" class="ds-section-title">Employees</h2>
         <p class="text-sm text-muted">
-          {{ assignedEmployeeCount() }} of {{ employeeRows().length }} have a personal override. The rest follow their team or the default.
+          {{ assignedEmployeeCount() }} of {{ employees.total() }} have a personal override. The rest follow their team or the default.
         </p>
       </div>
 
-      @if (employeeRows().length === 0) {
+      @if (employees.total() === 0 && !employeeList.search()) {
         <app-empty-state icon="pi pi-users" heading="No employees found in this organization." />
       } @else {
         <p-iconfield class="section-search">
           <p-inputicon class="pi pi-search" />
-          <input pInputText type="search" (input)="employeeSearch.set($any($event.target).value); employeePager.reset()" placeholder="Search by name or email…" aria-label="Search employees" />
+          <input pInputText type="search" [value]="employeeList.searchInput()" (input)="onEmployeeSearch($event)" placeholder="Search by name or email…" aria-label="Search employees" autocomplete="off" maxlength="100" />
         </p-iconfield>
         <div>
-          <p-table class="ds-table" [value]="employeePager.pageRows()" dataKey="userId" [rowHover]="true">
+          <p-table class="ds-table" [value]="employees.rows()" [loading]="employees.loading()" dataKey="userId" [rowHover]="true">
             <ng-template pTemplate="header">
               <tr>
                 <th scope="col">Person</th>
@@ -147,11 +147,11 @@
                 </td>
                 <td>
                   <p-select
-                    [ngModel]="row.scheduleId"
+                    [ngModel]="row.weeklyScheduleId"
                     [options]="scheduleOptions()"
                     optionLabel="label" optionValue="value"
                     placeholder="Team or default"
-                    [showClear]="row.scheduleId !== null"
+                    [showClear]="row.weeklyScheduleId !== null"
                     [disabled]="isSaving(row.userId) || scheduleOptions().length === 0"
                     [loading]="isSaving(row.userId)"
                     appendTo="body" styleClass="w-full"
@@ -169,11 +169,11 @@
             </ng-template>
           </p-table>
           <app-list-paginator
-            [total]="employeePager.total()"
-            [page]="employeePager.currentPage()"
-            [pageSize]="employeePager.pageSize()"
+            [total]="employees.total()"
+            [page]="employeeList.page()"
+            [pageSize]="employeeList.pageSize()"
             itemLabel="people"
-            (pageChange)="employeePager.onPage($event)"
+            (pageChange)="employeeList.onPage($event)"
           />
         </div>
       }
@@ -191,10 +191,13 @@
           <label for="preview-user" class="text-sm font-medium text-heading">Employee</label>
           <p-select
             inputId="preview-user"
-            [ngModel]="previewUserId()" (ngModelChange)="previewUserId.set($event)"
-            [options]="employeeSelectOptions()" optionLabel="label" optionValue="value"
+            [ngModel]="previewUserId()" (ngModelChange)="selectPreviewUser($event)"
+            [options]="previewOptions()" optionLabel="label" optionValue="value"
             [filter]="true" filterBy="label"
-            placeholder="Select an employee"
+            [loading]="previewPeople.loading()"
+            (onShow)="previewPeople.open()"
+            (onFilter)="previewPeople.search($event.filter)"
+            placeholder="Search for an employee"
             appendTo="body" styleClass="w-full"
           />
         </div>

@@ -613,3 +613,10 @@
   .edit-caret,
   .pick-opt { transition: none; }
 }
+
+/* "Show more" under a server-searched picker list. */
+.pick-more {
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}

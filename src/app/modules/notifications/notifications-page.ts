@@ -2,18 +2,24 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Subject, catchError, of, startWith, switchMap, tap } from 'rxjs';
+import { Subject, catchError, of, switchMap, tap } from 'rxjs';
+import { ListPaginator } from '../../shared/ui/list-paginator/list-paginator';
+import { injectListState } from '../../shared/data/url-list-state';
 import { NotificationsSocketService } from '../../core/notifications/notifications-socket.service';
 import { AppNotification } from '../../core/notifications/notification.model';
 import { notificationRoute } from '../../core/notifications/notification-route';
 
 @Component({
   selector: 'app-notifications-page',
+  imports: [ListPaginator],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main>
@@ -50,20 +56,13 @@ import { notificationRoute } from '../../core/notifications/notification-route';
       @if (!loading() && !error() && !items().length) {
         <p>No notifications found.</p>
       }
-      <footer>
-        <button
-          [disabled]="loading() || page() <= 1"
-          (click)="page.set(page() - 1); load()"
-        >
-          Previous</button
-        ><span>Page {{ page() }} of {{ lastPage() || 1 }}</span
-        ><button
-          [disabled]="loading() || page() >= lastPage()"
-          (click)="page.set(page() + 1); load()"
-        >
-          Next
-        </button>
-      </footer>
+      <app-list-paginator
+        [total]="total()"
+        [page]="list.page()"
+        [pageSize]="list.pageSize()"
+        itemLabel="notifications"
+        (pageChange)="list.onPage($event)"
+      />
     </main>
   `,
   styles: [
@@ -119,22 +118,27 @@ export class NotificationsPage {
   private readonly router = inject(Router);
   private readonly destroy = inject(DestroyRef);
   private readonly refresh = new Subject<void>();
+  /** Page, page size and "Unread only" live in the URL. */
+  readonly list = injectListState({ pageSize: 20, filters: { unread: false as boolean } });
   readonly items = signal<AppNotification[]>([]);
-  readonly page = signal(1);
-  readonly lastPage = signal(0);
+  readonly total = signal(0);
+  readonly page = this.list.page;
   readonly loading = signal(false);
   readonly error = signal('');
-  readonly unreadOnly = signal(false);
+  readonly unreadOnly = computed(() => this.list.filters().unread);
   constructor() {
+    effect(() => {
+      this.list.query();
+      untracked(() => this.load());
+    });
     this.refresh
       .pipe(
-        startWith(undefined),
         tap(() => {
           this.loading.set(true);
           this.error.set('');
         }),
         switchMap(() =>
-          this.notifications.list(this.page(), this.unreadOnly()).pipe(
+          this.notifications.list(this.page(), this.unreadOnly(), this.list.pageSize()).pipe(
             catchError(() => {
               this.error.set('Could not load notifications.');
               return of(null);
@@ -147,7 +151,7 @@ export class NotificationsPage {
         this.loading.set(false);
         if (result) {
           this.items.set(result.data);
-          this.lastPage.set(result.meta.lastPage);
+          this.total.set(result.meta.total);
         }
       });
     this.notifications.incoming
@@ -155,7 +159,7 @@ export class NotificationsPage {
       .subscribe((item) => {
         if (this.page() === 1)
           this.items.update((items) =>
-            [item, ...items.filter((row) => row.id !== item.id)].slice(0, 20),
+            [item, ...items.filter((row) => row.id !== item.id)].slice(0, this.list.pageSize()),
           );
       });
     this.notifications.reads
@@ -176,9 +180,7 @@ export class NotificationsPage {
     this.refresh.next();
   }
   toggleUnread() {
-    this.unreadOnly.update((value) => !value);
-    this.page.set(1);
-    this.load();
+    this.list.setFilter('unread', !this.unreadOnly());
   }
   markAll() {
     this.notifications

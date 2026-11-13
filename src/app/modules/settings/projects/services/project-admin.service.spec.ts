@@ -21,6 +21,9 @@ describe('internal project API request contracts', () => {
     service.setArchived('example-project', false).subscribe(); const restore = http.expectOne(req => req.url.endsWith('/example-project/archive')); expect(restore.request.body).toEqual({ isArchived: false }); restore.flush({ data: {} });
   });
   it('hides closed only when explicitly requested', () => {
-    service.listAll({ search: '', clientId: null, unassigned: false, teamId: null, status: null, includeArchived: false, includeClosed: false, sortField: 'createdAt', sortOrder: 'desc' }).subscribe(); const list = http.expectOne(req => req.url.endsWith('/maintenance/projects')); expect(list.request.params.get('includeClosed')).toBe('false'); expect(list.request.withCredentials).toBe(true); list.flush({ data: [], meta: { lastPage: 0 } });
+    service.list({ page: 2, limit: 25, clientId: null, unassigned: false, teamId: null, status: null, includeArchived: false, includeClosed: false, sortField: 'createdAt', sortOrder: 'desc' }).subscribe(); const list = http.expectOne(req => req.url.endsWith('/maintenance/projects')); expect(list.request.params.get('includeClosed')).toBe('false'); expect(list.request.params.get('page')).toBe('2'); expect(list.request.params.get('limit')).toBe('25'); expect(list.request.params.get('withClientTotals')).toBe('true'); expect(list.request.params.has('clientId')).toBe(false); expect(list.request.withCredentials).toBe(true); list.flush({ data: [], meta: { total: 0, page: 2, limit: 25, lastPage: 0 } });
+  });
+  it('leaves out the default closed toggle and sends unassigned instead of a client', () => {
+    service.list({ page: 1, limit: 25, clientId: 'example-client', unassigned: true, teamId: null, status: null, includeArchived: false, includeClosed: true }).subscribe(); const list = http.expectOne(req => req.url.endsWith('/maintenance/projects')); expect(list.request.params.has('includeClosed')).toBe(false); expect(list.request.params.get('unassigned')).toBe('true'); expect(list.request.params.has('clientId')).toBe(false); list.flush({ data: [], meta: { total: 0, page: 1, limit: 25, lastPage: 0 } });
   });
 });

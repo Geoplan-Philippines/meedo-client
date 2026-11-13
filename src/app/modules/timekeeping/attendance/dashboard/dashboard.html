@@ -12,7 +12,8 @@
       }
       <p-datepicker
         ariaLabel="Board day"
-        [formControl]="dateControl"
+        [ngModel]="selectedDate()"
+        (ngModelChange)="setDate($event)"
         dateFormat="yy-mm-dd"
         [showIcon]="true"
         iconDisplay="input"
@@ -90,7 +91,10 @@
               class="search-input"
               placeholder="Search by name or code…"
               aria-label="Search roster"
-              [formControl]="rosterSearch"
+              [value]="rosterList.searchInput()"
+              (input)="onRosterSearch($event)"
+              autocomplete="off"
+              maxlength="100"
             />
           </div>
         </div>
@@ -98,10 +102,6 @@
         <p-table
           #rosterTable
           [value]="rosterEntries()"
-          [lazy]="true"
-          (onLazyLoad)="onRosterLazyLoad($event)"
-          [first]="rosterFirst()"
-          [rows]="rosterRows()"
           [loading]="isLoadingRoster()"
           [rowHover]="true"
           dataKey="employeeId"
@@ -156,8 +156,8 @@
                   <div class="empty-icon" aria-hidden="true"><i class="pi pi-users"></i></div>
                   <p class="empty-title">No employees to show</p>
                   <p class="empty-body">
-                    @if (rosterSearch.value) {
-                      No one matches "{{ rosterSearch.value }}". Try different keywords.
+                    @if (rosterList.search()) {
+                      No one matches "{{ rosterList.search() }}". Try different keywords.
                     } @else if (statusFilter()) {
                       No one is {{ statusFilter() }} for this day.
                     } @else {
@@ -174,7 +174,7 @@
           [page]="rosterPage()"
           [pageSize]="rosterRows()"
           itemLabel="employees"
-          (pageChange)="onRosterPage($event)"
+          (pageChange)="rosterList.onPage($event)"
         />
       </div>
     </section>
@@ -212,7 +212,10 @@
                 class="search-input"
                 placeholder="Search employee…"
                 aria-label="Search scoreboard"
-                [formControl]="tardSearch"
+                [value]="tardList.searchInput()"
+                (input)="onTardSearch($event)"
+                autocomplete="off"
+                maxlength="100"
               />
             </div>
           </div>
@@ -221,10 +224,6 @@
         <p-table
           #tardTable
           [value]="tardEntries()"
-          [lazy]="true"
-          (onLazyLoad)="onTardLazyLoad($event)"
-          [first]="tardFirst()"
-          [rows]="tardRows()"
           [loading]="isLoadingTard()"
           dataKey="employeeId"
           class="ds-table board-table"
@@ -274,8 +273,8 @@
                   <div class="empty-icon" aria-hidden="true"><i class="pi pi-verified"></i></div>
                   <p class="empty-title">No lateness in this window</p>
                   <p class="empty-body">
-                    @if (tardSearch.value) {
-                      No one matches "{{ tardSearch.value }}".
+                    @if (tardList.search()) {
+                      No one matches "{{ tardList.search() }}".
                     } @else {
                       No attendance was recorded for this period yet.
                     }
@@ -290,7 +289,7 @@
           [page]="tardPage()"
           [pageSize]="tardRows()"
           itemLabel="employees"
-          (pageChange)="onTardPage($event)"
+          (pageChange)="tardList.onPage($event)"
         />
       </div>
     </section>

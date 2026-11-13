@@ -20,13 +20,14 @@ export interface ClientOption {
   isArchived: boolean;
 }
 
-export type ClientSortField = 'customerName' | 'projectCount' | 'createdAt';
+/** `name` is the shown name (display name, else the Apptivo customer name). */
+export type ClientSortField = 'name' | 'customerName' | 'projectCount' | 'createdAt';
 
 export interface ClientListParams {
   page: number;
   limit: number;
   search?: string;
   includeArchived?: boolean;
-  sortField?: ClientSortField;
+  sortField?: string;
   sortOrder?: 'asc' | 'desc';
 }

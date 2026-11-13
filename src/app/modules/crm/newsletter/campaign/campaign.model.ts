@@ -18,4 +18,6 @@ export interface CampaignListParams {
   limit: number;
   search?: string;
   includeArchived?: boolean;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
 }

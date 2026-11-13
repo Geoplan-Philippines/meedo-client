@@ -154,15 +154,32 @@ export interface TimesheetSummaryEmployee {
   entries: TimesheetEntry[];
 }
 
-export interface TimesheetSummary {
+/** Approval tabs, per employee: has a submitted entry, every entry approved, has a returned entry. */
+export type TimesheetSummaryTab = 'ALL' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+
+/** Week totals that come with each page of employees (`meta` of GET /summary). */
+export interface TimesheetSummaryMeta {
   periodStart: string;
   periodEnd: string;
   isLocked: boolean;
+  /** Employees matching the search, across every tab. */
   totalEmployees: number;
   totalEntries: number;
   totalHours: number;
+  overtimeHours: number;
   totalsByStatus: Record<string, number>;
-  employees: TimesheetSummaryEmployee[];
+  tabCounts: { all: number; submitted: number; approved: number; rejected: number };
+}
+
+export interface TimesheetSummaryPageQuery extends TimesheetSummaryFilters {
+  page: number;
+  limit: number;
+  /** Employee name, email or department (team). */
+  search?: string;
+  tab?: TimesheetSummaryTab;
+  /** One employee, for the review page. */
+  userId?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface TimesheetSummaryFilters {

@@ -1,5 +1,5 @@
 import { CommonModule, TitleCasePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
@@ -9,7 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { Table, TableModule } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -19,19 +19,28 @@ import {
   TimesheetEntry,
   TimesheetPeriodLock,
   TimesheetProject,
-  TimesheetSummary,
   TimesheetSummaryEmployee,
+  TimesheetSummaryTab,
 } from '../models/timesheet.model';
 import { TimesheetService } from '../services/timesheet.service';
 import { TimesheetEntryForm } from '../entry-form/timesheet-entry-form';
 import { manilaTodayKey } from '../entry-form/timesheet-entry-form';
+import { TimesheetProjectPicker } from '../entry-form/timesheet-project-picker';
 import { timesheetProjectLabel } from '../shared/timesheet-project.util';
 
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { StatStrip, StatItem } from '../../../../shared/ui/stat-strip/stat-strip';
-import { ClientPager } from '../../../../shared/utils/client-pager';
+import { injectListState } from '../../../../shared/data/url-list-state';
+import { pagedList } from '../../../../shared/data/paged-list';
+
+/** Approvals: week, tab, search, project and page live in the URL. */
+const APPROVALS_LIST = {
+  pageSize: 25,
+  filters: { week: null as string | null, tab: 'ALL', project: null as string | null },
+};
+const SUMMARY_TABS: readonly string[] = ['ALL', 'SUBMITTED', 'APPROVED', 'REJECTED'];
 import { TagModule } from 'primeng/tag';
 import { TabsModule } from 'primeng/tabs';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -52,6 +61,7 @@ import { BadgeModule } from 'primeng/badge';
     TitleCasePipe,
     CommonModule,
     TimesheetEntryForm,
+    TimesheetProjectPicker,
     FormsModule,
     TableModule,
     ButtonModule,
@@ -67,29 +77,41 @@ import { BadgeModule } from 'primeng/badge';
   styleUrl: './timesheet-approval.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TimesheetApproval implements OnInit {
+export class TimesheetApproval {
   private readonly timesheetService = inject(TimesheetService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
 
-  private readonly approvalTable = viewChild<Table>('approvalTable');
-
-  readonly selectedDate = signal<Date>(new Date(manilaTodayKey() + 'T12:00:00'));
+  readonly list = injectListState(APPROVALS_LIST);
+  /** A date in the chosen week (from `?week=YYYY-MM-DD`, else today in Manila). */
+  readonly selectedDate = computed(() => {
+    const week = this.list.filters().week;
+    return new Date((week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : manilaTodayKey()) + 'T12:00:00');
+  });
   readonly selectedWeek = computed(() => startOfWeek(this.selectedDate()));
-  readonly summary = signal<TimesheetSummary | null>(null);
   readonly periodLock = signal<TimesheetPeriodLock | null>(null);
   readonly auditLogs = signal<TimesheetAuditLog[]>([]);
-  readonly projects = signal<TimesheetProject[]>([]);
+  /** Projects already seen in this week's entries, so the filter keeps its label. */
+  readonly projects = computed<TimesheetProject[]>(() => {
+    const seen = new Map<string, TimesheetProject>();
+    for (const entry of this.employees().flatMap((employee) => employee.entries)) {
+      if (entry.project) seen.set(entry.project.id, entry.project);
+    }
+    return [...seen.values()];
+  });
 
   readonly selectedEntryIds = signal<Set<string>>(new Set());
   readonly selectedEmployee = signal<TimesheetSummaryEmployee | null>(null);
-  readonly activeTab = signal<'SUBMITTED' | 'APPROVED' | 'REJECTED' | null>(null);
+  readonly activeTab = computed<'SUBMITTED' | 'APPROVED' | 'REJECTED' | null>(() => {
+    const tab = this.list.filters().tab;
+    return tab === 'SUBMITTED' || tab === 'APPROVED' || tab === 'REJECTED' ? tab : null;
+  });
   readonly editingEntry = signal<TimesheetEntry | null>(null);
   editEntry(entry: TimesheetEntry) { if (!this.isPeriodLocked() && entry.status === 'SUBMITTED') this.editingEntry.set(entry); }
   entrySaved() { this.editingEntry.set(null); this.loadData(); }
   readonly taskPreviewContent = signal<string | null>(null);
 
-  readonly isLoading = signal(false);
+  readonly isLoading = computed(() => !this.summaryPage.loaded() || this.summaryPage.loading());
   readonly isApproving = signal(false);
   readonly isRejecting = signal(false);
   readonly isExporting = signal(false);
@@ -100,14 +122,29 @@ export class TimesheetApproval implements OnInit {
   readonly rejectReason = signal('');
   readonly unlockReason = signal('');
 
-  readonly employeeFilter = signal('');
-  readonly projectFilter = signal<string | null>(null);
+  readonly employeeFilter = this.list.searchInput;
+  readonly projectFilter = computed(() => this.list.filters().project);
 
   readonly periodStart = computed(() => toDateInputValue(this.selectedWeek()));
   readonly periodEnd = computed(() => toDateInputValue(addDays(this.selectedWeek(), 6)));
   readonly weekLabel = computed(() => `${formatShortDate(this.selectedWeek())} – ${formatShortDate(addDays(this.selectedWeek(), 6))}`);
 
-  readonly employees = computed(() => this.summary()?.employees ?? []);
+  /** One page of employees for the week; tab, search and project are applied by the API. */
+  readonly summaryPage = pagedList({
+    params: () => ({
+      periodStart: this.periodStart(),
+      periodEnd: this.periodEnd(),
+      page: this.list.page(),
+      limit: this.list.pageSize(),
+      search: this.list.search() || undefined,
+      tab: (SUMMARY_TABS.includes(this.list.filters().tab) ? this.list.filters().tab : 'ALL') as TimesheetSummaryTab,
+      projectId: this.list.filters().project ?? undefined,
+    }),
+    load: (query) => this.timesheetService.getSummaryPage(query),
+    refreshOn: ['timesheet'],
+  });
+  readonly summary = this.summaryPage.meta;
+  readonly employees = this.summaryPage.rows;
   readonly selectedCount = computed(() => this.selectedEntryIds().size);
   readonly isPeriodLocked = computed(() => this.periodLock()?.isLocked ?? this.summary()?.isLocked ?? false);
 
@@ -116,46 +153,9 @@ export class TimesheetApproval implements OnInit {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   });
 
-  readonly filteredEmployees = computed(() => {
-    let list = this.employees();
+  readonly tabCounts = computed(() => this.summary()?.tabCounts ?? { all: 0, submitted: 0, approved: 0, rejected: 0 });
 
-    const search = this.employeeFilter().toLowerCase().trim();
-    if (search) {
-      list = list.filter(e =>
-        e.employeeName.toLowerCase().includes(search) ||
-        e.employeeEmail.toLowerCase().includes(search) ||
-        (e.department ?? '').toLowerCase().includes(search),
-      );
-    }
-
-    const tab = this.activeTab();
-    if (tab === 'SUBMITTED') {
-      list = list.filter(e => e.entries.some(en => en.status === 'SUBMITTED'));
-    } else if (tab === 'APPROVED') {
-      list = list.filter(e => e.status === 'APPROVED');
-    } else if (tab === 'REJECTED') {
-      list = list.filter(e => e.entries.some(en => en.status === 'REJECTED'));
-    }
-
-    return list;
-  });
-
-  readonly tabCounts = computed(() => {
-    const list = this.employees();
-    return {
-      all: list.length,
-      submitted: list.filter(e => e.entries.some(en => en.status === 'SUBMITTED')).length,
-      approved: list.filter(e => e.status === 'APPROVED').length,
-      rejected: list.filter(e => e.entries.some(en => en.status === 'REJECTED')).length,
-    };
-  });
-
-  readonly totalOvertimeHours = computed(() =>
-    this.employees().reduce((sum, e) => sum + e.overtimeHours, 0),
-  );
-
-  /** Employee rows for the current tab and filters, paged with the shared list footer. */
-  readonly pager = new ClientPager(this.filteredEmployees);
+  readonly totalOvertimeHours = computed(() => this.summary()?.overtimeHours ?? 0);
 
   /** Headline numbers for the week. Zero shows as "no data", as before. */
   readonly weekStats = computed<StatItem[]>(() => {
@@ -172,6 +172,7 @@ export class TimesheetApproval implements OnInit {
     ];
   });
 
+  /** Actionable entries of the employees on this page ("select all" acts on the page). */
   readonly submittedEntryIds = computed(() =>
     this.employees().flatMap(e => e.entries)
       .filter(e => isActionable(e.status))
@@ -185,57 +186,62 @@ export class TimesheetApproval implements OnInit {
         this.showRejectDialog.set(false);
       }
     });
-  }
+    this.list.clampToTotal(this.summaryPage);
 
-  ngOnInit(): void {
-    this.loadData();
+    // A new week (or a page of different employees) clears the selection and reloads the lock and history.
+    effect(() => {
+      const periodStart = this.periodStart();
+      const periodEnd = this.periodEnd();
+      untracked(() => this.loadWeekState(periodStart, periodEnd));
+    });
+    effect(() => {
+      this.list.query();
+      untracked(() => this.selectedEntryIds.set(new Set()));
+    });
+    // Keep the open details panel in step with the reloaded page.
+    effect(() => {
+      const rows = this.employees();
+      untracked(() => {
+        const selected = this.selectedEmployee();
+        if (selected) this.selectedEmployee.set(rows.find(e => e.userId === selected.userId) ?? selected);
+      });
+    });
   }
 
   onWeekChange(date: Date | Date[] | null): void {
     const selected = Array.isArray(date) ? date[0] : date;
     if (!selected) return;
-    this.selectedDate.set(selected);
-    this.loadData();
+    this.list.setFilter('week', toDateInputValue(startOfWeek(selected)));
   }
 
   previousWeek(): void { this.changeWeekBy(-7); }
   nextWeek(): void     { this.changeWeekBy(7); }
 
   private changeWeekBy(days: number): void {
-    this.selectedDate.set(addDays(this.selectedDate(), days));
-    this.loadData();
+    this.list.setFilter('week', toDateInputValue(addDays(this.selectedWeek(), days)));
   }
 
+  /** Reloads the page of employees and the week's lock and history. */
   loadData(): void {
-    this.isLoading.set(true);
     this.selectedEntryIds.set(new Set());
+    this.summaryPage.reload();
+    this.loadWeekState(this.periodStart(), this.periodEnd());
+  }
 
+  private loadWeekState(periodStart: string, periodEnd: string): void {
     forkJoin({
-      summary: this.timesheetService.getSummary(this.currentFilters()),
-      // Include archived projects so entries already logged against them can still be filtered.
-      projects: this.timesheetService.getProjects(true),
-      lock: this.timesheetService.getPeriodLock(this.periodStart(), this.periodEnd()),
-      auditLogs: this.timesheetService.getAuditLogs(1, 8, this.periodStart(), this.periodEnd()),
-    })
-      .pipe(finalize(() => this.isLoading.set(false)))
-      .subscribe({
-        next: ({ summary, projects, lock, auditLogs }) => {
-          this.summary.set(summary);
-          this.projects.set(projects);
-          this.periodLock.set(lock);
-          this.auditLogs.set(auditLogs.data);
-
-          const selected = this.selectedEmployee();
-          if (selected) {
-            const refreshed = summary.employees?.find(e => e.userId === selected.userId) ?? null;
-            this.selectedEmployee.set(refreshed);
-          }
-        },
-        error: (err: unknown) => {
-          console.error('Error loading timesheet approval:', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to load approval summary') });
-        },
-      });
+      lock: this.timesheetService.getPeriodLock(periodStart, periodEnd),
+      auditLogs: this.timesheetService.getAuditLogs(1, 8, periodStart, periodEnd),
+    }).subscribe({
+      next: ({ lock, auditLogs }) => {
+        this.periodLock.set(lock);
+        this.auditLogs.set(auditLogs.data);
+      },
+      error: (err: unknown) => {
+        console.error('Error loading timesheet approval:', err);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: apiErrorMessage(err, 'Failed to load approval summary') });
+      },
+    });
   }
 
   applyFilters(): void {
@@ -243,25 +249,19 @@ export class TimesheetApproval implements OnInit {
   }
 
   clearFilters(): void {
-    this.employeeFilter.set('');
-    this.projectFilter.set(null);
-    this.loadData();
+    this.list.clearFilters();
   }
 
   setActiveTab(tab: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | null): void {
-    this.activeTab.set(tab);
-    this.resetPage();
+    this.list.setFilter('tab', tab ?? 'ALL');
   }
 
   onEmployeeFilterChange(value: string): void {
-    this.employeeFilter.set(value);
-    this.resetPage();
+    this.list.setSearch(value);
   }
 
-  /** Snap the client-side paginator back to the first page after the row set changes. */
-  private resetPage(): void {
-    const table = this.approvalTable();
-    if (table) table.first = 0;
+  setProjectFilter(project: TimesheetProject | null): void {
+    this.list.setFilter('project', project?.id ?? null);
   }
 
   selectEmployee(employee: TimesheetSummaryEmployee): void {

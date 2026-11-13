@@ -15,13 +15,14 @@
     <span pageActions class="ds-readonly-note"><i class="pi pi-lock" aria-hidden="true"></i> Read-only. Ask an admin to rename or reassign projects.</span>
   }
 
-  <form pageToolbar class="toolbar" [formGroup]="filters" (ngSubmit)="reload()" role="search" aria-label="Filter projects">
+  <form pageToolbar class="toolbar" (submit)="$event.preventDefault()" role="search" aria-label="Filter projects">
     <p-iconfield class="ds-search toolbar-search">
       <p-inputicon class="pi pi-search" />
       <input
         pInputText
         type="search"
-        formControlName="search"
+        [value]="list.searchInput()"
+        (input)="onSearch($event)"
         placeholder="Search project or client name, quote subject or WO number"
         aria-label="Search projects by project or client name, quote subject or WO number"
         autocomplete="off"
@@ -29,10 +30,12 @@
       />
     </p-iconfield>
     @if (!routeClientId()) {
-    <app-client-typeahead label="Filter by customer" placeholder="Search customers" [value]="filters.controls.clientId.value" [includeArchived]="true" (valueChange)="filters.controls.clientId.setValue($event?.id ?? null)" />
+    <app-client-typeahead label="Filter by customer" placeholder="Search customers" [value]="list.filters().clientId" [includeArchived]="true" (valueChange)="setClientFilter($event?.id ?? null)" />
     }
     <p-select
-      formControlName="status"
+      [ngModel]="list.filters().status"
+      (ngModelChange)="setStatus($event)"
+      name="status"
       [options]="statusOptions()"
       [showClear]="true"
       placeholder="All statuses"
@@ -41,7 +44,9 @@
       styleClass="toolbar-select"
     />
     <p-select
-      formControlName="sort"
+      [ngModel]="sortIndex()"
+      (ngModelChange)="setSort($event)"
+      name="sort"
       [options]="sortOptions"
       optionLabel="label"
       optionValue="value"
@@ -49,16 +54,16 @@
       appendTo="body"
       styleClass="toolbar-select"
     />
-    <label class="ds-toggle"><input type="checkbox" class="toolbar-check" formControlName="includeClosed" /> Show closed</label>
+    <label class="ds-toggle"><input type="checkbox" class="toolbar-check" [checked]="list.filters().includeClosed" (change)="setIncludeClosed($any($event.target).checked)" /> Show closed</label>
     <label class="ds-toggle" for="projects-show-archived">
-      <p-toggleSwitch inputId="projects-show-archived" formControlName="includeArchived" />
+      <p-toggleSwitch inputId="projects-show-archived" name="includeArchived" [ngModel]="list.filters().includeArchived" (ngModelChange)="setIncludeArchived($event)" />
       <span>Show archived</span>
     </label>
   </form>
 
   @if (isAdmin() && creating()) { <app-new-internal-record kind="project" (saved)="onCreated()" (cancelled)="creating.set(false)" /> }
 
-  @switch (loadState()) {
+  @switch (!projects.loaded() && !projects.error() ? 'loading' : projects.error() && !projects.loaded() ? 'error' : 'ready') {
     @case ('loading') {
       <div class="ds-table-skeleton" role="status">
         <span class="ds-sr-only">Loading projects…</span>
@@ -78,7 +83,7 @@
       </p-message>
     }
     @default {
-      @if (projects().length === 0) {
+      @if (projects.total() === 0) {
         <app-empty-state icon="pi pi-briefcase" [heading]="hasActiveFilters() ? 'No projects match these filters' : 'No projects yet'">
           @if (hasActiveFilters()) {
             <p-button label="Clear filters" text (onClick)="clearFilters()" />
@@ -90,7 +95,7 @@
         </app-empty-state>
       } @else {
         <p class="list-caption" aria-live="polite">
-          {{ projects().length }} {{ projects().length === 1 ? 'project' : 'projects' }} across {{ clientCount() }}
+          {{ projects.total() }} {{ projects.total() === 1 ? 'project' : 'projects' }} across {{ clientCount() }}
           {{ clientCount() === 1 ? 'customer' : 'customers' }}
         </p>
 
@@ -98,6 +103,7 @@
           <p-table
             class="ds-table projects-table"
             [value]="groupedRows()"
+            [loading]="projects.loading()"
             dataKey="id"
             rowGroupMode="subheader"
             groupRowsBy="client.id"
@@ -132,6 +138,7 @@
                     type="button"
                     class="row"
                     [attr.aria-label]="'Open ' + project.name"
+                    [appPrefetch]="projectTicketsLink(project)"
                     (click)="openProject(project); $event.stopPropagation()"
                   >
                     <span class="row-title">
@@ -178,11 +185,11 @@
           </p-table>
         </div>
         <app-list-paginator
-          [total]="pager.total()"
-          [page]="pager.currentPage()"
-          [pageSize]="pager.pageSize()"
+          [total]="projects.total()"
+          [page]="list.page()"
+          [pageSize]="list.pageSize()"
           itemLabel="projects"
-          (pageChange)="pager.onPage($event)"
+          (pageChange)="list.onPage($event)"
         />
       }
     }

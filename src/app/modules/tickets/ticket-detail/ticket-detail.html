@@ -268,10 +268,10 @@
     </ul>
   </p-popover>
 
-  <p-popover #assigneePop styleClass="detail-pop" (onHide)="assigneeSearch.set('')">
+  <p-popover #assigneePop styleClass="detail-pop" (onShow)="assignees.open()">
     <div class="pick-search">
       <i class="pi pi-search" aria-hidden="true"></i>
-      <input type="text" placeholder="Search members…" aria-label="Search members" [value]="assigneeSearch()" (input)="assigneeSearch.set($any($event.target).value)" />
+      <input type="text" placeholder="Search members…" aria-label="Search members" [value]="assignees.term()" (input)="assignees.search($any($event.target).value)" />
       @if (filteredMembers().length > 0) {
         <button
           type="button"
@@ -312,15 +312,24 @@
           </button>
         </li>
       } @empty {
-        <li class="pick-empty">{{ teamName() ? 'No members in this team' : 'No members' }}</li>
+        <li class="pick-empty">
+          @if (assignees.loading()) { Loading members… }
+          @else if (assignees.failed()) { Could not load members. }
+          @else { {{ teamName() ? 'No members in this team' : 'No members' }} }
+        </li>
       }
     </ul>
+    @if (assignees.hasMore()) {
+      <button type="button" class="pick-opt pick-more" [disabled]="assignees.loading()" (click)="assignees.loadMore()">
+        Show more ({{ assignees.items().length }} of {{ assignees.total() }})
+      </button>
+    }
   </p-popover>
 
-  <p-popover #projectPop styleClass="detail-pop" (onHide)="projectSearch.set('')">
+  <p-popover #projectPop styleClass="detail-pop" (onShow)="projectPicker.open()">
     <div class="pick-search">
       <i class="pi pi-search" aria-hidden="true"></i>
-      <input type="text" placeholder="Search projects…" aria-label="Search projects" [value]="projectSearch()" (input)="projectSearch.set($any($event.target).value)" />
+      <input type="text" placeholder="Search projects…" aria-label="Search projects" [value]="projectPicker.term()" (input)="projectPicker.search($any($event.target).value)" />
     </div>
     <ul class="pick-list pick-list--scroll" role="menu">
       @if (ticket()?.projectId) {
@@ -331,7 +340,7 @@
           </button>
         </li>
       }
-      @for (p of projectMatches().items; track p.id) {
+      @for (p of projectOptions(); track p.id) {
         <li>
           <button class="pick-opt" type="button" role="menuitemradio" [attr.aria-checked]="ticket()?.projectId === p.id" (click)="setProject(p); projectPop.hide()">
             <span class="pick-stack">
@@ -343,13 +352,17 @@
           </button>
         </li>
       } @empty {
-        <li class="pick-empty">No projects</li>
+        <li class="pick-empty">
+          @if (projectPicker.loading()) { Loading projects… }
+          @else if (projectPicker.failed()) { Could not load projects. }
+          @else { No projects }
+        </li>
       }
     </ul>
-    @if (projectMatches().total > projectMatches().items.length) {
-      <p class="pick-empty" aria-live="polite">
-        Showing {{ projectMatches().items.length }} of {{ projectMatches().total }}. Type to narrow.
-      </p>
+    @if (projectPicker.hasMore()) {
+      <button type="button" class="pick-opt pick-more" [disabled]="projectPicker.loading()" (click)="projectPicker.loadMore()">
+        Show more ({{ projectPicker.items().length }} of {{ projectPicker.total() }})
+      </button>
     }
   </p-popover>
 

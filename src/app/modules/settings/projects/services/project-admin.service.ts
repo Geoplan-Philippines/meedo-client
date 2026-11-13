@@ -1,11 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, of } from 'rxjs';
-import { map, switchMap, tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
+import { PageQuery, toHttpParams } from '../../../../shared/data/page-query';
+import { ListStateConfig } from '../../../../shared/data/url-list-state';
+import { cacheContext } from '../../../../core/http/api-cache';
 import { ProjectsService } from '../../../tickets/services/projects.service';
 import {
   ProjectDetail,
@@ -15,8 +18,29 @@ import {
   UpdateProjectPayload,
 } from '../models/project-admin.model';
 
-/** Server maximum for maintenance lists. */
-const PAGE_SIZE = 200;
+export type ProjectListFilterState = {
+  status: string | null;
+  clientId: string | null;
+  includeArchived: boolean;
+  includeClosed: boolean;
+};
+
+/** Projects screen: newest reported first; filters, sort and page live in the URL. */
+export const PROJECTS_LIST: ListStateConfig<ProjectListFilterState> = {
+  pageSize: 25,
+  sortField: 'reportedDate',
+  sortOrder: 'desc',
+  sortFields: ['workOrderNumber', 'quoteSubject', 'reportedDate', 'total', 'status', 'createdAt'],
+  filters: { status: null, clientId: null, includeArchived: false, includeClosed: true },
+};
+
+/** Per-client totals the grouped screen shows in its group headers. */
+export type ProjectPageMeta = {
+  clientCount?: number;
+  clientTotals?: { clientId: string | null; count: number }[];
+};
+
+export type ProjectPageQuery = PageQuery & Omit<ProjectListFilters, 'search' | 'sortField' | 'sortOrder'>;
 
 @Injectable({ providedIn: 'root' })
 export class ProjectAdminService {
@@ -30,35 +54,48 @@ export class ProjectAdminService {
   members(id: string) {
     return this.http.get<ApiResponse<{ userId: string; user: { id: string; name: string | null; email: string } }[]>>(`${this.baseUrl}/${id}/members`, { withCredentials: true }).pipe(map(res => res.data));
   }
-  memberOptions() {
-    return this.http.get<ApiResponse<{ user: { id: string; name: string | null; email: string } }[]>>(`${this.baseUrl}/member-options`, { withCredentials: true }).pipe(map(res => res.data.map(row => row.user)));
+  /** Admin picker: one page of organization members not yet on `projectId`, searched by name or email. */
+  memberOptions(query: PageQuery & { projectId?: string }): Observable<PaginatedApiResponse<{ user: { id: string; name: string | null; email: string } }>> {
+    return this.http.get<PaginatedApiResponse<{ user: { id: string; name: string | null; email: string } }>>(`${this.baseUrl}/member-options`, {
+      params: toHttpParams(query),
+      context: cacheContext('members'),
+      withCredentials: true,
+    });
   }
   addMember(id: string, userId: string) { return this.http.post(`${this.baseUrl}/${id}/members`, { userId }, { withCredentials: true }); }
   removeMember(id: string, userId: string) { return this.http.delete(`${this.baseUrl}/${id}/members/${userId}`, { withCredentials: true }); }
   setClosed(id: string, isClosed: boolean) { return this.http.patch<ApiResponse<ProjectRecord>>(`${this.baseUrl}/${id}/closed`, { isClosed }, { withCredentials: true }).pipe(map(res => res.data)); }
   setArchived(id: string, isArchived: boolean) { return this.http.patch<ApiResponse<ProjectRecord>>(`${this.baseUrl}/${id}/archive`, { isArchived }, { withCredentials: true }).pipe(map(res => res.data), tap(() => this.ticketProjects.invalidate())); }
 
-  /** Every project matching the filters (all pages; the screen groups them by client). */
-  listAll(filters: ProjectListFilters): Observable<ProjectRecord[]> {
-    return this.fetchPage(filters, 1).pipe(
-      switchMap((first) => {
-        const rest = Array.from({ length: Math.max(0, first.meta.lastPage - 1) }, (_, i) => this.fetchPage(filters, i + 2));
-        return rest.length
-          ? forkJoin(rest).pipe(map((pages) => [first, ...pages].flatMap((page) => page.data)))
-          : of(first.data);
+  /**
+   * One page of projects matching the filters, with per-client totals for the
+   * group headers. The screen groups the page's rows by client.
+   */
+  list(query: ProjectPageQuery): Observable<PaginatedApiResponse<ProjectRecord, ProjectPageMeta>> {
+    const { unassigned, clientId, includeClosed, teamId, ...rest } = query;
+    return this.http.get<PaginatedApiResponse<ProjectRecord, ProjectPageMeta>>(this.baseUrl, {
+      params: toHttpParams({
+        ...rest,
+        ...(unassigned ? { unassigned: true } : { clientId }),
+        ...(teamId ? { teamId } : {}),
+        // Closed projects show by default; only hiding them is sent.
+        ...(includeClosed === false ? { includeClosed: false } : {}),
+        withClientTotals: true,
       }),
-    );
+      context: cacheContext('projects'),
+      withCredentials: true,
+    });
   }
 
   statuses(): Observable<string[]> {
     return this.http
-      .get<ApiResponse<string[]>>(`${this.baseUrl}/statuses`, { withCredentials: true })
+      .get<ApiResponse<string[]>>(`${this.baseUrl}/statuses`, { context: cacheContext('lookups'), withCredentials: true })
       .pipe(map((response) => response.data));
   }
 
   detail(id: string): Observable<ProjectDetail> {
     return this.http
-      .get<ApiResponse<ProjectDetail>>(`${this.baseUrl}/${id}`, { withCredentials: true })
+      .get<ApiResponse<ProjectDetail>>(`${this.baseUrl}/${id}`, { context: cacheContext('projects'), withCredentials: true })
       .pipe(map((response) => response.data));
   }
 
@@ -80,23 +117,5 @@ export class ProjectAdminService {
         map((response) => response.data),
         tap(() => this.ticketProjects.invalidate()),
       );
-  }
-
-  private fetchPage(filters: ProjectListFilters, page: number): Observable<PaginatedApiResponse<ProjectRecord>> {
-    const params: Record<string, string | number | boolean> = {
-      page,
-      limit: PAGE_SIZE,
-      sortField: filters.sortField,
-      sortOrder: filters.sortOrder,
-    };
-    if (filters.search.trim()) params['search'] = filters.search.trim();
-    if (filters.unassigned) params['unassigned'] = true;
-    else if (filters.clientId) params['clientId'] = filters.clientId;
-    if (filters.teamId) params['teamId'] = filters.teamId;
-    if (filters.status) params['status'] = filters.status;
-    if (filters.includeArchived) params['includeArchived'] = true;
-    if (filters.includeClosed === false) params['includeClosed'] = false;
-
-    return this.http.get<PaginatedApiResponse<ProjectRecord>>(this.baseUrl, { params, withCredentials: true });
   }
 }

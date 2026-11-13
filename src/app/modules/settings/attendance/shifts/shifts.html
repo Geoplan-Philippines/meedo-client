@@ -14,7 +14,7 @@
   <div pageActions class="page-actions-row">
       @if (archivedCount() > 0) {
         <label for="show-archived" class="flex items-center gap-2 text-sm text-body cursor-pointer select-none">
-          <p-toggleSwitch inputId="show-archived" [formControl]="showArchivedControl" />
+          <p-toggleSwitch inputId="show-archived" [ngModel]="showArchived()" (ngModelChange)="setShowArchived($event)" />
           Show archived ({{ archivedCount() }})
         </label>
       }
@@ -23,27 +23,27 @@
   </div>
 
 
-  @if (error()) {
+  @if (error() || shifts.error()) {
     <p-message severity="error" styleClass="ds-message">
-      <span>{{ error() }}</span>
-      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
+      <span>{{ error() || 'Failed to load shifts. Please try again.' }}</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="shifts.loading()" />
     </p-message>
   }
 
-  @if (isLoading()) {
+  @if (!shifts.loaded()) {
     <div class="ds-table-skeleton" role="status">
       <span class="ds-sr-only">Loading shifts…</span>
       @for (row of [1, 2, 3, 4]; track row) {
         <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="16rem" height="0.75rem" /></div>
       }
     </div>
-  } @else if (visibleShifts().length === 0) {
+  } @else if (shifts.total() === 0) {
     <app-empty-state icon="pi pi-clock" heading="No shifts yet" description="Create your first shift (for example a 9-to-6 with a one-hour break), then build weekly schedules from it.">
       <p-button label="New shift" icon="pi pi-plus" (onClick)="openCreate()" />
     </app-empty-state>
   } @else {
     <div>
-      <p-table class="ds-table" [value]="pager.pageRows()" [lazy]="true" (onLazyLoad)="pager.onSort($event)" dataKey="id" [rowHover]="true">
+      <p-table class="ds-table" [value]="shifts.rows()" [loading]="shifts.loading()" dataKey="id" [rowHover]="true">
         <ng-template pTemplate="header">
           <tr>
             <th scope="col">Shift</th>
@@ -130,11 +130,11 @@
         </ng-template>
       </p-table>
       <app-list-paginator
-        [total]="pager.total()"
-        [page]="pager.currentPage()"
-        [pageSize]="pager.pageSize()"
+        [total]="shifts.total()"
+        [page]="list.page()"
+        [pageSize]="list.pageSize()"
         itemLabel="shifts"
-        (pageChange)="pager.onPage($event)"
+        (pageChange)="list.onPage($event)"
       />
     </div>
   }

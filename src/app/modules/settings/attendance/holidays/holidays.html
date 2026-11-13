@@ -24,8 +24,8 @@
     <span class="text-lg font-semibold text-heading tabular-nums min-w-[4ch] text-center">{{ year() }}</span>
     <p-button icon="pi pi-chevron-right" severity="secondary" text rounded ariaLabel="Next year" (onClick)="changeYear(1)" [disabled]="isLoading()" />
     @if (!isLoading()) {
-      <span class="ml-2 text-sm text-muted">{{ holidays().length }} {{ holidays().length === 1 ? 'holiday' : 'holidays' }}</span>
-      @if (holidays().length > 0) {
+      <span class="ml-2 text-sm text-muted">{{ holidays.total() }} {{ holidays.total() === 1 ? 'holiday' : 'holidays' }}</span>
+      @if (holidays.total() > 0) {
         <p-button
           label="Clear year"
           icon="pi pi-trash"
@@ -38,21 +38,21 @@
     }
   </div>
 
-  @if (error()) {
+  @if (error() || holidays.error()) {
     <p-message severity="error" styleClass="ds-message">
-      <span>{{ error() }}</span>
+      <span>{{ error() || 'Failed to load holidays. Please try again.' }}</span>
       <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
     </p-message>
   }
 
-  @if (isLoading()) {
+  @if (!holidays.loaded()) {
     <div class="ds-table-skeleton" role="status">
       <span class="ds-sr-only">Loading holidays…</span>
       @for (row of [1, 2, 3, 4]; track row) {
         <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="16rem" height="0.75rem" /></div>
       }
     </div>
-  } @else if (holidays().length === 0) {
+  } @else if (holidays.total() === 0) {
     <app-empty-state icon="pi pi-flag" [heading]="'No holidays for ' + year()" description="Add holidays one at a time, or import a country's public holidays for the year and adjust from there.">
       <div class="flex items-center gap-2">
         <p-button label="Import {{ year() }}" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="openImport()" />
@@ -61,7 +61,17 @@
     </app-empty-state>
   } @else {
     <div>
-      <p-table class="ds-table" [value]="pager.pageRows()" [lazy]="true" (onLazyLoad)="pager.onSort($event)" dataKey="id" [rowHover]="true">
+      <p-table
+        class="ds-table"
+        [value]="holidays.rows()"
+        [lazy]="true"
+        (onLazyLoad)="list.onLazyLoad($event)"
+        [sortField]="list.sortField()"
+        [sortOrder]="list.tableSortOrder()"
+        [loading]="holidays.loading()"
+        dataKey="id"
+        [rowHover]="true"
+      >
         <ng-template pTemplate="header">
           <tr>
             <th scope="col" class="w-px whitespace-nowrap">Date</th>
@@ -111,11 +121,11 @@
         </ng-template>
       </p-table>
       <app-list-paginator
-        [total]="pager.total()"
-        [page]="pager.currentPage()"
-        [pageSize]="pager.pageSize()"
+        [total]="holidays.total()"
+        [page]="list.page()"
+        [pageSize]="list.pageSize()"
         itemLabel="items"
-        (pageChange)="pager.onPage($event)"
+        (pageChange)="list.onPage($event)"
       />
     </div>
   }
@@ -217,7 +227,7 @@
   [header]="'Clear ' + year() + ' holidays'"
 >
   <p class="text-sm text-body">
-    Delete all <strong class="text-heading">{{ holidays().length }}</strong> {{ holidays().length === 1 ? 'holiday' : 'holidays' }} in
+    Delete all <strong class="text-heading">{{ holidays.total() }}</strong> {{ holidays.total() === 1 ? 'holiday' : 'holidays' }} in
     <strong class="text-heading">{{ year() }}</strong>? Other years are not affected. This can't be undone.
   </p>
   <ng-template pTemplate="footer">

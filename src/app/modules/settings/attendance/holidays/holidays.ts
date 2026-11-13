@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -24,12 +24,13 @@ import {
   holidayTypeLabel,
   isoDateOnlyToLocal,
 } from '../shared/attendance-settings.util';
-import { HolidaysService } from '../services/holidays.service';
+import { HOLIDAYS_LIST, HolidaysService } from '../services/holidays.service';
 
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../../shared/utils/client-pager';
+import { injectListState } from '../../../../shared/data/url-list-state';
+import { pagedList } from '../../../../shared/data/paged-list';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
@@ -58,13 +59,19 @@ type DialogMode = 'create' | 'edit';
   styleUrl: './holidays.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Holidays implements OnInit {
+export class Holidays {
   private readonly holidaysService = inject(HolidaysService);
 
-  readonly year = signal(new Date().getFullYear());
-  readonly holidays = signal<Holiday[]>([]);
-  readonly pager = new ClientPager(this.holidays);
-  readonly isLoading = signal(false);
+  /** The year, page and sort live in the URL (`?year=2027`). */
+  readonly list = injectListState({ ...HOLIDAYS_LIST, filters: { year: String(new Date().getFullYear()) } });
+  readonly year = computed(() => yearOrCurrent(this.list.filters().year));
+  readonly holidays = pagedList({
+    params: () => ({ ...this.list.query(), year: this.year() }),
+    load: (query) => this.holidaysService.list(query),
+    refreshOn: ['attendance'],
+  });
+  readonly isLoading = computed(() => !this.holidays.loaded() || this.holidays.loading());
+  /** Save and delete failures; load failures come from the list. */
   readonly error = signal<string | null>(null);
 
   readonly typeOptions = HOLIDAY_TYPE_OPTIONS;
@@ -140,28 +147,17 @@ export class Holidays implements OnInit {
   readonly nameLength = computed(() => this.nameValue()?.length ?? 0);
   private readonly nameValue = toSignal(this.form.controls.name.valueChanges, { initialValue: '' });
 
-  ngOnInit(): void {
-    this.load();
+  constructor() {
+    this.list.clampToTotal(this.holidays);
   }
 
   load(): void {
-    this.isLoading.set(true);
     this.error.set(null);
-    this.holidaysService.list(this.year()).subscribe({
-      next: (data) => {
-        this.holidays.set(data);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load holidays. Please try again.');
-        this.isLoading.set(false);
-      },
-    });
+    this.holidays.reload();
   }
 
   changeYear(delta: number): void {
-    this.year.update((y) => y + delta);
-    this.load();
+    this.list.setFilter('year', String(this.year() + delta));
   }
 
   localDate(iso: string): Date {
@@ -225,8 +221,8 @@ export class Holidays implements OnInit {
 
     if (this.dialogMode() === 'create') {
       this.holidaysService.create(payload).subscribe({
-        next: (created) => {
-          this.insertIfInYear(created);
+        next: () => {
+          this.insertIfInYear();
           this.isSaving.set(false);
           this.isDialogOpen.set(false);
         },
@@ -244,7 +240,7 @@ export class Holidays implements OnInit {
     this.holidaysService.update(editing.id, update).subscribe({
       next: (updated) => {
         // The edit may move it out of the current year; reload to stay accurate.
-        this.holidays.update((list) => list.map((h) => (h.id === updated.id ? updated : h)));
+        this.holidays.updateRows((rows) => rows.map((h) => (h.id === updated.id ? updated : h)));
         if (new Date(updated.date).getUTCFullYear() !== this.year()) {
           this.load();
         }
@@ -271,7 +267,7 @@ export class Holidays implements OnInit {
     this.error.set(null);
     this.holidaysService.delete(target.id).subscribe({
       next: () => {
-        this.holidays.update((list) => list.filter((h) => h.id !== target.id));
+        this.holidays.reload();
         this.isDeleting.set(false);
         this.holidayToDelete.set(null);
       },
@@ -285,7 +281,7 @@ export class Holidays implements OnInit {
   // ── Clear year ──────────────────────────────────────────────────────────────
 
   openClearYear(): void {
-    if (this.holidays().length === 0) return;
+    if (this.holidays.total() === 0) return;
     this.isClearOpen.set(true);
   }
 
@@ -300,7 +296,7 @@ export class Holidays implements OnInit {
     this.error.set(null);
     this.holidaysService.clearYear(this.year()).subscribe({
       next: () => {
-        this.holidays.set([]);
+        this.holidays.reload();
         this.isClearing.set(false);
         this.isClearOpen.set(false);
       },
@@ -340,9 +336,10 @@ export class Holidays implements OnInit {
           this.isImporting.set(false);
           // Show the imported set: jump to that year and reload.
           if (value.year !== this.year()) {
-            this.year.set(value.year);
+            this.list.setFilter('year', String(value.year));
+          } else {
+            this.load();
           }
-          this.load();
         },
         error: (err) => {
           this.isImporting.set(false);
@@ -354,14 +351,9 @@ export class Holidays implements OnInit {
       });
   }
 
-  private insertIfInYear(holiday: Holiday): void {
-    if (new Date(holiday.date).getUTCFullYear() !== this.year()) {
-      this.load();
-      return;
-    }
-    this.holidays.update((list) =>
-      [...list, holiday].sort((a, b) => a.date.localeCompare(b.date)),
-    );
+  /** The server places a saved holiday on its page (or in another year); reload to show it. */
+  private insertIfInYear(): void {
+    this.load();
   }
 
   private handleSaveError(err: unknown, action: 'create' | 'update'): void {
@@ -377,4 +369,10 @@ export class Holidays implements OnInit {
     }
     return null;
   }
+}
+
+/** A year from the URL, or this year when it is missing or not a sensible year. */
+function yearOrCurrent(value: string | boolean | readonly string[] | null): number {
+  const year = typeof value === 'string' && /^\d{4}$/.test(value) ? Number(value) : NaN;
+  return year >= 1970 && year <= 2100 ? year : new Date().getFullYear();
 }

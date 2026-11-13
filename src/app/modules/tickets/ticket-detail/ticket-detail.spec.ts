@@ -5,10 +5,10 @@ import { of, Subject } from 'rxjs';
 import { vi } from 'vitest';
 
 import { AuthService } from '../../../core/auth/auth.service';
-import { TeamsService } from '../../settings/teams/services/teams.service';
 import { Team } from '../../settings/teams/models/teams.model';
+import { MemberDirectoryService } from '../../../core/members/member-directory.service';
+import { WorkspaceService } from '../../clients/services/workspace.service';
 import { Ticket } from '../models/ticket.model';
-import { MembersService } from '../services/members.service';
 import { ProjectsService } from '../services/projects.service';
 import { StatusesService } from '../services/statuses.service';
 import { TicketCategoriesService } from '../services/ticket-categories.service';
@@ -24,21 +24,26 @@ describe('TicketDetail department access', () => {
   let response: Subject<Ticket>;
   let update: ReturnType<typeof vi.fn>;
   let admin: boolean;
+  const emptyPage = { data: [], meta: { total: 0, page: 1, limit: 20, lastPage: 0 } };
+  const directoryList = vi.fn(() => of(emptyPage));
+  const projectSearch = vi.fn(() => of(emptyPage));
 
   beforeEach(async () => {
     response = new Subject<Ticket>();
     update = vi.fn(() => of(seed));
     admin = true;
+    directoryList.mockClear();
+    projectSearch.mockClear();
     await TestBed.configureTestingModule({ imports: [TicketDetail], providers: [provideRouter([]), provideHttpClient(),
       { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: seed.id })), snapshot: {} } },
       { provide: TicketsService, useValue: { getById: () => response, getAll: () => of({ data: [] }), updateTicket: update } },
       { provide: TicketDepartmentService, useValue: { load: () => of({ isAdmin: false, teams: [own] }) } },
       { provide: AuthService, useValue: { isAdmin: () => admin, organizationId: () => 'org', currentUser: () => ({ id: 'u' }) } },
-      { provide: TeamsService, useValue: { listTeamMembers: () => of([]) } },
-      { provide: MembersService, useValue: { getMembers: () => of([]) } },
-      { provide: ProjectsService, useValue: { getAll: () => of([]) } },
-      { provide: StatusesService, useValue: { getAll: () => of([]) } },
-      { provide: TicketCategoriesService, useValue: { getAll: () => of([]) } },
+      { provide: MemberDirectoryService, useValue: { list: directoryList } },
+      { provide: WorkspaceService, useValue: { project: () => of(null) } },
+      { provide: ProjectsService, useValue: { search: projectSearch } },
+      { provide: StatusesService, useValue: { options: () => of([]) } },
+      { provide: TicketCategoriesService, useValue: { options: () => of([]) } },
     ] }).compileComponents();
     vi.spyOn(TestBed.inject(Router), 'getCurrentNavigation').mockReturnValue({ extras: { state: { ticket: seed } } } as unknown as Navigation);
   });
@@ -79,12 +84,27 @@ describe('TicketDetail department access', () => {
       expect(fixture.nativeElement.textContent).toContain('Restricted rollout');
       expect(fixture.nativeElement.querySelector('[data-testid="ticket-client"]').textContent).toContain('Acme client');
       expect(fixture.nativeElement.querySelector('[aria-label="Ticket project"]').disabled).toBe(true);
-      expect(fixture.componentInstance.projects()).toEqual([]);
-      expect(fixture.componentInstance.projectMatches().items).toEqual([]);
+      expect(fixture.componentInstance.projectOptions()).toEqual([]);
+      expect(fixture.componentInstance.canEditProject()).toBe(false);
       fixture.componentInstance.clearProject();
       expect(update).not.toHaveBeenCalled();
       expect(fixture.nativeElement.querySelector('a[href*="private-project"]')).toBeNull();
       fixture.destroy();
     });
   }
+
+  it('searches assignees within the ticket team on the server only when the picker opens', async () => {
+    const fixture = TestBed.createComponent(TicketDetail);
+    response.next(seed);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(directoryList).not.toHaveBeenCalled();
+    expect(projectSearch).not.toHaveBeenCalled();
+    fixture.componentInstance.assignees.open();
+    fixture.componentInstance.projectPicker.open();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(directoryList).toHaveBeenCalledWith({ page: 1, limit: 20, sortField: 'name', sortOrder: 'asc', teamId: 'own' });
+    expect(projectSearch).toHaveBeenCalledWith({ page: 1, limit: 20 });
+    fixture.destroy();
+  });
 });

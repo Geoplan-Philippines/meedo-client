@@ -11,7 +11,8 @@
     <input
       pInputText
       type="search"
-      [formControl]="searchControl"
+      [value]="list.searchInput()"
+      (input)="onSearch($event)"
       placeholder="Search customers"
       aria-label="Search customers by name"
       autocomplete="off"
@@ -19,16 +20,16 @@
     />
   </p-iconfield>
   <label pageToolbarEnd class="ds-toggle" for="customers-show-archived">
-    <p-toggleSwitch inputId="customers-show-archived" [formControl]="archivedControl" />
+    <p-toggleSwitch inputId="customers-show-archived" [ngModel]="list.filters().includeArchived" (ngModelChange)="setIncludeArchived($event)" />
     <span>Show archived</span>
   </label>
 
   @if (isAdmin() && creating()) { <app-new-internal-record kind="client" (saved)="onCreated()" (cancelled)="creating.set(false)" /> }
 
-  @if (error(); as message) {
+  @if (clients.error()) {
     <p-message severity="error" styleClass="ds-message">
-      <span>{{ message }}</span>
-      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="reload()" [disabled]="isLoading()" />
+      <span>Failed to load customers. Please try again.</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="reload()" [disabled]="clients.loading()" />
     </p-message>
   }
   @if (saveError(); as message) {
@@ -38,16 +39,14 @@
   <div>
     <p-table
       class="ds-table"
-      [value]="clients()"
+      [value]="clients.rows()"
       dataKey="id"
       [lazy]="true"
-      (onLazyLoad)="onLazyLoad($event)"
-      [rows]="rows()"
-      [first]="first()"
-      [loading]="isLoading()"
+      (onLazyLoad)="list.onLazyLoad($event)"
+      [loading]="clients.loading()"
       [rowHover]="true"
-      sortField="name"
-      [sortOrder]="1"
+      [sortField]="list.sortField()"
+      [sortOrder]="list.tableSortOrder()"
     >
       <ng-template pTemplate="header">
         <tr>
@@ -80,7 +79,7 @@
               }
             } @else {
               <span class="name-cell">
-                <a class="name hover:text-primary" [routerLink]="['/clients', client.id]" [title]="client.name">{{ client.name }}</a>
+                <a class="name hover:text-primary" [routerLink]="['/clients', client.id]" appPrefetch [title]="client.name">{{ client.name }}</a>
                 @if (isAdmin() && client.missingFromApptivoAt) { <span class="missing-apptivo">Missing from Apptivo</span> }
                 @if (client.isArchived) { <app-archived-tag /> }
               </span>
@@ -143,18 +142,18 @@
         </tr>
       </ng-template>
     </p-table>
-    @if (!searchControl.value.trim() || 'unassigned'.includes(searchControl.value.trim().toLowerCase())) {
-      <a routerLink="/clients/unassigned" class="unassigned-row">
+    @if (!list.search() || 'unassigned'.includes(list.search().toLowerCase())) {
+      <a routerLink="/clients/unassigned" appPrefetch class="unassigned-row">
         <span><span class="name">Unassigned</span><span class="hint-inline">Projects without a client</span></span>
         <i class="pi pi-angle-right" aria-hidden="true"></i>
       </a>
     }
     <app-list-paginator
-      [total]="total()"
-      [page]="page()"
-      [pageSize]="rows()"
+      [total]="clients.total()"
+      [page]="list.page()"
+      [pageSize]="list.pageSize()"
       itemLabel="clients"
-      (pageChange)="onPageChange($event)"
+      (pageChange)="list.onPage($event)"
     />
   </div>
 </app-page>

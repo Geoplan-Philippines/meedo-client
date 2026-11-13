@@ -1,9 +1,9 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { rxResource, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, combineLatest, debounceTime, map, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -17,12 +17,8 @@ import { InputIconModule } from 'primeng/inputicon';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
-import { ProjectAdminService } from './services/project-admin.service';
-import {
-  ProjectListFilters,
-  ProjectRecord,
-  ProjectSortField,
-} from './models/project-admin.model';
+import { PROJECTS_LIST, ProjectAdminService, ProjectListFilterState, ProjectPageQuery } from './services/project-admin.service';
+import { ProjectRecord, ProjectSortField } from './models/project-admin.model';
 import { ProjectDetailDrawer } from './project-detail-drawer/project-detail-drawer';
 import { WorkspaceService } from '../../clients/services/workspace.service';
 import { WorkspaceBreadcrumb } from '../../clients/workspace-breadcrumb/workspace-breadcrumb';
@@ -32,7 +28,9 @@ import { ClientTypeahead } from '../shared/client-typeahead';
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../shared/utils/client-pager';
+import { PrefetchLink } from '../../../shared/ui/prefetch/prefetch-link';
+import { ListQuery, injectListState } from '../../../shared/data/url-list-state';
+import { pagedList } from '../../../shared/data/paged-list';
 
 import { MessageModule } from 'primeng/message';
 /** Group of projects under one client; `clientId` null is the "Unassigned" group. */
@@ -42,10 +40,6 @@ interface ProjectGroup {
   isArchived: boolean;
   projects: ProjectRecord[];
 }
-
-type LoadState = 'loading' | 'ready' | 'error';
-
-const SEARCH_DEBOUNCE_MS = 250;
 
 const SORT_OPTIONS: { label: string; field: ProjectSortField; order: 'asc' | 'desc' }[] = [
   { label: 'Newest reported', field: 'reportedDate', order: 'desc' },
@@ -59,7 +53,7 @@ const SORT_OPTIONS: { label: string; field: ProjectSortField; order: 'asc' | 'de
   selector: 'app-settings-projects',
   imports: [
     MessageModule,
-    ReactiveFormsModule,
+    FormsModule,
     DatePipe,
     DecimalPipe,
     ButtonModule,
@@ -81,43 +75,26 @@ const SORT_OPTIONS: { label: string; field: ProjectSortField; order: 'asc' | 'de
     RouterLink,
     NewInternalRecord,
     ClientTypeahead,
+    PrefetchLink,
   ],
   templateUrl: './projects.html',
   styleUrl: './projects.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Projects implements OnInit {
+export class Projects {
   private readonly projectAdmin = inject(ProjectAdminService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly workspace = inject(WorkspaceService);
 
   readonly isAdmin = this.authService.isAdmin;
   readonly creating = signal(false);
   readonly sortOptions = SORT_OPTIONS.map((option, index) => ({ label: option.label, value: index }));
 
-  readonly projects = signal<ProjectRecord[]>([]);
-  readonly loadState = signal<LoadState>('loading');
-  readonly statusOptions = signal<string[]>([]);
   readonly selectedProjectId = signal<string | null>(null);
   /** Manage button that opened the drawer, so focus can return to it on close. */
   private manageTrigger: HTMLElement | null = null;
-
-  readonly filters = new FormGroup({
-    search: new FormControl('', { nonNullable: true }),
-    clientId: new FormControl<string | null>(null),
-    status: new FormControl<string | null>(null),
-    includeArchived: new FormControl(false, { nonNullable: true }),
-    includeClosed: new FormControl(true, { nonNullable: true }),
-    sort: new FormControl(0, { nonNullable: true }),
-  });
-
-  private readonly filterValue = toSignal(
-    this.filters.valueChanges.pipe(map(() => this.filters.getRawValue())),
-    { initialValue: this.filters.getRawValue() },
-  );
 
   /** Client fixed by the URL; 'unassigned' = projects with no client. */
   readonly routeClientId = toSignal(this.route.paramMap.pipe(map((params) => params.get('clientId'))), {
@@ -132,84 +109,93 @@ export class Projects implements OnInit {
   });
   readonly subtitle = computed(() => this.routeClientId() ? 'Projects for this client.' : 'Internal projects and Apptivo work orders, grouped by customer.');
 
-  constructor() {
-    // The Project breadcrumb opens the existing detail drawer at a shareable URL.
-    effect(() => this.selectedProjectId.set(this.routeProjectId()));
-  }
+  /** Search, filters, sort and page live in the URL; the API pages and counts. */
+  readonly list = injectListState(PROJECTS_LIST);
+  readonly projects = pagedList({
+    params: () => projectPageQuery(this.list.query(), this.routeClientId()),
+    load: (query) => this.projectAdmin.list(query),
+    refreshOn: ['projects', 'clients'],
+  });
 
-  /** Projects are paged flat, then the visible page is grouped by client. */
-  readonly pager = new ClientPager(this.projects, 25);
-  readonly groups = computed<ProjectGroup[]>(() => groupByClient(this.pager.pageRows()));
+  private readonly statusesResource = rxResource({
+    stream: () => this.projectAdmin.statuses().pipe(catchError(() => of([] as string[]))),
+  });
+  readonly statusOptions = computed(() => (this.statusesResource.hasValue() ? this.statusesResource.value() : []));
+
+  readonly sortIndex = computed(() => {
+    const index = SORT_OPTIONS.findIndex((option) => option.field === this.list.sortField() && option.order === this.list.sortOrder());
+    return index < 0 ? 0 : index;
+  });
+
+  /** The page's rows grouped by client, A–Z, "Unassigned" last. */
+  readonly groups = computed<ProjectGroup[]>(() => groupByClient(this.projects.rows()));
   /** Page rows in group order, for the p-table subheader grouping. */
   readonly groupedRows = computed(() => this.groups().flatMap((group) => group.projects));
   private readonly groupIndex = computed(() => new Map(this.groups().map((group) => [group.clientId, group])));
+  /** Project count per client across every page (from the API), for the group headers. */
+  private readonly groupTotals = computed(
+    () => new Map((this.projects.meta()?.clientTotals ?? []).map((entry) => [entry.clientId, entry.count])),
+  );
+  readonly clientCount = computed(() => this.projects.meta()?.clientCount ?? 0);
+  readonly hasActiveFilters = computed(() => {
+    const filters = this.list.filters();
+    return !!(this.list.search() || filters.clientId || filters.status);
+  });
+
+  constructor() {
+    // The Project breadcrumb opens the existing detail drawer at a shareable URL.
+    effect(() => this.selectedProjectId.set(this.routeProjectId()));
+    this.list.clampToTotal(this.projects);
+  }
 
   groupOf(project: ProjectRecord): ProjectGroup {
     const key = project.client ? project.client.id : null;
     return this.groupIndex().get(key) ?? { clientId: key, name: 'Unassigned', isArchived: false, projects: [] };
   }
-  /** Project count per client across every page, for the group headers. */
-  private readonly groupTotals = computed(() => {
-    const totals = new Map<string | null, number>();
-    for (const project of this.projects()) {
-      const key = project.client ? project.client.id : null;
-      totals.set(key, (totals.get(key) ?? 0) + 1);
-    }
-    return totals;
-  });
 
   groupTotal(clientId: string | null): number {
-    return this.groupTotals().get(clientId) ?? 0;
+    return this.groupTotals().get(clientId) ?? this.groupIndex().get(clientId)?.projects.length ?? 0;
   }
-  readonly clientCount = computed(() => new Set(this.projects().flatMap((project) => (project.client ? [project.client.id] : []))).size);
-  readonly hasActiveFilters = computed(() => {
-    const value = this.filterValue();
-    return !!(value.search.trim() || value.clientId || value.status);
-  });
 
-  /** Reloads whenever the URL client or a filter changes. */
-  private readonly listTrigger$ = combineLatest([
-    toObservable(this.routeClientId),
-    // Typing in search waits for a pause; dropdowns and toggles apply at once.
-    this.filters.valueChanges.pipe(debounceTime(SEARCH_DEBOUNCE_MS), startWith(null)),
-  ]);
+  onSearch(event: Event): void {
+    this.list.setSearch((event.target as HTMLInputElement).value);
+  }
 
-  ngOnInit(): void {
-    // Older links used /…?clientId=; the client now lives in the path.
-    const queryClientId = this.route.snapshot.queryParamMap.get('clientId');
-    if (queryClientId && !this.routeClientId()) this.filters.controls.clientId.setValue(queryClientId);
+  setClientFilter(clientId: string | null): void {
+    this.list.setFilter('clientId', clientId);
+  }
 
-    this.projectAdmin
-      .statuses()
-      .pipe(catchError(() => of([] as string[])), takeUntilDestroyed(this.destroyRef))
-      .subscribe((statuses) => this.statusOptions.set(statuses));
+  setStatus(status: string | null): void {
+    this.list.setFilter('status', status);
+  }
 
-    this.listTrigger$
-      .pipe(
-        map(() => this.toListFilters()),
-        tap(() => this.loadState.set('loading')),
-        switchMap((filters) =>
-          this.projectAdmin.listAll(filters).pipe(
-            map((projects) => ({ projects, failed: false })),
-            catchError(() => of({ projects: [] as ProjectRecord[], failed: true })),
-          ),
-        ),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(({ projects, failed }) => {
-        this.projects.set(projects);
-        this.loadState.set(failed ? 'error' : 'ready');
-      });
+  setSort(index: number): void {
+    const option = SORT_OPTIONS[index] ?? SORT_OPTIONS[0];
+    this.list.setSort(option.field, option.order);
+  }
+
+  setIncludeClosed(value: boolean): void {
+    this.list.setFilter('includeClosed', value);
+  }
+
+  setIncludeArchived(value: boolean): void {
+    this.list.setFilter('includeArchived', value);
   }
 
   reload(): void {
-    this.filters.updateValueAndValidity();
+    this.projects.reload();
   }
 
   onCreated() { this.creating.set(false); this.workspace.invalidate(); this.reload(); }
 
   clearFilters(): void {
-    this.filters.patchValue({ search: '', clientId: null, status: null });
+    this.list.clearFilters();
+  }
+
+  /** Where a project row leads: its tickets on a client page, else nowhere (the drawer opens). */
+  projectTicketsLink(project: ProjectRecord): string | null {
+    const clientId = this.routeClientId();
+    return clientId ? this.router.serializeUrl(this.router.createUrlTree(workspaceLinks.projectTickets(clientId, project.id))) : null;
   }
 
   openProject(project: ProjectRecord): void {
@@ -250,26 +236,23 @@ export class Projects implements OnInit {
 
   /** Keep the list row in step with an edit made in the drawer. */
   onProjectChanged(updated: ProjectRecord): void {
-    this.projects.update((list) => list.map((project) => (project.id === updated.id ? updated : project)));
+    this.projects.updateRows((rows) => rows.map((project) => (project.id === updated.id ? updated : project)));
     this.workspace.refreshProjects();
   }
+}
 
-  private toListFilters(): ProjectListFilters {
-    const value = this.filters.getRawValue();
-    const sort = SORT_OPTIONS[value.sort] ?? SORT_OPTIONS[0];
-    const routeClientId = this.routeClientId();
-    return {
-      search: value.search,
-      clientId: routeClientId && routeClientId !== UNASSIGNED_CLIENT_ID ? routeClientId : value.clientId,
-      unassigned: routeClientId === UNASSIGNED_CLIENT_ID,
-      teamId: null,
-      status: value.status,
-      includeArchived: value.includeArchived,
-      includeClosed: value.includeClosed,
-      sortField: sort.field,
-      sortOrder: sort.order,
-    };
-  }
+/**
+ * The API query for the screen. On /clients/:clientId the client comes from
+ * the path ('unassigned' = projects with no client) and replaces the filter.
+ */
+export function projectPageQuery(query: ListQuery<ProjectListFilterState>, routeClientId: string | null): ProjectPageQuery {
+  const { clientId, ...rest } = query;
+  return {
+    ...rest,
+    teamId: null,
+    unassigned: routeClientId === UNASSIGNED_CLIENT_ID,
+    clientId: routeClientId && routeClientId !== UNASSIGNED_CLIENT_ID ? routeClientId : clientId,
+  };
 }
 
 /** Groups by client, keeping the server's row order within a group. Clients A–Z, "Unassigned" last. */

@@ -36,25 +36,22 @@
       pInputText
       type="search"
       [ngModel]="employeeFilter()"
-      (ngModelChange)="onEmployeeFilterChange($event); pager.reset()"
+      (ngModelChange)="onEmployeeFilterChange($event)"
+      autocomplete="off"
+      maxlength="100"
       placeholder="Search by name or department…"
       aria-label="Search employees by name, email or department"
     />
   </p-iconfield>
-  <p-select
+  <app-timesheet-project-picker
     pageToolbar
-    [ngModel]="projectFilter()"
-    (ngModelChange)="projectFilter.set($event)"
-    [options]="projects()"
-    optionLabel="label"
-    optionValue="id"
-    [filter]="true"
-    [showClear]="true"
+    [value]="projectFilter()"
+    [known]="projects()"
+    [includeArchived]="true"
     placeholder="All projects"
-    appendTo="body"
-    (onChange)="applyFilters()"
-    aria-label="Filter by project"
+    ariaLabel="Filter by project"
     styleClass="project-filter"
+    (changed)="setProjectFilter($event)"
   />
   <div pageToolbarEnd class="week-picker-group" aria-label="Selected approval week">
     <button class="week-nav-btn" pButton type="button" severity="secondary" [text]="true" icon="pi pi-chevron-left" (click)="previousWeek()" [disabled]="isLoading()" aria-label="Previous week"></button>
@@ -95,8 +92,7 @@
     <section class="table-panel" aria-label="Employee timesheet list">
       <div class="ds-table-scroll">
         <p-table
-          #approvalTable
-          [value]="pager.pageRows()"
+          [value]="employees()"
           [loading]="isLoading()"
           [rowHover]="true"
           class="ds-table approval-table"
@@ -205,7 +201,7 @@
     @if (isLoading()) {
       <app-empty-state icon="pi pi-spin pi-spinner" heading="Loading approval summary…" />
     } @else {
-      @for (employee of pager.pageRows(); track employee.userId) {
+      @for (employee of employees(); track employee.userId) {
         <article
           class="mobile-card"
           role="button"
@@ -239,11 +235,11 @@
   </div>
 
     <app-list-paginator
-      [total]="pager.total()"
-      [page]="pager.currentPage()"
-      [pageSize]="pager.pageSize()"
+      [total]="summaryPage.total()"
+      [page]="list.page()"
+      [pageSize]="list.pageSize()"
       itemLabel="employees"
-      (pageChange)="pager.onPage($event)"
+      (pageChange)="list.onPage($event)"
     />
   </div>
 

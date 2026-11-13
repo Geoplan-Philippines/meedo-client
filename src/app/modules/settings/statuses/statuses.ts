@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { rxResource, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject } from 'rxjs';
 import { catchError, exhaustMap, filter, finalize, tap } from 'rxjs/operators';
@@ -12,6 +12,8 @@ import { TableModule } from 'primeng/table';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
 import {
+  CUSTOM_STATUSES_LIST,
+  STANDARD_STATUSES_LIST,
   StatusesService,
 } from './services/statuses.service';
 import {
@@ -23,7 +25,8 @@ import {
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../shared/utils/client-pager';
+import { injectListState } from '../../../shared/data/url-list-state';
+import { pagedList } from '../../../shared/data/paged-list';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { MessageModule } from 'primeng/message';
@@ -63,6 +66,7 @@ function colorInPalette(control: AbstractControl): ValidationErrors | null {
     TagModule,
     RouterLink,
     ReactiveFormsModule,
+    FormsModule,
     DatePipe,
     TableModule,
     ButtonModule,
@@ -75,28 +79,36 @@ function colorInPalette(control: AbstractControl): ValidationErrors | null {
   styleUrl: './statuses.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Statuses implements OnInit {
+export class Statuses {
   private readonly statusesService = inject(StatusesService);
 
-  readonly statuses = signal<Status[]>([]);
-  readonly isLoading = signal(false);
+  /** Save and archive failures; load failures come from the lists. */
   readonly error = signal<string | null>(null);
 
-  readonly showArchivedControl = new FormControl(false, { nonNullable: true });
-  readonly showArchived = toSignal(this.showArchivedControl.valueChanges, { initialValue: false });
-
-  /** Built-in, locked statuses. The fixed baseline, sourced from the API. */
-  readonly systemStatuses = computed(() => this.statuses().filter((s) => s.isSystem));
-  readonly standardPager = new ClientPager(this.systemStatuses);
+  /** Built-in, locked statuses in workflow order. */
+  readonly standardList = injectListState(STANDARD_STATUSES_LIST);
+  readonly standard = pagedList({
+    params: () => ({ ...this.standardList.query(), isSystem: true }),
+    load: (query) => this.statusesService.list(query),
+    refreshOn: ['lookups'],
+  });
 
   /** Team-defined statuses that can be edited or archived. */
-  readonly customStatuses = computed(() => this.statuses().filter((s) => !s.isSystem));
-
-  readonly visibleStatuses = computed(() => {
-    const custom = this.customStatuses();
-    return this.showArchived() ? custom : custom.filter((s) => !s.isArchived);
+  readonly list = injectListState(CUSTOM_STATUSES_LIST);
+  readonly custom = pagedList({
+    params: () => ({ ...this.list.query(), isSystem: false }),
+    load: (query) => this.statusesService.list(query),
+    refreshOn: ['lookups'],
   });
-  readonly pager = new ClientPager(this.visibleStatuses);
+  readonly showArchived = computed(() => this.list.filters().includeArchived);
+
+  /** With archived hidden and nothing left, this tells "all archived" from "none yet". */
+  private readonly archivedCustom = rxResource({
+    params: () => (this.custom.loaded() && this.custom.total() === 0 && !this.showArchived() ? true : undefined),
+    stream: () => this.statusesService.list({ page: 1, limit: 1, isSystem: false, includeArchived: true }),
+  });
+  readonly hasArchivedCustom = computed(() => (this.archivedCustom.hasValue() ? this.archivedCustom.value().meta.total > 0 : false));
+  readonly loadFailed = computed(() => !!this.standard.error() || !!this.custom.error());
 
   readonly isDialogOpen = signal(false);
   readonly dialogMode = signal<DialogMode>('create');
@@ -155,9 +167,9 @@ export class Statuses implements OnInit {
             : this.statusesService.archive(status.id);
           return request$.pipe(
             tap(() => {
-              this.statuses.update((list) =>
-                list.map((s) => (s.id === status.id ? { ...s, isArchived: nextArchived } : s)),
-              );
+              // Archived rows leave the list unless "Show archived" is on; a reload settles the page.
+              this.custom.updateRows((rows) => rows.map((s) => (s.id === status.id ? { ...s, isArchived: nextArchived } : s)));
+              this.custom.reload();
             }),
             catchError(() => {
               const action = status.isArchived ? 'restore' : 'archive';
@@ -170,25 +182,19 @@ export class Statuses implements OnInit {
         takeUntilDestroyed(),
       )
       .subscribe();
+
+    this.list.clampToTotal(this.custom);
+    this.standardList.clampToTotal(this.standard);
   }
 
-  ngOnInit(): void {
-    this.load();
+  setShowArchived(value: boolean): void {
+    this.list.setFilter('includeArchived', value);
   }
 
   load(): void {
-    this.isLoading.set(true);
     this.error.set(null);
-    this.statusesService.list().subscribe({
-      next: (data) => {
-        this.statuses.set(data);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load statuses. Please try again.');
-        this.isLoading.set(false);
-      },
-    });
+    this.standard.reload();
+    this.custom.reload();
   }
 
   openCreate(): void {
@@ -225,8 +231,8 @@ export class Statuses implements OnInit {
     if (this.dialogMode() === 'create') {
       const payload: CreateStatusPayload = { name: value.name, color: value.color };
       this.statusesService.create(payload).subscribe({
-        next: (created) => {
-          this.statuses.update((list) => [...list, created]);
+        next: () => {
+          this.custom.reload();
           this.isSaving.set(false);
           this.isDialogOpen.set(false);
         },
@@ -249,7 +255,7 @@ export class Statuses implements OnInit {
     };
     this.statusesService.update(editing.id, payload).subscribe({
       next: (updated) => {
-        this.statuses.update((list) => list.map((s) => (s.id === updated.id ? updated : s)));
+        this.custom.updateRows((rows) => rows.map((s) => (s.id === updated.id ? updated : s)));
         this.isSaving.set(false);
         this.isDialogOpen.set(false);
       },

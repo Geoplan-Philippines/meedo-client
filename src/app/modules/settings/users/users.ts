@@ -1,6 +1,6 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -13,23 +13,25 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ToastModule } from 'primeng/toast';
-import { catchError, EMPTY, forkJoin, Subject, switchMap } from 'rxjs';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
-import { AuthService } from '../../../core/auth/auth.service';
+import { MemberDirectoryService, OrgMember } from '../../../core/members/member-directory.service';
 import { Team } from '../teams/models/teams.model';
 import { TeamsService } from '../teams/services/teams.service';
 import {
   HikvisionDirectoryUser,
   OnboardMemberPayload,
-  OrganizationMember,
   OrganizationMemberRole,
   UpdateMemberPayload,
 } from './models/users.model';
-import { UserService } from './services/user.service';
+import { USERS_LIST, UserService } from './services/user.service';
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../shared/utils/client-pager';
+import { injectListState } from '../../../shared/data/url-list-state';
+import { pagedList } from '../../../shared/data/paged-list';
+import { pagedSearch } from '../../../shared/data/paged-search';
 
 import { MessageModule } from 'primeng/message';
 type DialogMode = 'create' | 'edit';
@@ -51,6 +53,8 @@ type DialogMode = 'create' | 'edit';
     PasswordModule,
     SelectModule,
     ToastModule,
+    IconFieldModule,
+    InputIconModule,
     DatePipe,
     ReactiveFormsModule,
   ],
@@ -64,20 +68,33 @@ export class Users implements OnInit {
   private readonly teamsService = inject(TeamsService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly refresh$ = new Subject<void>();
-  private readonly authService = inject(AuthService);
+  private readonly directory = inject(MemberDirectoryService);
 
-  readonly users = signal<OrganizationMember[]>([]);
-  readonly pager = new ClientPager(this.users);
-  readonly teams = signal<Team[]>([]);
+  readonly list = injectListState(USERS_LIST);
+  readonly users = pagedList({
+    params: () => this.list.query(),
+    load: (query) => this.directory.list(query),
+    refreshOn: ['members'],
+  });
+
+  /** Team picker in the dialog: searched on the server. */
+  readonly teamSearch = pagedSearch<Team>({
+    fetch: (query) => this.teamsService.list({ ...query, sortField: 'name', sortOrder: 'asc' }),
+  });
+  /** The edited member's current team, kept in the options even when it is not on the first page. */
+  private readonly currentTeam = signal<Pick<Team, 'id' | 'name'> | null>(null);
+  readonly teamOptions = computed(() => {
+    const current = this.currentTeam();
+    const found = this.teamSearch.items();
+    return current && !found.some((team) => team.id === current.id) ? [current, ...found] : found;
+  });
+
   readonly biometricUsers = signal<HikvisionDirectoryUser[]>([]);
   readonly isLoadingBiometricUsers = signal(false);
   readonly biometricUsersError = signal<string | null>(null);
-  readonly isLoading = signal(false);
-  readonly loadError = signal<string | null>(null);
   readonly dialogVisible = signal(false);
   readonly dialogMode = signal<DialogMode>('create');
-  readonly selectedUser = signal<OrganizationMember | null>(null);
+  readonly selectedUser = signal<OrgMember | null>(null);
   readonly editingUserId = signal<string | null>(null);
   readonly isSaving = signal(false);
   readonly saveError = signal<string | null>(null);
@@ -113,46 +130,20 @@ export class Users implements OnInit {
     }),
   });
 
+  constructor() {
+    this.list.clampToTotal(this.users);
+  }
+
   ngOnInit(): void {
-    this.refresh$
-      .pipe(
-        switchMap(() => {
-          const organizationId = this.authService.organizationId();
-          this.isLoading.set(true);
-          this.loadError.set(null);
-
-          if (!organizationId) {
-            this.isLoading.set(false);
-            this.loadError.set('No organization selected.');
-            return EMPTY;
-          }
-
-          return forkJoin({
-            users: this.userService.getUsers(organizationId),
-            teams: this.teamsService.getTeams(organizationId),
-          }).pipe(
-            catchError((error) => {
-              console.error('Error loading users:', error);
-              this.isLoading.set(false);
-              this.loadError.set('Failed to load users and teams. Please try again.');
-              return EMPTY;
-            }),
-          );
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(({ users, teams }) => {
-        this.users.set(users);
-        this.teams.set([...teams].sort((a, b) => a.name.localeCompare(b.name)));
-        this.isLoading.set(false);
-      });
-
     this.loadBiometricUsers();
-    this.refresh$.next();
   }
 
   loadUsers(): void {
-    this.refresh$.next();
+    this.users.reload();
+  }
+
+  onSearch(event: Event): void {
+    this.list.setSearch((event.target as HTMLInputElement).value);
   }
 
   loadBiometricUsers(): void {
@@ -198,11 +189,13 @@ export class Users implements OnInit {
       role: 'member',
     });
     this.onboardEmployeeForm.controls.password.updateValueAndValidity({ emitEvent: false });
+    this.currentTeam.set(null);
+    this.teamSearch.open();
     this.saveError.set(null);
     this.dialogVisible.set(true);
   }
 
-  openEditDialog(member: OrganizationMember): void {
+  openEditDialog(member: OrgMember): void {
     if (this.editingUserId()) return;
 
     this.editingUserId.set(member.id);
@@ -215,6 +208,8 @@ export class Users implements OnInit {
         next: (details) => {
           this.dialogMode.set('edit');
           this.selectedUser.set(member);
+          this.currentTeam.set(details.team ?? null);
+          this.teamSearch.open();
           this.roleOptions.set([
             { label: this.formatRole(details.role), value: details.role },
           ]);

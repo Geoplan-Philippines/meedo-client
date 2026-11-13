@@ -1,17 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap, tap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
-import { ListPageChange, ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
+import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -20,20 +19,16 @@ import { ArchivedTag } from '../../../shared/ui/archived-tag/archived-tag';
 import { ProjectsService } from '../../tickets/services/projects.service';
 import { WorkspaceService } from '../../clients/services/workspace.service';
 import { WorkspaceBreadcrumb } from '../../clients/workspace-breadcrumb/workspace-breadcrumb';
-import { ClientsService } from './services/clients.service';
-import { ClientListParams, ClientRecord, ClientSortField } from './models/client.model';
+import { CLIENTS_LIST, ClientsService } from './services/clients.service';
+import { ClientRecord } from './models/client.model';
+import { injectListState } from '../../../shared/data/url-list-state';
+import { pagedList } from '../../../shared/data/paged-list';
+import { PrefetchLink } from '../../../shared/ui/prefetch/prefetch-link';
 import { NewInternalRecord } from '../shared/new-internal-record';
 
 import { MessageModule } from 'primeng/message';
 /** Must match the server's DISPLAY_NAME_MAX_LENGTH. */
 const DISPLAY_NAME_MAX_LENGTH = 200;
-const PAGE_SIZE = 25;
-const SEARCH_DEBOUNCE_MS = 250;
-
-const SORTABLE: Record<string, ClientSortField> = {
-  name: 'customerName',
-  projectCount: 'projectCount',
-};
 
 @Component({
   selector: 'app-settings-customers',
@@ -46,6 +41,7 @@ const SORTABLE: Record<string, ClientSortField> = {
     InputIconModule,
     RouterLink,
     ReactiveFormsModule,
+    FormsModule,
     ButtonModule,
     InputTextModule,
     TableModule,
@@ -54,6 +50,7 @@ const SORTABLE: Record<string, ClientSortField> = {
     ArchivedTag,
     WorkspaceBreadcrumb,
     NewInternalRecord,
+    PrefetchLink,
   ],
   templateUrl: './customers.html',
   styleUrl: './customers.css',
@@ -69,24 +66,20 @@ export class Customers {
   readonly isAdmin = this.authService.isAdmin;
   readonly creating = signal(false);
   onCreated() { this.creating.set(false); this.workspace.invalidate(); this.reload(); }
-  readonly pageSize = PAGE_SIZE;
   readonly maxNameLength = DISPLAY_NAME_MAX_LENGTH;
 
-  readonly clients = signal<ClientRecord[]>([]);
-  readonly total = signal(0);
-  readonly isLoading = signal(false);
-  readonly error = signal<string | null>(null);
-  readonly first = signal(0);
-  readonly rows = signal(PAGE_SIZE);
-  /** Current page, 1-based, for the shared list footer. */
-  readonly page = computed(() => Math.floor(this.first() / this.rows()) + 1);
+  /** Page, sort, search and "Show archived" live in the URL; the API applies them. */
+  readonly list = injectListState(CLIENTS_LIST);
+  readonly clients = pagedList({
+    params: () => this.list.query(),
+    load: (query) => this.clientsService.list(query),
+    refreshOn: ['clients', 'projects'],
+  });
 
   readonly editingId = signal<string | null>(null);
   readonly isSaving = signal(false);
   readonly saveError = signal<string | null>(null);
 
-  readonly searchControl = new FormControl('', { nonNullable: true });
-  readonly archivedControl = new FormControl(false, { nonNullable: true });
   readonly editForm = new FormGroup({
     displayName: new FormControl('', {
       nonNullable: true,
@@ -94,66 +87,20 @@ export class Customers {
     }),
   });
 
-  private params: ClientListParams = { page: 1, limit: PAGE_SIZE, sortField: 'customerName', sortOrder: 'asc' };
-  /** Every list request goes through here; switchMap drops responses a newer request replaced. */
-  private readonly request$ = new Subject<ClientListParams>();
-
   constructor() {
-    this.searchControl.valueChanges
-      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe((search) => this.applyParams({ search, page: 1 }));
-
-    this.archivedControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((includeArchived) => this.applyParams({ includeArchived, page: 1 }));
-
-    this.request$
-      .pipe(
-        tap(() => {
-          this.isLoading.set(true);
-          this.error.set(null);
-        }),
-        switchMap((params) =>
-          this.clientsService.list(params).pipe(
-            map((response) => ({ response, failed: false as const })),
-            catchError(() => of({ response: null, failed: true as const })),
-          ),
-        ),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(({ response }) => {
-        this.isLoading.set(false);
-        if (!response) {
-          this.error.set('Failed to load customers. Please try again.');
-          return;
-        }
-        this.clients.set(response.data);
-        this.total.set(response.meta.total);
-        this.first.set((response.meta.page - 1) * response.meta.limit);
-      });
+    this.list.clampToTotal(this.clients);
   }
 
-  /** PrimeNG lazy table: page and sort changes. */
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const rows = event.rows ?? PAGE_SIZE;
-    const sortKey = typeof event.sortField === 'string' ? event.sortField : 'name';
-    this.applyParams({
-      page: Math.floor((event.first ?? 0) / rows) + 1,
-      limit: rows,
-      sortField: SORTABLE[sortKey] ?? 'customerName',
-      sortOrder: event.sortOrder === -1 ? 'desc' : 'asc',
-    });
+  onSearch(event: Event): void {
+    this.list.setSearch((event.target as HTMLInputElement).value);
   }
 
-  /** Shared list footer: page or page size changed. */
-  onPageChange(change: ListPageChange): void {
-    this.rows.set(change.pageSize);
-    this.first.set(change.first);
-    this.applyParams({ page: change.page, limit: change.pageSize });
+  setIncludeArchived(value: boolean): void {
+    this.list.setFilter('includeArchived', value);
   }
 
   reload(): void {
-    this.request$.next(this.params);
+    this.clients.reload();
   }
 
   startEdit(client: ClientRecord): void {
@@ -193,7 +140,7 @@ export class Customers {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {
-          this.clients.update((list) => list.map((c) => (c.id === updated.id ? updated : c)));
+          this.clients.updateRows((rows) => rows.map((c) => (c.id === updated.id ? updated : c)));
           this.isSaving.set(false);
           this.editingId.set(null);
           // Ticket pickers show client names, so refresh them on next open.
@@ -209,11 +156,5 @@ export class Customers {
           );
         },
       });
-  }
-
-  private applyParams(patch: Partial<ClientListParams>): void {
-    this.params = { ...this.params, ...patch };
-    if (patch.page === 1) this.first.set(0);
-    this.request$.next(this.params);
   }
 }

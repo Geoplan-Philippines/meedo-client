@@ -1,9 +1,32 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment.dev';
 import { CreateTeamPayload, Team, TeamMember } from '../models/teams.model';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
+import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
+import { PageQuery, toHttpParams } from '../../../../shared/data/page-query';
+import { ListStateConfig } from '../../../../shared/data/url-list-state';
+import { cacheContext } from '../../../../core/http/api-cache';
+
+export interface TeamListQuery extends PageQuery {
+  /** Only teams the signed-in user belongs to. */
+  mine?: boolean;
+}
+
+export const TEAMS_LIST: ListStateConfig = {
+  pageSize: 25,
+  sortField: 'name',
+  sortOrder: 'asc',
+  sortFields: ['name', 'createdAt', 'memberCount'],
+};
+
+/**
+ * Teams are a short list per organization (departments), so filters and
+ * pickers show the first page by name and search the server for the rest.
+ */
+export const TEAM_OPTIONS_QUERY: TeamListQuery = { page: 1, limit: 50, sortField: 'name', sortOrder: 'asc' };
 
 @Injectable({ providedIn: 'root' })
 export class TeamsService {
@@ -12,17 +35,13 @@ export class TeamsService {
   /** Our own team endpoints (org-scoped, not gated on the caller's team membership). */
   private readonly teamsUrl = `${environment.apiBaseUrl}/settings/teams`;
 
-  getTeams(organizationId: string) {
-    return this.http.get<Team[]>(`${this.baseUrl}/list-teams`, {
-      params: { organizationId },
+  /** One page of the organization's teams with member counts; `mine` keeps the caller's own teams. */
+  list(query: TeamListQuery): Observable<PaginatedApiResponse<Team>> {
+    return this.http.get<PaginatedApiResponse<Team>>(this.teamsUrl, {
+      params: toHttpParams(query),
+      context: cacheContext('teams'),
       withCredentials: true,
     });
-  }
-
-  /** Better Auth returns memberships across organizations; narrow to the active one. */
-  getUserTeams(organizationId: string) {
-    return this.http.get<Team[]>(`${this.baseUrl}/list-user-teams`, { withCredentials: true })
-      .pipe(map(teams => teams.filter(team => team.organizationId === organizationId)));
   }
 
   /**
@@ -33,7 +52,7 @@ export class TeamsService {
    */
   listTeamMembers(teamId: string) {
     return this.http
-      .get<ApiResponse<TeamMember[]>>(`${this.teamsUrl}/${teamId}/members`)
+      .get<ApiResponse<TeamMember[]>>(`${this.teamsUrl}/${teamId}/members`, { context: cacheContext('teams') })
       .pipe(map((res) => res.data));
   }
 

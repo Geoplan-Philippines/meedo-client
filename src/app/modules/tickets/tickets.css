@@ -850,3 +850,10 @@
 .ticket-layout-toggle { display: flex; gap: .25rem; }
 .ticket-layout-toggle button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-primary-foreground); border-color: var(--color-primary); }
 .ticket-layout-toggle button[aria-pressed="false"] { background: transparent; color: var(--color-body); border-color: transparent; }
+
+/* "Show more" under a server-searched picker list. */
+.filter-more {
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}

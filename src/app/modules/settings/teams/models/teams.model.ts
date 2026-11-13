@@ -1,10 +1,11 @@
 export interface Team {
   id: string;
   name: string;
-  isArchived: boolean;
   organizationId: string;
   createdAt: string;
   updatedAt: string;
+  /** Members assigned to the team (from the team list). */
+  memberCount?: number;
 }
 
 export interface CreateTeamPayload {

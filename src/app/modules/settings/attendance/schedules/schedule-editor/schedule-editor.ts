@@ -125,11 +125,14 @@ export class ScheduleEditor implements OnInit {
     this.loadError.set(null);
     forkJoin({
       schedule: this.schedulesService.get(this.scheduleId),
-      shifts: this.shiftsService.list(),
+      shifts: this.shiftsService.options(),
     }).subscribe({
       next: ({ schedule, shifts }) => {
         this.schedule.set(schedule);
-        this.shifts.set(shifts);
+        // Only active shifts are loaded; archived ones this schedule still uses come with its days.
+        const loaded = new Set(shifts.map((shift) => shift.id));
+        const referenced = schedule.days.flatMap((day) => (day.shift && !loaded.has(day.shift.id) ? [day.shift] : []));
+        this.shifts.set([...shifts, ...new Map(referenced.map((shift) => [shift.id, shift])).values()]);
         this.buildForm(schedule);
         this.isLoading.set(false);
       },

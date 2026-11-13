@@ -31,8 +31,7 @@ import {
 } from './shared/timesheet-project.util';
 
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
-import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
-import { ClientPager } from '../../../shared/utils/client-pager';
+import { TimesheetProjectPicker } from './entry-form/timesheet-project-picker';
 import { TableModule } from 'primeng/table';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { MessageModule } from 'primeng/message';
@@ -137,7 +136,7 @@ function stripHtml(value: string): string {
     TableModule,
     EmptyState,
     PageLayout,
-    ListPaginator,
+    TimesheetProjectPicker,
     CommonModule,
     FormsModule,
     ButtonModule,
@@ -164,7 +163,6 @@ export class Timesheet implements OnInit {
   readonly formOpen = signal(false);
   readonly editingEntry = signal<TimesheetEntry | null>(null);
   readonly rawEntries = signal<TimesheetEntry[]>([]);
-  readonly pickerProjects = signal<TimesheetProject[]>([]);
   readonly targetEntryId = signal<string | null>(null);
   private readonly timesheetService = inject(TimesheetService);
   private readonly messageService = inject(MessageService);
@@ -232,21 +230,17 @@ export class Timesheet implements OnInit {
       : [{ title: 'No activity yet', time: 'Draft entries will appear here after saving.', tone: 'info' }];
   });
 
-  /** New rows can only use active projects; archived ones appear only as existing rows. */
-  readonly projectOptions = computed(() =>
-    this.projects()
-      .filter((project) => !project.isArchived)
-      .map((project) => ({ label: project.label ?? timesheetProjectLabel(project), value: project.id })),
-  );
-
   readonly tableProjectIds = computed(() => {
     const ids = new Set<string>();
     this.entries().forEach((entry) => { if (entry.projectId) ids.add(entry.projectId); });
     this.addedProjectIds().forEach((id) => ids.add(id));
     return [...ids];
   });
-  /** Project rows of the week grid, paged with the shared list footer. */
-  readonly projectPager = new ClientPager(this.tableProjectIds, 25);
+  /**
+   * Project rows of the week grid. One person's week is shown whole (it is
+   * bounded by the daily hour limits), because the daily and weekly totals
+   * and unsaved rows need every row.
+   */
 
   readonly hasSubmittableEntries = computed(() => this.entries().some((entry) => entry.status === 'DRAFT'));
   readonly draftCount = computed(() => this.entries().filter((entry) => entry.status === 'DRAFT').length);
@@ -288,15 +282,14 @@ export class Timesheet implements OnInit {
 
     forkJoin({
       entries: this.timesheetService.getEntries(this.periodStart(), this.periodEnd()),
-      projects: this.timesheetService.getProjects(),
       lock: this.timesheetService.getPeriodLock(this.periodStart(), this.periodEnd()),
     })
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: ({ entries, projects, lock }) => {
-          this.pickerProjects.set(projects);
+        next: ({ entries, lock }) => {
           this.rawEntries.set(entries.data);
-          this.projects.set(withEntryProjects(projects, entries.data));
+          // Row names come with the entries; new rows are picked with a server search.
+          this.projects.set(withEntryProjects(this.projects().filter((project) => this.addedProjectIds().has(project.id)), entries.data));
           this.entries.set(this.entriesToDayEntries(entries.data));
           this.isLocked.set(lock.isLocked);
           this.lockMessage.set(lock.isLocked ? `This week was locked on ${formatShortDate(new Date(lock.lockedAt ?? Date.now()))}.` : null);
@@ -383,8 +376,12 @@ export class Timesheet implements OnInit {
     this.addProjectModal.set(null);
   }
 
-  onAddProjectChange(projectId: string): void {
-    this.addProjectModal.set({ projectId });
+  onAddProjectChange(project: TimesheetProject | null): void {
+    this.addProjectModal.set({ projectId: project?.id ?? null });
+    // Keep the picked project so its new row has a name.
+    if (project && !this.projects().some((known) => known.id === project.id)) {
+      this.projects.update((projects) => [...projects, project]);
+    }
   }
 
   confirmAddProject(): void {

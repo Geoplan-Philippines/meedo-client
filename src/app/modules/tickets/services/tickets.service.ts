@@ -9,11 +9,68 @@ import {
   TicketFacets,
   TicketFacetsParams,
   TicketListParams,
+  TicketView,
   UpdateTicketPayload,
 } from '../models/ticket.model';
+import { cacheContext } from '../../../core/http/api-cache';
+import { ListQuery, ListStateConfig } from '../../../shared/data/url-list-state';
 import { TicketStats } from '../models/ticket-stats.model';
 import { ApiResponse } from '../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
+
+/** URL filters of the ticket list: the view tab and the facet selections. */
+export type TicketListFilters = {
+  tab: string;
+  status: readonly string[];
+  priority: readonly string[];
+  team: readonly string[];
+};
+
+/** Ticket list: newest first; tab, facets, search, sort and page live in the URL. */
+export const TICKETS_LIST: ListStateConfig<TicketListFilters> = {
+  pageSize: 25,
+  sortField: 'createdAt',
+  sortOrder: 'desc',
+  sortFields: ['title', 'priority', 'dueDate', 'createdAt', 'ticketNumber'],
+  filters: { tab: 'all', status: [], priority: [], team: [] },
+};
+
+const TICKET_VIEW_VALUES: readonly TicketView[] = ['all', 'active', 'backlog', 'closed'];
+
+export function ticketView(tab: string): TicketView {
+  return (TICKET_VIEW_VALUES as readonly string[]).includes(tab) ? (tab as TicketView) : 'all';
+}
+
+/** The API query for a ticket list state, plus the page's scope (my tickets, one project). */
+export function ticketListParams(
+  query: ListQuery<TicketListFilters>,
+  scope: { assigneeId?: string; projectId?: string },
+): TicketListParams {
+  return {
+    page: query.page,
+    limit: query.limit,
+    search: query.search,
+    view: ticketView(query.tab),
+    ticketStatusId: query.status.length ? [...query.status] : undefined,
+    priority: query.priority.length ? [...query.priority] : undefined,
+    teamId: query.team.length ? [...query.team] : undefined,
+    assigneeId: scope.assigneeId,
+    projectId: scope.projectId,
+    sortField: query.sortField,
+    sortOrder: query.sortOrder,
+  };
+}
+
+/** Facet counts for the same scope (status selections are left out so their badges stay useful). */
+export function ticketFacetParams(params: TicketListParams): TicketFacetsParams {
+  return {
+    view: params.view,
+    search: params.search,
+    teamId: params.teamId,
+    assigneeId: params.assigneeId,
+    projectId: params.projectId,
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class TicketsService {
@@ -41,6 +98,7 @@ export class TicketsService {
 
     return this.http.get<PaginatedApiResponse<Ticket>>(this.baseUrl, {
       params: httpParams,
+      context: cacheContext('tickets'),
       withCredentials: true,
     });
   }
@@ -60,6 +118,7 @@ export class TicketsService {
     return this.http
       .get<ApiResponse<TicketFacets>>(`${this.baseUrl}/facets`, {
         params: httpParams,
+        context: cacheContext('tickets'),
         withCredentials: true,
       })
       .pipe(map(res => res.data));
@@ -67,13 +126,13 @@ export class TicketsService {
 
   getStats() {
     return this.http
-      .get<ApiResponse<TicketStats>>(`${this.baseUrl}/stats`, { withCredentials: true })
+      .get<ApiResponse<TicketStats>>(`${this.baseUrl}/stats`, { context: cacheContext('tickets'), withCredentials: true })
       .pipe(map(res => res.data));
   }
 
   getById(id: string) {
     return this.http
-      .get<ApiResponse<Ticket>>(`${this.baseUrl}/${id}`, { withCredentials: true })
+      .get<ApiResponse<Ticket>>(`${this.baseUrl}/${id}`, { context: cacheContext('tickets'), withCredentials: true })
       .pipe(map(res => res.data));
   }
 

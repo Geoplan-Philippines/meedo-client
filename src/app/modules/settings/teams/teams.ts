@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
@@ -7,16 +7,19 @@ import { TableModule } from 'primeng/table';
 import { PageLayout } from '../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../shared/utils/client-pager';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { TeamsService } from './services/teams.service';
-import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { MessageModule } from 'primeng/message';
+import { TEAMS_LIST, TeamsService } from './services/teams.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { injectListState } from '../../../shared/data/url-list-state';
+import { pagedList } from '../../../shared/data/paged-list';
 import { Team } from './models/teams.model';
 
 @Component({
@@ -31,6 +34,9 @@ import { Team } from './models/teams.model';
     InputTextModule,
     ConfirmDialogModule,
     ToastModule,
+    IconFieldModule,
+    InputIconModule,
+    MessageModule,
     DatePipe,
     ReactiveFormsModule,
   ],
@@ -39,17 +45,19 @@ import { Team } from './models/teams.model';
   styleUrl: './teams.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Teams implements OnInit {
+export class Teams {
   private readonly teamsService = inject(TeamsService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly refresh$ = new Subject<void>();
   private readonly authService = inject(AuthService);
 
-  readonly teams = signal<Team[]>([]);
-  readonly pager = new ClientPager(this.teams);
-  readonly isLoading = signal(false);
+  readonly list = injectListState(TEAMS_LIST);
+  readonly teams = pagedList({
+    params: () => this.list.query(),
+    load: (query) => this.teamsService.list(query),
+    refreshOn: ['teams'],
+  });
   readonly dialogVisible = signal(false);
   readonly isEditing = signal(false);
   readonly isSaving = signal(false);
@@ -64,50 +72,16 @@ export class Teams implements OnInit {
     }),
   });
 
-  ngOnInit(): void {
-    this.refresh$
-      .pipe(
-        switchMap(() => {
-          this.isLoading.set(true);
-          const organizationId = this.authService.organizationId();
+  constructor() {
+    this.list.clampToTotal(this.teams);
+  }
 
-          if (!organizationId) {
-            this.isLoading.set(false);
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: 'No organization selected',
-            });
-            return EMPTY;
-          }
-
-          return this.teamsService.getTeams(organizationId).pipe(
-            catchError((err) => {
-              console.error('Error loading teams:', err);
-              this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to load teams',
-              });
-              this.isLoading.set(false);
-              return EMPTY;
-            }),
-          );
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (res) => {
-          this.teams.set(res);
-          this.isLoading.set(false);
-        },
-      });
-
-    this.refresh$.next();
+  onSearch(event: Event): void {
+    this.list.setSearch((event.target as HTMLInputElement).value);
   }
 
   loadTeams(): void {
-    this.refresh$.next();
+    this.teams.reload();
   }
 
   openCreateDialog(): void {

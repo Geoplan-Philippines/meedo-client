@@ -25,14 +25,6 @@ export interface Subscriber {
   createdAt: string;
 }
 
-export interface LeadsResponse {
-  data: Lead[];
-}
-
-export interface SubscribersResponse {
-  data: Subscriber[];
-}
-
 export interface LeadsStatsResponse {
   data: LeadsStats;
 }

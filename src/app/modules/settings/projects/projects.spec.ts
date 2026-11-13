@@ -15,6 +15,7 @@ import { Projects } from './projects';
 describe('Projects client navigation', () => {
   let fixture: ComponentFixture<Projects>;
   let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let listAll: ReturnType<typeof vi.fn>;
   let navigate: ReturnType<typeof vi.spyOn>;
   let detail: ReturnType<typeof vi.fn>;
@@ -24,8 +25,12 @@ describe('Projects client navigation', () => {
 
   beforeEach(async () => {
     params = new BehaviorSubject(convertToParamMap({ clientId: 'c1' }));
+    queryParams = new BehaviorSubject(convertToParamMap({}));
     isAdmin.set(true);
-    listAll = vi.fn().mockReturnValue(of([project, second]));
+    listAll = vi.fn().mockReturnValue(of({
+      data: [project, second],
+      meta: { total: 2, page: 1, limit: 25, lastPage: 1, clientCount: 1, clientTotals: [{ clientId: 'c1', count: 2 }] },
+    }));
     detail = vi.fn((id: string) => of({ ...(id === 'p2' ? second : project), history: [], slaPolicies: [] }));
     await TestBed.configureTestingModule({
       imports: [Projects],
@@ -33,7 +38,8 @@ describe('Projects client navigation', () => {
         provideRouter([]), provideHttpClient(),
         { provide: ActivatedRoute, useValue: {
           paramMap: params,
-          snapshot: { paramMap: params.value, queryParamMap: convertToParamMap({}) },
+          queryParamMap: queryParams,
+          snapshot: { paramMap: params.value, queryParamMap: queryParams.value },
         } },
         { provide: AuthService, useValue: { isAdmin } },
         { provide: ClientsService, useValue: { list: () => of({ data: [], meta: { page: 1, limit: 20, total: 0, lastPage: 0 } }), get: () => of({ id: 'c1', name: 'Alpha', customerName: 'Alpha', isArchived: false }) } },
@@ -42,7 +48,7 @@ describe('Projects client navigation', () => {
           project: () => of(project),
           refreshProjects: vi.fn(),
         } },
-        { provide: ProjectAdminService, useValue: { listAll, detail, statuses: () => of([]), members: () => of([]), memberOptions: () => of([]) } },
+        { provide: ProjectAdminService, useValue: { list: listAll, detail, statuses: () => of([]), members: () => of([]), memberOptions: () => of([]) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(Projects);
@@ -51,8 +57,13 @@ describe('Projects client navigation', () => {
     await fixture.whenStable();
   });
 
-  it('scopes projects to the route client without a hidden department filter', async () => {
-    expect(listAll).toHaveBeenLastCalledWith(expect.objectContaining({ clientId: 'c1', unassigned: false, teamId: null }));
+  it('asks for one page scoped to the route client without a hidden department filter', async () => {
+    expect(listAll).toHaveBeenLastCalledWith({
+      page: 1, limit: 25, sortField: 'reportedDate', sortOrder: 'desc',
+      status: null, includeArchived: false, includeClosed: true,
+      clientId: 'c1', unassigned: false, teamId: null,
+    });
+    expect(fixture.nativeElement.textContent).toContain('2 projects across 1 customer');
     params.next(convertToParamMap({ clientId: 'c2' }));
     fixture.detectChanges();
     await fixture.whenStable();
@@ -93,10 +104,12 @@ describe('Projects client navigation', () => {
     expect(detail).toHaveBeenLastCalledWith('p2');
   });
 
-  it('closes the drawer in place, keeping filters and the closed-projects toggle', async () => {
+  it('closes the drawer in place, keeping the URL filters and the closed-projects toggle', async () => {
     const component = fixture.componentInstance;
-    component.filters.patchValue({ search: 'Mig', includeClosed: false });
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    queryParams.next(convertToParamMap({ q: 'Mig', includeClosed: 'false' }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(listAll).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'Mig', includeClosed: false }));
     const loads = listAll.mock.calls.length;
 
     manageButtons()[0].click();
@@ -106,7 +119,8 @@ describe('Projects client navigation', () => {
 
     expect(navigate).not.toHaveBeenCalled();
     expect(component.selectedProjectId()).toBeNull();
-    expect(component.filters.getRawValue()).toMatchObject({ search: 'Mig', includeClosed: false });
+    expect(component.list.search()).toBe('Mig');
+    expect(component.list.filters().includeClosed).toBe(false);
     expect(listAll.mock.calls.length).toBe(loads);
   });
 

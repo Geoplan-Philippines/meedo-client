@@ -25,7 +25,9 @@
       type="search"
       placeholder="Search by title or description…"
       aria-label="Search tickets"
-      [formControl]="searchControl"
+      autocomplete="off"
+      [value]="list.searchInput()"
+      (input)="onSearch($event)"
     />
   </p-iconfield>
   <button
@@ -140,16 +142,16 @@
       }
     } @else {
       <p-table
-        #dt
         class="ds-table tickets-table"
         [value]="tickets()"
+        dataKey="id"
         [lazy]="true"
         [loading]="isLoading()"
-        [first]="firstRow()"
-        [rows]="rows()"
+        [sortField]="list.sortField()"
+        [sortOrder]="list.tableSortOrder()"
         [tableStyle]="{ 'width': '100%', 'table-layout': 'fixed' }"
         [rowHover]="true"
-        (onLazyLoad)="onLazyLoad($event)"
+        (onLazyLoad)="list.onLazyLoad($event)"
       >
         <ng-template pTemplate="header">
           <tr>
@@ -175,6 +177,7 @@
                 class="ticket-title-btn"
                 type="button"
                 [attr.aria-label]="'Open ticket #' + ticket.ticketNumber + ': ' + ticket.title"
+                [appPrefetch]="'/tickets/' + ticket.id"
               >
                 <span class="ticket-number">#{{ ticket.ticketNumber }}</span>
                 <span class="ticket-title" [title]="ticket.title">{{ ticket.title }}</span>
@@ -258,10 +261,10 @@
       </p-table>
       <app-list-paginator
         [total]="totalRecords()"
-        [page]="page()"
-        [pageSize]="rows()"
+        [page]="list.page()"
+        [pageSize]="list.pageSize()"
         itemLabel="tickets"
-        (pageChange)="onPageChange($event)"
+        (pageChange)="list.onPage($event)"
       />
     }
   </div>
@@ -489,7 +492,7 @@
   </div>
 </p-popover>
 
-<p-popover #assigneePop styleClass="filter-popover" (onHide)="assigneeSearch.set('')">
+<p-popover #assigneePop styleClass="filter-popover" (onShow)="composeAssignees.open()">
   <div class="filter-menu">
     <div class="picker-search">
       <i class="pi pi-search" aria-hidden="true"></i>
@@ -497,8 +500,8 @@
         type="text"
         placeholder="Search members…"
         aria-label="Search members"
-        [value]="assigneeSearch()"
-        (input)="assigneeSearch.set($any($event.target).value)"
+        [value]="composeAssignees.term()"
+        (input)="composeAssignees.search($any($event.target).value)"
       />
       @if (filteredMembers().length > 0) {
         <button
@@ -549,14 +552,21 @@
         </li>
       } @empty {
         <li class="filter-empty">
-          {{ selectedTeam() ? 'No members in this team' : 'No members found' }}
+          @if (composeAssignees.loading()) { Loading members… }
+          @else if (composeAssignees.failed()) { Could not load members. }
+          @else { {{ selectedTeam() ? 'No members in this team' : 'No members found' }} }
         </li>
       }
     </ul>
+    @if (composeAssignees.hasMore()) {
+      <button type="button" class="filter-option filter-more" [disabled]="composeAssignees.loading()" (click)="composeAssignees.loadMore()">
+        Show more ({{ composeAssignees.items().length }} of {{ composeAssignees.total() }})
+      </button>
+    }
   </div>
 </p-popover>
 
-<p-popover #projectPop styleClass="filter-popover" (onHide)="projectSearch.set('')">
+<p-popover #projectPop styleClass="filter-popover" (onShow)="composeProjects.open()">
   <div class="filter-menu">
     <div class="picker-search">
       <i class="pi pi-search" aria-hidden="true"></i>
@@ -564,19 +574,19 @@
         type="text"
         placeholder="Search projects…"
         aria-label="Search projects"
-        [value]="projectSearch()"
-        (input)="projectSearch.set($any($event.target).value)"
+        [value]="composeProjects.term()"
+        (input)="composeProjects.search($any($event.target).value)"
       />
     </div>
     <ul class="filter-list filter-list--scroll" role="menu">
-      @for (project of projectMatches().items; track project.id) {
+      @for (project of composeProjects.items(); track project.id) {
         <li>
           <button
             class="filter-option"
             type="button"
             role="menuitemradio"
             [attr.aria-checked]="selectedProject()?.id === project.id"
-            (click)="setProjectValue(project.id); projectPop.hide()"
+            (click)="setProjectValue(project); projectPop.hide()"
           >
             <span class="option-stack">
               <span class="option-label">{{ project.name }}</span>
@@ -588,13 +598,17 @@
           </button>
         </li>
       } @empty {
-        <li class="filter-empty">No projects found</li>
+        <li class="filter-empty">
+          @if (composeProjects.loading()) { Loading projects… }
+          @else if (composeProjects.failed()) { Could not load projects. }
+          @else { No projects found }
+        </li>
       }
     </ul>
-    @if (projectMatches().total > projectMatches().items.length) {
-      <p class="filter-empty" aria-live="polite">
-        Showing {{ projectMatches().items.length }} of {{ projectMatches().total }}. Type to narrow.
-      </p>
+    @if (composeProjects.hasMore()) {
+      <button type="button" class="filter-option filter-more" [disabled]="composeProjects.loading()" (click)="composeProjects.loadMore()">
+        Show more ({{ composeProjects.items().length }} of {{ composeProjects.total() }})
+      </button>
     }
   </div>
 </p-popover>
@@ -727,7 +741,7 @@
             </div>
           }
         } @else {
-        <p-select inputId="edit-ticket-project" formControlName="projectId" [options]="editProjectOptions()" optionLabel="label" optionValue="id" placeholder="Select project" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="label" [virtualScroll]="true" [virtualScrollItemSize]="44" [showClear]="true" appendTo="body">
+        <p-select inputId="edit-ticket-project" formControlName="projectId" [options]="editProjectOptions()" optionLabel="label" optionValue="id" placeholder="Select project" class="w-full" [loading]="editProjects.loading()" [filter]="true" filterBy="label" (onFilter)="editProjects.search($event.filter)" (onShow)="editProjects.open()" [showClear]="true" appendTo="body">
           <ng-template #selectedItem let-project>
             <span class="project-option">
               <span class="project-option__name">{{ project.name }}</span>
@@ -754,7 +768,7 @@
 
     <div class="form-field">
       <label class="form-label" for="edit-ticket-assignee">Assigned To</label>
-      <p-multiSelect inputId="edit-ticket-assignee" formControlName="assigneeIds" [options]="members()" optionLabel="displayName" optionValue="id" placeholder="Select members" display="chip" class="w-full" [loading]="isLoadingDropdowns()" [filter]="true" filterBy="displayName" appendTo="body" />
+      <p-multiSelect inputId="edit-ticket-assignee" formControlName="assigneeIds" [options]="editAssigneeOptions()" optionLabel="displayName" optionValue="id" placeholder="Select members" display="chip" class="w-full" [loading]="editAssignees.loading()" [filter]="true" filterBy="displayName" (onFilter)="editAssignees.search($event.filter)" (onPanelShow)="editAssignees.open()" appendTo="body" />
     </div>
 
   </form>

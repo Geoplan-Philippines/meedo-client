@@ -127,14 +127,15 @@ export class TimesheetReview implements OnInit {
     this.isLoading.set(true);
 
     forkJoin({
-      summary: this.timesheetService.getSummary({ periodStart, periodEnd }),
+      // Only this employee's row: the summary pages employees, so ask for this one.
+      summary: this.timesheetService.getSummaryPage({ periodStart, periodEnd, userId: userId ?? undefined, page: 1, limit: 1 }),
       lock: this.timesheetService.getPeriodLock(periodStart, periodEnd),
       auditLogs: this.timesheetService.getAuditLogs(1, 20, periodStart, periodEnd),
     })
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: ({ summary, lock, auditLogs }) => {
-          const emp = summary.employees?.find(e => e.userId === userId) ?? null;
+          const emp = summary.data.find(e => e.userId === userId) ?? null;
           this.employee.set(emp);
           this.periodLock.set(lock);
           this.auditLogs.set(auditLogs.data);

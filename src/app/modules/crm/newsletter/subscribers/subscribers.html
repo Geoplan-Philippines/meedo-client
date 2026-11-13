@@ -10,13 +10,16 @@
       type="search"
       placeholder="Search by name or email…"
       aria-label="Search subscribers"
+      autocomplete="off"
+      maxlength="100"
+      [value]="list.searchInput()"
       (input)="onSearch($event)"
     />
   </p-iconfield>
   <button pageToolbarEnd pButton type="button" class="coming-soon" severity="secondary" [outlined]="true" icon="pi pi-filter" label="Filter" aria-disabled="true" title="Coming soon"></button>
 
   <div>
-    @if (isLoading()) {
+    @if (!subscribers.loaded()) {
       <div class="ds-table-skeleton" role="status" aria-label="Loading subscribers">
         @for (row of skeletonRows; track row) {
           <div class="skeleton-row">
@@ -30,9 +33,13 @@
     } @else {
       <p-table
         class="ds-table"
-        [value]="pager.pageRows()"
+        [value]="subscribers.rows()"
+        dataKey="id"
         [lazy]="true"
-        (onLazyLoad)="pager.onSort($event)"
+        (onLazyLoad)="list.onLazyLoad($event)"
+        [sortField]="list.sortField()"
+        [sortOrder]="list.tableSortOrder()"
+        [loading]="subscribers.loading()"
         [tableStyle]="{ 'width': '100%' }"
         [rowHover]="true"
       >
@@ -64,18 +71,18 @@
             <td colspan="3">
               <app-empty-state
                 heading="No subscribers found"
-                [description]="searchTerm() ? 'No subscribers match your search. Try different keywords.' : 'Your newsletter has no subscribers yet.'"
+                [description]="list.search() ? 'No subscribers match your search. Try different keywords.' : 'Your newsletter has no subscribers yet.'"
               />
             </td>
           </tr>
         </ng-template>
       </p-table>
       <app-list-paginator
-        [total]="pager.total()"
-        [page]="pager.currentPage()"
-        [pageSize]="pager.pageSize()"
+        [total]="subscribers.total()"
+        [page]="list.page()"
+        [pageSize]="list.pageSize()"
         itemLabel="subscribers"
-        (pageChange)="pager.onPage($event)"
+        (pageChange)="list.onPage($event)"
       />
     }
   </div>

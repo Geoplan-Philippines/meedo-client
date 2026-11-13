@@ -14,28 +14,28 @@
   <p-button pageActions label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" />
 
 
-  @if (error()) {
+  @if (error() || schedules.error()) {
     <p-message severity="error" styleClass="ds-message">
-      <span>{{ error() }}</span>
-      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="isLoading()" />
+      <span>{{ error() || 'Failed to load schedules. Please try again.' }}</span>
+      <p-button label="Retry" icon="pi pi-refresh" size="small" severity="danger" text (onClick)="load()" [disabled]="schedules.loading()" />
     </p-message>
   }
 
-  @if (isLoading()) {
+  @if (!schedules.loaded()) {
     <div class="ds-table-skeleton" role="status">
       <span class="ds-sr-only">Loading schedules…</span>
       @for (row of [1, 2, 3, 4]; track row) {
         <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="16rem" height="0.75rem" /></div>
       }
     </div>
-  } @else if (schedules().length === 0) {
+  } @else if (schedules.total() === 0) {
     <app-empty-state icon="pi pi-calendar" heading="No schedules yet" description="Create a schedule, then open it to set which days are working days and which shift each one uses.">
       <p-button label="New schedule" icon="pi pi-plus" (onClick)="openCreate()" />
     </app-empty-state>
   } @else {
     <div>
     <ul class="ds-rows" aria-label="Weekly schedules">
-      @for (schedule of pager.pageRows(); track schedule.id) {
+      @for (schedule of schedules.rows(); track schedule.id) {
         <li class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div class="flex flex-col gap-2 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
@@ -120,11 +120,11 @@
       }
     </ul>
     <app-list-paginator
-      [total]="pager.total()"
-      [page]="pager.currentPage()"
-      [pageSize]="pager.pageSize()"
+      [total]="schedules.total()"
+      [page]="list.page()"
+      [pageSize]="list.pageSize()"
       itemLabel="schedules"
-      (pageChange)="pager.onPage($event)"
+      (pageChange)="list.onPage($event)"
     />
     </div>
   }

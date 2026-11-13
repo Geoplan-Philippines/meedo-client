@@ -4,17 +4,18 @@ import {
   DestroyRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
-  viewChild,
+  untracked,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { forkJoin, of, debounceTime, distinctUntilChanged, finalize, catchError, map, skip, switchMap } from 'rxjs';
+import { filter, forkJoin, map } from 'rxjs';
 
-import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -30,34 +31,37 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { MessageService } from 'primeng/api';
 
-import { TicketsService } from './services/tickets.service';
+import { TICKETS_LIST, TicketsService, ticketFacetParams, ticketListParams, ticketView } from './services/tickets.service';
 import { TicketDepartmentService } from './services/ticket-department.service';
 import { TicketsBoard } from './tickets-board/tickets-board';
 import { InputFeedback } from '../../shared/ui/input-feedback/input-feedback';
 import { ArchivedTag } from '../../shared/ui/archived-tag/archived-tag';
 import { WorkspaceBreadcrumb } from '../clients/workspace-breadcrumb/workspace-breadcrumb';
+import { WorkspaceService } from '../clients/services/workspace.service';
 import { PageLayout } from '../../shared/ui/page-layout/page-layout';
-import { ListPageChange, ListPaginator } from '../../shared/ui/list-paginator/list-paginator';
+import { ListPaginator } from '../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { PrefetchLink } from '../../shared/ui/prefetch/prefetch-link';
 import { clientDisplayName, projectDisplayName } from '../../shared/utils/display-name.utils';
 import { TICKET_TITLE_MAX_LENGTH, TICKET_DESCRIPTION_MAX_LENGTH, MY_TICKETS_QUERY_PARAMS } from './tickets.constants';
 import { trimmedRequired } from './utils/ticket-validation';
 import { TicketAttachmentsService } from './services/attachments.service';
 import { TicketCategoriesService } from './services/ticket-categories.service';
 import { StatusesService } from './services/statuses.service';
-import { ProjectsService, filterProjects, withCurrentProject } from './services/projects.service';
-import { TeamsService } from '../settings/teams/services/teams.service';
-import { MembersService } from './services/members.service';
+import { ProjectsService, toPickerProject, withCurrentProject } from './services/projects.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { ApiCache } from '../../core/http/api-cache';
+import { MemberDirectoryService, OrgMember, withDisplayName } from '../../core/members/member-directory.service';
+import { injectListState } from '../../shared/data/url-list-state';
+import { pagedList } from '../../shared/data/paged-list';
+import { pagedSearch } from '../../shared/data/paged-search';
 
-import { OrgMember } from './models/members.model';
 import { Project } from './models/projects.model';
 import { Status } from './models/status.model';
 import { TicketCategory } from './models/ticket-categories.model';
 import {
   CreateTicketPayload,
   Ticket,
-  TicketFacets,
   TicketView,
   UpdateTicketPayload,
 } from './models/ticket.model';
@@ -107,6 +111,7 @@ import { MessageModule } from 'primeng/message';
     PageLayout,
     ListPaginator,
     EmptyState,
+    PrefetchLink,
   ],
   providers: [MessageService],
   templateUrl: './tickets.html',
@@ -120,18 +125,14 @@ export class Tickets implements OnInit {
   private readonly categoriesService = inject(TicketCategoriesService);
   private readonly statusesService = inject(StatusesService);
   private readonly projectsService = inject(ProjectsService);
-  private readonly teamsService = inject(TeamsService);
-  private readonly membersService = inject(MembersService);
+  private readonly directory = inject(MemberDirectoryService);
+  private readonly workspace = inject(WorkspaceService);
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly table = viewChild<Table>('dt');
-
-  // List state (server-side pagination / sort / filter)
-  readonly tickets = signal<Ticket[]>([]);
   readonly layout = toSignal(this.route.queryParamMap.pipe(map(params => params.get('view') === 'board' ? 'board' : 'list')), {
     initialValue: this.route.snapshot.queryParamMap.get('view') === 'board' ? 'board' : 'list',
   });
@@ -142,6 +143,49 @@ export class Tickets implements OnInit {
   readonly scopeClientId = toSignal(this.route.paramMap.pipe(map(params => params.get('clientId'))), {
     initialValue: this.route.snapshot.paramMap.get('clientId'),
   });
+
+  /** Tab, facets, search, sort and page live in the URL, so reloads and Back keep them. */
+  readonly list = injectListState(TICKETS_LIST);
+  readonly view = computed<TicketView>(() => ticketView(this.list.filters().tab));
+  readonly searchTerm = this.list.search;
+  readonly selectedStatusIds = computed(() => [...this.list.filters().status]);
+  readonly selectedPriorities = computed(() => [...this.list.filters().priority]);
+  readonly selectedTeamIds = computed(() => [...this.list.filters().team]);
+
+  /** "My issues" lives in the URL (?assignee=me) so the sidebar's "My tickets" can open it. */
+  readonly myIssues = toSignal(this.route.queryParamMap.pipe(map(isMyTickets)), {
+    initialValue: isMyTickets(this.route.snapshot.queryParamMap),
+  });
+  /** The signed-in user's member row; its id is what tickets store as an assignee. */
+  private readonly activeMember = rxResource({ stream: () => this.directory.activeMember() });
+  readonly currentMemberId = computed(() => (this.activeMember.hasValue() ? this.activeMember.value()?.id ?? null : null));
+  /** True while ?assignee=me waits for the member ID; loading now would briefly show everyone's tickets. */
+  readonly awaitingMember = computed(() => this.myIssues() && this.activeMember.isLoading());
+  readonly assigneeFilter = computed(() => (this.myIssues() ? this.currentMemberId() ?? undefined : undefined));
+
+  /** The list request; undefined holds it back until "My issues" knows who "me" is. */
+  private readonly listParams = computed(() =>
+    this.awaitingMember()
+      ? undefined
+      : ticketListParams(this.list.query(), { assigneeId: this.assigneeFilter(), projectId: this.scopeProjectId() ?? undefined }),
+  );
+  readonly ticketPage = pagedList({
+    params: () => (this.layout() === 'board' ? undefined : this.listParams()),
+    load: (query) => this.ticketsService.getAll(query),
+    refreshOn: ['tickets'],
+  });
+  readonly tickets = this.ticketPage.rows;
+  readonly totalRecords = this.ticketPage.total;
+  readonly isLoading = this.ticketPage.loading;
+
+  private readonly facetsResource = rxResource({
+    params: () => {
+      const params = this.listParams();
+      return params ? ticketFacetParams(params) : undefined;
+    },
+    stream: ({ params }) => this.ticketsService.getFacets(params),
+  });
+  readonly facets = computed(() => (this.facetsResource.hasValue() ? this.facetsResource.value() : null));
 
   readonly boardRevision = signal(0);
   readonly boardFilters = computed(() => ({
@@ -155,15 +199,7 @@ export class Tickets implements OnInit {
     void this.router.navigate([], { relativeTo: this.route, queryParams: { view: layout === 'board' ? 'board' : null }, queryParamsHandling: 'merge' });
   }
 
-  onBoardMove(): void { this.refreshFacets(); }
-  readonly totalRecords = signal(0);
-  readonly rows = signal(10);
-  readonly isLoading = signal(false);
-
-  /** Index of the first row on the current page (PrimeNG's `first`). */
-  readonly firstRow = signal(0);
-  /** Current page, 1-based, for the shared list footer. */
-  readonly page = computed(() => Math.floor(this.firstRow() / this.rows()) + 1);
+  onBoardMove(): void { this.facetsResource.reload(); }
 
   readonly viewTabOptions: { label: string; value: TicketView }[] = [
     { label: 'All tickets', value: 'all' },
@@ -175,21 +211,7 @@ export class Tickets implements OnInit {
     { label: 'List', value: 'list', icon: 'pi pi-list' },
     { label: 'Board', value: 'board', icon: 'pi pi-th-large' },
   ];
-  // Default ordering: newest tickets first, by creation time.
-  private sortField: string | null = 'createdAt';
-  private sortOrder: 'asc' | 'desc' | null = 'desc';
-  private ticketsRequestId = 0;
-  private facetsRequestId = 0;
 
-  readonly searchControl = new FormControl('', { nonNullable: true });
-  readonly searchTerm = signal('');
-
-  // View + filter state (replaces the old single-select status / priority dropdowns).
-  readonly view = signal<TicketView>('all');
-  readonly selectedStatusIds = signal<string[]>([]);
-  readonly selectedPriorities = signal<string[]>([]);
-  readonly selectedTeamIds = signal<string[]>([]);
-  readonly facets = signal<TicketFacets | null>(null);
   /** Which page of the filter popover is showing: the facet list or a value list. */
   readonly filterPanel = signal<'root' | 'status' | 'priority' | 'team'>('root');
 
@@ -236,28 +258,10 @@ export class Tickets implements OnInit {
 
   readonly categories = signal<TicketCategory[]>([]);
   readonly statuses = signal<Status[]>([]);
-  readonly projects = signal<Project[]>([]);
   readonly teams = signal<Team[]>([]);
   readonly departmentAdmin = signal(false);
   readonly departmentLoaded = signal(false);
   readonly noDepartments = computed(() => this.departmentLoaded() && !this.departmentAdmin() && this.teams().length === 0);
-  readonly members = signal<OrgMember[]>([]);
-  private readonly membersLoaded = signal(false);
-  /** "My issues" lives in the URL (?assignee=me) so the sidebar's "My tickets" can open it. */
-  private readonly myIssues$ = this.route.queryParamMap.pipe(map(isMyTickets));
-  readonly myIssues = toSignal(this.myIssues$, { initialValue: isMyTickets(this.route.snapshot.queryParamMap) });
-  /** True while ?assignee=me waits for the member ID; loading now would briefly show everyone's tickets. */
-  readonly awaitingMember = computed(() => this.myIssues() && !this.membersLoaded());
-  readonly currentMemberId = computed(() => {
-    const userId = this.authService.currentUser()?.id;
-    const organizationId = this.authService.organizationId();
-    return this.members().find(
-      (member) => member.userId === userId && member.organizationId === organizationId,
-    )?.id ?? null;
-  });
-  readonly assigneeFilter = computed(() =>
-    this.myIssues() ? this.currentMemberId() ?? undefined : undefined,
-  );
 
   // Start of today, computed once — used to flag overdue due dates in the list.
   private readonly today = startOfToday();
@@ -273,14 +277,14 @@ export class Tickets implements OnInit {
   readonly editTicketForm = this.buildTicketForm();
 
   // ─── Compose modal (Linear-style create) ───────────────
-  /** Local filters for the longer picker lists (project / assignee). */
-  readonly projectSearch = signal('');
-  readonly assigneeSearch = signal('');
-
   // Mirror the create form value into a signal so the pill labels stay reactive
   // under OnPush as the popovers write back to the controls.
   private readonly composeValue = toSignal(this.ticketForm.valueChanges, {
     initialValue: this.ticketForm.getRawValue(),
+  });
+
+  private readonly editValue = toSignal(this.editTicketForm.valueChanges, {
+    initialValue: this.editTicketForm.getRawValue(),
   });
 
   readonly titleMaxLength = TICKET_TITLE_MAX_LENGTH;
@@ -304,19 +308,40 @@ export class Tickets implements OnInit {
     return id ? this.categories().find((category) => category.id === id) ?? null : null;
   });
 
-  readonly selectedProject = computed(() => {
-    const id = this.composeValue().projectId;
-    return id ? this.projects().find((project) => project.id === id) ?? null : null;
-  });
-
   readonly selectedTeam = computed(() => {
     const id = this.composeValue().teamId;
     return id ? this.teams().find((team) => team.id === id) ?? null : null;
   });
 
+  // ─── Pickers: searched on the server, one page at a time ───
+  /** Compose project picker; the API only returns projects the user may see. */
+  readonly composeProjects = pagedSearch<Project>({ fetch: (query) => this.projectsService.search(query) });
+  /** Edit dialog project picker. */
+  readonly editProjects = pagedSearch<Project>({ fetch: (query) => this.projectsService.search(query) });
+  /** The compose pick, kept so its label survives a new search. */
+  private readonly chosenProject = signal<Project | null>(null);
+
+  readonly selectedProject = computed(() => {
+    const id = this.composeValue().projectId;
+    if (!id) return null;
+    const chosen = this.chosenProject();
+    return chosen?.id === id ? chosen : this.composeProjects.items().find((project) => project.id === id) ?? null;
+  });
+
+  /** Compose assignees: the selected team's members when a team is set, else the whole organization. */
+  readonly composeAssignees = pagedSearch<OrgMember>({
+    fetch: (query) => this.directory.list({ ...query, sortField: 'name', sortOrder: 'asc', teamId: this.selectedTeam()?.id }),
+  });
+  /** Edit dialog assignees: the whole organization. */
+  readonly editAssignees = pagedSearch<OrgMember>({
+    fetch: (query) => this.directory.list({ ...query, sortField: 'name', sortOrder: 'asc' }),
+  });
+  /** Every member seen in a search or on the edited ticket, so chosen assignees keep their names. */
+  private readonly knownMembers = signal(new Map<string, OrgMember>());
+
   readonly selectedAssignees = computed(() => {
-    const ids = new Set(this.composeValue().assigneeIds ?? []);
-    return this.members().filter((member) => ids.has(member.id));
+    const known = this.knownMembers();
+    return (this.composeValue().assigneeIds ?? []).flatMap((id) => known.get(id) ?? []);
   });
 
   /** Up to three assignee avatars for the pill; the rest collapse into a +N chip. */
@@ -336,43 +361,37 @@ export class Tickets implements OnInit {
   /** Markdown mirrored into the compose editor (reset clears it; the editor writes back on save). */
   readonly composeDescription = computed(() => this.composeValue().description ?? '');
 
-  readonly projectMatches = computed(() => filterProjects(this.projects(), this.projectSearch()));
-
-  /** Edit dialog options: active projects plus the ticket's archived project, if it has one. */
-  readonly editProjectOptions = computed(() =>
-    withCurrentProject(this.projects(), this.selectedTicket()?.project, this.authService.isAdmin()),
-  );
-  readonly editProjectReadOnly = computed(() => !this.authService.isAdmin() && !!this.selectedTicket()?.projectId &&
-    !this.projects().some(project => project.id === this.selectedTicket()?.projectId));
-
   /**
-   * Auth-user IDs belonging to the currently selected compose team.
-   * switchMap cancels the previous request whenever the team changes.
-   * null = no team selected → show all org members.
+   * Whether a member may see the edited ticket's project. Members only get their
+   * own projects from the API, so a ticket on someone else's project keeps its
+   * project read-only. Admins see every project.
    */
-  private readonly composeTeamMemberUserIds = toSignal(
-    toObservable(this.selectedTeam).pipe(
-      switchMap((team) => {
-        if (!team) return of(null);
-        return this.teamsService.listTeamMembers(team.id).pipe(
-          map((rows) => new Set(rows.map((r) => r.userId))),
-          // On failure fall back to an empty set (no members), never null — a
-          // selected team must never silently widen the picker to the whole org.
-          catchError(() => of(new Set<string>())),
-        );
-      }),
-    ),
-    { initialValue: null as Set<string> | null },
+  private readonly editProjectAccess = rxResource({
+    params: () => {
+      const projectId = this.selectedTicket()?.projectId;
+      return !this.authService.isAdmin() && projectId ? projectId : undefined;
+    },
+    stream: ({ params }) => this.workspace.project(params),
+  });
+  private readonly editProjectVisible = computed(() =>
+    this.authService.isAdmin() || (this.editProjectAccess.hasValue() && this.editProjectAccess.value() !== null),
   );
 
-  readonly filteredMembers = computed(() => {
-    const query = this.assigneeSearch().trim().toLowerCase();
-    const teamUserIds = this.composeTeamMemberUserIds();
-    let list = this.members();
-    if (teamUserIds) list = list.filter((member) => teamUserIds.has(member.userId));
-    if (query) list = list.filter((member) => member.displayName.toLowerCase().includes(query));
-    return list;
+  /** Edit dialog options: the search results plus the ticket's own project (archived or not on this page). */
+  readonly editProjectOptions = computed(() =>
+    withCurrentProject(this.editProjects.items(), this.selectedTicket()?.project, this.editProjectVisible()),
+  );
+  readonly editProjectReadOnly = computed(() => !this.authService.isAdmin() && !!this.selectedTicket()?.projectId && !this.editProjectVisible());
+
+  /** Edit dialog assignee options: the ticket's chosen members first, then the search results. */
+  readonly editAssigneeOptions = computed(() => {
+    const known = this.knownMembers();
+    const chosen = (this.editValue().assigneeIds ?? []).flatMap((id) => known.get(id) ?? []);
+    const found = this.editAssignees.items().filter((member) => !chosen.some((picked) => picked.id === member.id));
+    return [...chosen, ...found];
   });
+
+  readonly filteredMembers = this.composeAssignees.items;
 
   /** True when every visible member is already in the assignee list. */
   readonly allFilteredAssigneesSelected = computed(() => {
@@ -392,36 +411,43 @@ export class Tickets implements OnInit {
   });
 
   constructor() {
-    this.searchControl.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.refreshFacets();
-        this.applyFilters();
-      });
+    this.list.clampToTotal(this.ticketPage);
 
-    // Moving between projects reuses this component; reload for the new scope.
-    toObservable(this.scopeProjectId)
-      .pipe(distinctUntilChanged(), skip(1), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.refreshFacets();
-        this.applyFilters();
-      });
+    effect(() => {
+      const found = [...this.composeAssignees.items(), ...this.editAssignees.items()];
+      untracked(() => this.rememberMembers(found));
+    });
 
-    // The My issues toggle and the sidebar's "My tickets" / "Tickets" links only change the URL.
-    this.myIssues$
-      .pipe(distinctUntilChanged(), skip(1), takeUntilDestroyed(this.destroyRef))
+    // A changed compose team re-scopes the assignee search.
+    effect(() => {
+      this.selectedTeam();
+      untracked(() => {
+        if (this.createDialogVisible()) this.composeAssignees.refresh();
+      });
+    });
+
+    // ?assignee=me without a member here (e.g. a removed membership): drop the param.
+    effect(() => {
+      if (this.myIssues() && this.activeMember.hasValue() && !this.activeMember.value()) {
+        untracked(() => void this.router.navigate([], { relativeTo: this.route, queryParams: { assignee: null }, queryParamsHandling: 'merge', replaceUrl: true }));
+      }
+    });
+
+    // Facet counts follow ticket changes (writes and websocket notifications) like the list does.
+    inject(ApiCache)
+      .changes$.pipe(
+        filter((change) => change === null || change.has('tickets')),
+        takeUntilDestroyed(),
+      )
       .subscribe(() => {
-        this.refreshFacets();
-        this.applyFilters();
+        if (this.facetsResource.status() !== 'idle') this.facetsResource.reload();
       });
   }
 
   ngOnInit(): void {
     this.loadDropdowns();
-    this.refreshFacets();
     this.openEditFromQueryParam();
     this.openCreateFromQueryParam();
-    // The lazy p-table fires (onLazyLoad) on init, which loads the first page.
   }
 
   /** The dashboard's "New ticket" button routes here with ?new=1; open compose. */
@@ -461,106 +487,14 @@ export class Tickets implements OnInit {
     });
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    this.firstRow.set(event.first ?? 0);
-    this.rows.set(event.rows ?? 10);
-    const sortField = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    if (sortField) {
-      this.sortField = sortField;
-      this.sortOrder = event.sortOrder === 1 ? 'asc' : 'desc';
-    } else {
-      // No column sort active → fall back to newest-first by creation time
-      // (PrimeNG reports sortOrder 1 with no field on the initial load, which
-      // would otherwise sort the backend's default createdAt ascending).
-      this.sortField = 'createdAt';
-      this.sortOrder = 'desc';
-    }
-    this.fetchTickets();
-  }
-
-  /** Shared list footer: page or page size changed. */
-  onPageChange(change: ListPageChange): void {
-    this.rows.set(change.pageSize);
-    this.firstRow.set(change.first);
-    this.fetchTickets();
-  }
-
-  private fetchTickets(): void {
-    const requestId = ++this.ticketsRequestId;
-    this.isLoading.set(true);
-    // loadDropdowns() reloads once the member ID is known.
-    if (this.awaitingMember()) return;
-    this.ticketsService
-      .getAll({
-        page: this.page(),
-        limit: this.rows(),
-        search: this.searchControl.value.trim() || undefined,
-        view: this.view(),
-        ticketStatusId: this.selectedStatusIds().length ? this.selectedStatusIds() : undefined,
-        priority: this.selectedPriorities().length ? this.selectedPriorities() : undefined,
-        teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
-        assigneeId: this.assigneeFilter(),
-        projectId: this.scopeProjectId() ?? undefined,
-        sortField: this.sortField || undefined,
-        sortOrder: this.sortOrder || undefined,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoading.set(false)))
-      .subscribe({
-        next: (res) => {
-          // Ignore stale responses that resolved after a newer request started.
-          if (requestId !== this.ticketsRequestId) return;
-          this.tickets.set(res.data);
-          this.totalRecords.set(res.meta.total);
-        },
-        error: (err: unknown) => {
-          if (requestId !== this.ticketsRequestId) return;
-          console.error('Error loading tickets:', err);
-          this.tickets.set([]);
-          this.totalRecords.set(0);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load tickets' });
-        },
-      });
-  }
-
-  private applyFilters(): void {
-    this.searchTerm.set(this.searchControl.value.trim());
-    this.firstRow.set(0);
-    if (this.layout() === 'board') return;
-    const table = this.table();
-    if (table) {
-      table.reset();
-    } else {
-      this.fetchTickets();
-    }
-  }
-
-  private refreshFacets(): void {
-    const requestId = ++this.facetsRequestId;
-    if (this.awaitingMember()) return;
-    this.ticketsService
-      .getFacets({
-        view: this.view(),
-        search: this.searchControl.value.trim() || undefined,
-        teamId: this.selectedTeamIds().length ? this.selectedTeamIds() : undefined,
-        assigneeId: this.assigneeFilter(),
-        projectId: this.scopeProjectId() ?? undefined,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (facets) => {
-          if (requestId === this.facetsRequestId) this.facets.set(facets);
-        },
-        error: (err: unknown) => console.error('Error loading ticket facets:', err),
-      });
+  onSearch(event: Event): void {
+    this.list.setSearch((event.target as HTMLInputElement).value);
   }
 
   // ─── View tabs ──────────────────────────────────────────
   setView(view: TicketView): void {
     if (this.view() === view) return;
-    this.view.set(view);
-    // View changes the scope of both the list and the facet counts.
-    this.refreshFacets();
-    this.applyFilters();
+    this.list.setFilter('tab', view);
   }
 
   viewCount(view: TicketView): number {
@@ -582,17 +516,11 @@ export class Tickets implements OnInit {
   }
 
   toggleStatus(id: string): void {
-    this.selectedStatusIds.update((ids) =>
-      ids.includes(id) ? ids.filter((existing) => existing !== id) : [...ids, id],
-    );
-    this.applyFilters();
+    this.list.setFilter('status', toggle(this.selectedStatusIds(), id));
   }
 
   togglePriority(value: string): void {
-    this.selectedPriorities.update((values) =>
-      values.includes(value) ? values.filter((existing) => existing !== value) : [...values, value],
-    );
-    this.applyFilters();
+    this.list.setFilter('priority', toggle(this.selectedPriorities(), value));
   }
 
   isStatusSelected(id: string): boolean {
@@ -612,28 +540,22 @@ export class Tickets implements OnInit {
   }
 
   removeStatus(id: string): void {
-    this.selectedStatusIds.update((ids) => ids.filter((existing) => existing !== id));
-    this.applyFilters();
+    this.list.setFilter('status', this.selectedStatusIds().filter((existing) => existing !== id));
   }
 
   removePriority(value: string): void {
-    this.selectedPriorities.update((values) => values.filter((existing) => existing !== value));
-    this.applyFilters();
+    this.list.setFilter('priority', this.selectedPriorities().filter((existing) => existing !== value));
   }
 
   toggleTeam(id: string): void {
-    this.selectedTeamIds.update((ids) =>
-      ids.includes(id) ? ids.filter((existing) => existing !== id) : [...ids, id],
-    );
-    this.refreshFacets();
-    this.applyFilters();
+    this.list.setFilter('team', toggle(this.selectedTeamIds(), id));
   }
 
   toggleMyIssues(): void {
     if (!this.currentMemberId()) return;
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { assignee: this.myIssues() ? null : MY_TICKETS_QUERY_PARAMS.assignee },
+      queryParams: { assignee: this.myIssues() ? null : MY_TICKETS_QUERY_PARAMS.assignee, page: null },
       queryParamsHandling: 'merge',
     });
   }
@@ -643,48 +565,34 @@ export class Tickets implements OnInit {
   }
 
   removeTeam(id: string): void {
-    this.selectedTeamIds.update((ids) => ids.filter((existing) => existing !== id));
-    this.refreshFacets();
-    this.applyFilters();
+    this.list.setFilter('team', this.selectedTeamIds().filter((existing) => existing !== id));
   }
 
   clearFilters(): void {
-    this.selectedStatusIds.set([]);
-    this.selectedPriorities.set([]);
-    this.selectedTeamIds.set([]);
-    this.refreshFacets();
-    this.applyFilters();
+    this.list.setFilters({ status: [], priority: [], team: [] });
   }
 
+  /** After a create or edit: refresh the list, facets and board (a new ticket goes back to page 1). */
   private refreshList(resetToFirstPage: boolean): void {
     this.boardRevision.update(revision => revision + 1);
-    if (this.layout() === 'board') return;
-    const table = this.table();
-    if (resetToFirstPage && table) {
-      table.reset();
-    } else {
-      this.fetchTickets();
-    }
+    if (resetToFirstPage && this.list.page() !== 1) this.list.setPage(1);
+    this.ticketPage.reload();
+    this.facetsResource.reload();
   }
 
   loadDropdowns(): void {
     this.isLoadingDropdowns.set(true);
 
-    const organizationId = this.authService.organizationId();
-
     forkJoin({
-      categories: this.categoriesService.getAll(),
-      statuses: this.statusesService.getAll(),
-      projects: this.projectsService.getAll(),
+      categories: this.categoriesService.options(),
+      statuses: this.statusesService.options(),
       department: this.departmentService.load(),
-      members: organizationId ? this.membersService.getMembers(organizationId) : of([] as OrgMember[]),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.categories.set(res.categories);
           this.statuses.set(res.statuses);
-          this.projects.set(res.projects);
           this.teams.set(res.department.teams);
           this.departmentAdmin.set(res.department.isAdmin);
           this.departmentLoaded.set(true);
@@ -692,29 +600,14 @@ export class Tickets implements OnInit {
             form.controls.teamId.clearValidators();
             form.controls.teamId.updateValueAndValidity();
           }
-          this.members.set(res.members);
           this.isLoadingDropdowns.set(false);
-          this.resolveMyIssues();
         },
         error: (err: unknown) => {
           console.error('Error loading dropdowns:', err);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load form data' });
           this.isLoadingDropdowns.set(false);
-          this.resolveMyIssues();
         },
       });
-  }
-
-  /** Loads what ?assignee=me held back, or drops the param when the user has no member ID here. */
-  private resolveMyIssues(): void {
-    this.membersLoaded.set(true);
-    if (!this.myIssues()) return;
-    if (this.currentMemberId()) {
-      this.refreshFacets();
-      this.applyFilters();
-    } else {
-      void this.router.navigate([], { relativeTo: this.route, queryParams: { assignee: null }, queryParamsHandling: 'merge', replaceUrl: true });
-    }
   }
 
   projectName(project: NonNullable<Ticket['project']>): string {
@@ -771,6 +664,7 @@ export class Tickets implements OnInit {
   readonly uploadAttachment = (file: File) => this.attachmentsService.upload(file);
 
   private resetCreateForm(): void {
+    const scopeProjectId = this.scopeProjectId();
     this.ticketForm.reset({
       title: '',
       description: '',
@@ -779,12 +673,21 @@ export class Tickets implements OnInit {
       ticketStatusId: '',
       categoryId: '',
       // New tickets on a project's page start on that project.
-      projectId: this.scopeProjectId() ?? '',
+      projectId: scopeProjectId ?? '',
       teamId: '',
       assigneeIds: [],
     });
-    this.projectSearch.set('');
-    this.assigneeSearch.set('');
+    this.chosenProject.set(null);
+    this.composeProjects.reset();
+    this.composeAssignees.reset();
+    if (scopeProjectId) {
+      this.workspace
+        .project(scopeProjectId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((record) => {
+          if (record && this.composeValue().projectId === record.id) this.chosenProject.set(toPickerProject(record));
+        });
+    }
   }
 
   // ─── Compose pill pickers ───────────────────────────────
@@ -803,9 +706,10 @@ export class Tickets implements OnInit {
     this.ticketForm.controls.categoryId.setValue(next);
   }
 
-  setProjectValue(id: string): void {
-    const next = this.composeValue().projectId === id ? '' : id;
-    this.ticketForm.controls.projectId.setValue(next);
+  setProjectValue(project: Project): void {
+    const clearing = this.composeValue().projectId === project.id;
+    this.chosenProject.set(clearing ? null : project);
+    this.ticketForm.controls.projectId.setValue(clearing ? '' : project.id);
   }
 
   setTeamValue(id: string): void {
@@ -826,6 +730,7 @@ export class Tickets implements OnInit {
     return (this.composeValue().assigneeIds ?? []).includes(id);
   }
 
+  /** Selects or clears the members currently listed by the search. */
   toggleAllAssignees(): void {
     const filtered = this.filteredMembers();
     const current = new Set(this.ticketForm.controls.assigneeIds.value ?? []);
@@ -859,6 +764,16 @@ export class Tickets implements OnInit {
   openEditDialog(ticket: Ticket): void {
     if (!this.canEditTicket(ticket)) return;
     this.selectedTicket.set(ticket);
+    this.rememberMembers((ticket.assignees ?? []).flatMap((assignee) => (assignee.member ? [withDisplayName({
+      id: assignee.memberId,
+      userId: assignee.member.user.id,
+      organizationId: ticket.organizationId,
+      role: '',
+      createdAt: '',
+      user: assignee.member.user,
+    })] : [])));
+    this.editProjects.reset();
+    this.editAssignees.reset();
     this.editTicketForm.controls.teamId.setValidators(!this.departmentAdmin() && ticket.teamId ? [Validators.required] : []);
     this.editTicketForm.controls.teamId.updateValueAndValidity();
     this.editTicketForm.reset({
@@ -913,7 +828,6 @@ export class Tickets implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Ticket updated' });
           this.editDialogVisible.set(false);
           this.isUpdating.set(false);
-          this.refreshFacets();
           this.refreshList(false);
         },
         error: (err: unknown) => {
@@ -954,7 +868,6 @@ export class Tickets implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Ticket created' });
           this.createDialogVisible.set(false);
           this.isSaving.set(false);
-          this.refreshFacets();
           this.refreshList(true);
         },
         error: (err: unknown) => {
@@ -964,8 +877,21 @@ export class Tickets implements OnInit {
         },
       });
   }
+
+  private rememberMembers(members: readonly OrgMember[]): void {
+    if (!members.length) return;
+    this.knownMembers.update((known) => {
+      const next = new Map(known);
+      for (const member of members) next.set(member.id, member);
+      return next;
+    });
+  }
 }
 
 function isMyTickets(params: ParamMap): boolean {
   return params.get('assignee') === MY_TICKETS_QUERY_PARAMS.assignee;
+}
+
+function toggle(values: readonly string[], value: string): string[] {
+  return values.includes(value) ? values.filter((existing) => existing !== value) : [...values, value];
 }

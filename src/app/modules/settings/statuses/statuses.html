@@ -6,9 +6,9 @@
   </nav>
   <p-button pageActions label="New status" icon="pi pi-plus" (onClick)="openCreate()" />
 
-  @if (error()) {
+  @if (error() || loadFailed()) {
     <p-message severity="error" styleClass="ds-message">
-      <span>{{ error() }}</span>
+      <span>{{ error() || 'Failed to load statuses. Please try again.' }}</span>
       <p-button
         label="Retry"
         icon="pi pi-refresh"
@@ -16,7 +16,7 @@
         severity="danger"
         text
         (onClick)="load()"
-        [disabled]="isLoading()"
+        [disabled]="standard.loading() || custom.loading()"
       />
     </p-message>
   }
@@ -33,14 +33,14 @@
 
     <div class="flat-list">
       <ul>
-        @for (standard of standardPager.pageRows(); track standard.id) {
+        @for (row of standard.rows(); track row.id) {
           <li class="flat-row">
             <span
               class="inline-block w-3 h-3 rounded-full border border-border shrink-0"
-              [style.background-color]="standard.color"
+              [style.background-color]="row.color"
               aria-hidden="true"
             ></span>
-            <span class="font-medium text-heading min-w-0 truncate">{{ standard.name }}</span>
+            <span class="font-medium text-heading min-w-0 truncate">{{ row.name }}</span>
             <i
               class="pi pi-lock ml-auto shrink-0 text-sm text-faint"
               pTooltip="Standard status. It can't be edited or removed."
@@ -51,16 +51,16 @@
             ></i>
           </li>
         } @empty {
-          <li class="flat-row text-muted">Loading standard statuses…</li>
+          <li class="flat-row text-muted">{{ standard.loaded() ? 'No standard statuses.' : 'Loading standard statuses…' }}</li>
         }
       </ul>
     </div>
     <app-list-paginator
-      [total]="standardPager.total()"
-      [page]="standardPager.currentPage()"
-      [pageSize]="standardPager.pageSize()"
+      [total]="standard.total()"
+      [page]="standardList.page()"
+      [pageSize]="standardList.pageSize()"
       itemLabel="standard statuses"
-      (pageChange)="standardPager.onPage($event)"
+      (pageChange)="standardList.onPage($event)"
     />
   </section>
 
@@ -73,35 +73,45 @@
       </div>
       <div class="flex items-center gap-4 flex-wrap">
         <label for="show-archived" class="ds-toggle">
-          <p-toggleSwitch inputId="show-archived" [formControl]="showArchivedControl" />
+          <p-toggleSwitch inputId="show-archived" [ngModel]="showArchived()" (ngModelChange)="setShowArchived($event)" />
           Show archived
         </label>
       </div>
     </div>
 
-    @if (isLoading()) {
+    @if (!custom.loaded()) {
     <div class="ds-table-skeleton" role="status">
       <span class="ds-sr-only">Loading statuses…</span>
       @for (row of [1, 2, 3]; track row) {
         <div class="skeleton-row"><p-skeleton width="10rem" height="0.75rem" /><p-skeleton width="4rem" height="1.25rem" borderRadius="999px" /></div>
       }
     </div>
-  } @else if (visibleStatuses().length === 0) {
-    <app-empty-state icon="pi pi-tag" [heading]="!showArchived() && customStatuses().length > 0 ? 'No active custom statuses' : 'No custom statuses yet'">
+  } @else if (custom.total() === 0) {
+    <app-empty-state icon="pi pi-tag" [heading]="!showArchived() && hasArchivedCustom() ? 'No active custom statuses' : 'No custom statuses yet'">
       <p class="empty-copy">
-        @if (!showArchived() && customStatuses().length > 0) {
+        @if (!showArchived() && hasArchivedCustom()) {
           All custom statuses are archived. Toggle "Show archived" to view them.
         } @else {
           The standard statuses above cover the basics. Add one of your own to fit your workflow.
         }
       </p>
-      @if (showArchived() || statuses().length === 0) {
+      @if (showArchived() || !hasArchivedCustom()) {
         <p-button label="New status" icon="pi pi-plus" (onClick)="openCreate()" />
       }
     </app-empty-state>
   } @else {
     <div>
-      <p-table class="ds-table" [value]="pager.pageRows()" [lazy]="true" (onLazyLoad)="pager.onSort($event)" dataKey="id" [rowHover]="true">
+      <p-table
+        class="ds-table"
+        [value]="custom.rows()"
+        [lazy]="true"
+        (onLazyLoad)="list.onLazyLoad($event)"
+        [sortField]="list.sortField()"
+        [sortOrder]="list.tableSortOrder()"
+        [loading]="custom.loading()"
+        dataKey="id"
+        [rowHover]="true"
+      >
         <ng-template pTemplate="header">
           <tr>
             <th scope="col" pSortableColumn="name">Status <p-sortIcon field="name" /></th>
@@ -162,11 +172,11 @@
         </ng-template>
       </p-table>
       <app-list-paginator
-        [total]="pager.total()"
-        [page]="pager.currentPage()"
-        [pageSize]="pager.pageSize()"
+        [total]="custom.total()"
+        [page]="list.page()"
+        [pageSize]="list.pageSize()"
         itemLabel="statuses"
-        (pageChange)="pager.onPage($event)"
+        (pageChange)="list.onPage($event)"
       />
     </div>
   }

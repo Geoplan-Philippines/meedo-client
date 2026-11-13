@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -16,12 +16,13 @@ import {
 
 type DialogMode = 'create' | 'edit';
 import { WEEK_ORDER, dayLabelShort } from '../shared/attendance-settings.util';
-import { WeeklySchedulesService } from '../services/weekly-schedules.service';
+import { SCHEDULES_LIST, WeeklySchedulesService } from '../services/weekly-schedules.service';
 
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../../shared/utils/client-pager';
+import { injectListState } from '../../../../shared/data/url-list-state';
+import { pagedList } from '../../../../shared/data/paged-list';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { MessageModule } from 'primeng/message';
@@ -53,12 +54,16 @@ interface DayDot {
   styleUrl: './schedules.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Schedules implements OnInit {
+export class Schedules {
   private readonly schedulesService = inject(WeeklySchedulesService);
 
-  readonly schedules = signal<WeeklySchedule[]>([]);
-  readonly pager = new ClientPager(this.schedules);
-  readonly isLoading = signal(false);
+  readonly list = injectListState(SCHEDULES_LIST);
+  readonly schedules = pagedList({
+    params: () => this.list.query(),
+    load: (query) => this.schedulesService.list(query),
+    refreshOn: ['attendance'],
+  });
+  /** Save failures; load failures come from the list. */
   readonly error = signal<string | null>(null);
 
   readonly isDialogOpen = signal(false);
@@ -82,23 +87,13 @@ export class Schedules implements OnInit {
   readonly nameLength = computed(() => this.nameValue()?.length ?? 0);
   private readonly nameValue = toSignal(this.form.controls.name.valueChanges, { initialValue: '' });
 
-  ngOnInit(): void {
-    this.load();
+  constructor() {
+    this.list.clampToTotal(this.schedules);
   }
 
   load(): void {
-    this.isLoading.set(true);
     this.error.set(null);
-    this.schedulesService.list().subscribe({
-      next: (data) => {
-        this.schedules.set(data);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load schedules. Please try again.');
-        this.isLoading.set(false);
-      },
-    });
+    this.schedules.reload();
   }
 
   /** One dot per weekday: filled with the shift color when it's a working day. */
@@ -166,8 +161,8 @@ export class Schedules implements OnInit {
       this.schedulesService.update(editing.id, { name }).subscribe({
         next: (updated) => {
           // `update` doesn't return days/_count; keep the existing ones, swap the name.
-          this.schedules.update((list) =>
-            list.map((s) => (s.id === updated.id ? { ...s, name: updated.name } : s)),
+          this.schedules.updateRows((rows) =>
+            rows.map((s) => (s.id === updated.id ? { ...s, name: updated.name } : s)),
           );
           this.isSaving.set(false);
           this.isDialogOpen.set(false);
@@ -182,13 +177,9 @@ export class Schedules implements OnInit {
 
     const payload: CreateWeeklySchedulePayload = { name, isDefault: value.isDefault };
     this.schedulesService.create(payload).subscribe({
-      next: (created) => {
-        // A new default demotes the previous one server-side; refresh to stay truthful.
-        if (created.isDefault) {
-          this.load();
-        } else {
-          this.schedules.update((list) => [...list, created]);
-        }
+      next: () => {
+        // The page order (and a demoted old default) comes from the server.
+        this.load();
         this.isSaving.set(false);
         this.isDialogOpen.set(false);
       },
@@ -216,7 +207,7 @@ export class Schedules implements OnInit {
     this.deleteError.set(null);
     this.schedulesService.delete(target.id).subscribe({
       next: () => {
-        this.schedules.update((list) => list.filter((s) => s.id !== target.id));
+        this.schedules.reload();
         this.isDeleting.set(false);
         this.scheduleToDelete.set(null);
       },
@@ -235,9 +226,9 @@ export class Schedules implements OnInit {
     this.error.set(null);
     this.schedulesService.setDefault(schedule.id).subscribe({
       next: () => {
-        this.schedules.update((list) =>
-          list.map((s) => ({ ...s, isDefault: s.id === schedule.id })),
-        );
+        // The default schedule lists first, so the order changes too.
+        this.schedules.updateRows((rows) => rows.map((s) => ({ ...s, isDefault: s.id === schedule.id })));
+        this.schedules.reload();
         this.settingDefaultId.set(null);
       },
       error: () => {

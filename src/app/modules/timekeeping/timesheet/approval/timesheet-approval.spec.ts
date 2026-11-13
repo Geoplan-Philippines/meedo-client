@@ -1,21 +1,27 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 
 import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
 import { TimesheetApproval } from './timesheet-approval';
-import { TimesheetAuditLog, TimesheetPeriodLock, TimesheetProject, TimesheetSummary } from '../models/timesheet.model';
+import { TimesheetAuditLog, TimesheetPeriodLock, TimesheetProject, TimesheetSummaryEmployee, TimesheetSummaryMeta } from '../models/timesheet.model';
 import { TimesheetService } from '../services/timesheet.service';
 import { manilaTodayKey } from '../entry-form/timesheet-entry-form';
 
-const summary: TimesheetSummary = {
+const summaryMeta: TimesheetSummaryMeta = {
   periodStart: '2026-06-22',
   periodEnd: '2026-06-28',
   isLocked: false,
   totalEmployees: 1,
   totalEntries: 1,
   totalHours: 8,
+  overtimeHours: 0,
   totalsByStatus: { SUBMITTED: 1 },
+  tabCounts: { all: 1, submitted: 1, approved: 0, rejected: 0 },
+};
+
+const summary: { employees: TimesheetSummaryEmployee[] } = {
   employees: [
     {
       userId: 'user-1',
@@ -89,16 +95,24 @@ describe('TimesheetApproval', () => {
   });
   let fixture: ComponentFixture<TimesheetApproval>;
   let component: TimesheetApproval;
+  const summaryPage = (isLocked: boolean) => ({
+    statusCode: 200, message: 'ok', data: summary.employees,
+    meta: { total: 1, page: 1, limit: 25, lastPage: 1, ...summaryMeta, isLocked },
+  });
+  const getSummaryPage = vi.fn();
 
   beforeEach(async () => {
+    getSummaryPage.mockClear();
+    getSummaryPage.mockReturnValue(of(summaryPage(false)));
     await TestBed.configureTestingModule({
       imports: [TimesheetApproval],
       providers: [
+        provideRouter([]),
         {
           provide: TimesheetService,
           useValue: {
-            getSummary: () => of(summary),
-            getProjects: () => of(projects),
+            getSummaryPage: getSummaryPage,
+            searchProjects: () => of({ ...auditLogs, data: projects }),
             getPeriodLock: () => of(lock),
             getAuditLogs: () => of(auditLogs),
             bulkApprove: () => of({ approvedCount: 1, entries: [] }),
@@ -117,10 +131,24 @@ describe('TimesheetApproval', () => {
     await fixture.whenStable();
   });
 
-  it('renders the approval summary', () => {
+  it('renders one page of employees with the week totals', () => {
     expect(component).toBeTruthy();
     expect(component.employees().length).toBe(1);
     expect(component.employees()[0].status).toBe('PENDING');
+    expect(component.tabCounts()).toEqual({ all: 1, submitted: 1, approved: 0, rejected: 0 });
+    expect(getSummaryPage).toHaveBeenCalledWith(expect.objectContaining({ page: 1, limit: 25, tab: 'ALL' }));
+  });
+
+  it('sends tab, search, project, week and page from the URL', async () => {
+    getSummaryPage.mockReturnValue(of({ ...summaryPage(false), meta: { ...summaryPage(false).meta, total: 60, lastPage: 3 } }));
+    await TestBed.inject(Router).navigateByUrl('/?tab=SUBMITTED&q=ops&project=project-1&week=2026-06-22&page=2');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(getSummaryPage).toHaveBeenLastCalledWith({
+      periodStart: '2026-06-22', periodEnd: '2026-06-28', page: 2, limit: 25,
+      search: 'ops', tab: 'SUBMITTED', projectId: 'project-1',
+    });
+    expect(component.activeTab()).toBe('SUBMITTED');
   });
 
   it('selects submitted entries for approval when unlocked', () => {
@@ -210,9 +238,11 @@ describe('TimesheetApproval', () => {
     expect(component.selectedCount()).toBe(1);
   });
 
-  it('uses the summary lock state when no period-lock response is available', () => {
+  it('uses the summary lock state when no period-lock response is available', async () => {
+    getSummaryPage.mockReturnValue(of(summaryPage(true)));
+    component.summaryPage.reload();
+    await fixture.whenStable();
     component.periodLock.set(null);
-    component.summary.set({ ...summary, isLocked: true });
 
     component.toggleAllSubmitted(true);
     component.toggleEntry(summary.employees[0].entries[0], true);

@@ -4,6 +4,10 @@ import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../../../environments/environment.dev';
 import { ApiResponse } from '../../../../shared/interface/api-response.interface';
+import { PaginatedApiResponse } from '../../../../shared/interface/paginated-response.interface';
+import { PageQuery, toHttpParams } from '../../../../shared/data/page-query';
+import { ListStateConfig } from '../../../../shared/data/url-list-state';
+import { cacheContext } from '../../../../core/http/api-cache';
 import {
   CreateHolidayPayload,
   GenerateHolidaysPayload,
@@ -12,15 +16,28 @@ import {
   UpdateHolidayPayload,
 } from '../models/attendance.model';
 
+export interface HolidayListQuery extends PageQuery {
+  year?: number;
+}
+
+export const HOLIDAYS_LIST: ListStateConfig = {
+  pageSize: 25,
+  sortField: 'date',
+  sortOrder: 'asc',
+  sortFields: ['date', 'name'],
+};
+
 @Injectable({ providedIn: 'root' })
 export class HolidaysService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/settings/attendance/holidays`;
 
-  list(year: number): Observable<Holiday[]> {
-    return this.http
-      .get<ApiResponse<Holiday[]>>(this.baseUrl, { params: { year } })
-      .pipe(map((res) => res.data));
+  /** One page of holidays, narrowed to a year. */
+  list(query: HolidayListQuery): Observable<PaginatedApiResponse<Holiday>> {
+    return this.http.get<PaginatedApiResponse<Holiday>>(this.baseUrl, {
+      params: toHttpParams(query),
+      context: cacheContext('attendance'),
+    });
   }
 
   create(payload: CreateHolidayPayload): Observable<Holiday> {

@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
@@ -9,43 +9,33 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 
-import { AuthService } from '../../../../core/auth/auth.service';
-import { TeamsService } from '../../teams/services/teams.service';
-import { UserService } from '../../users/services/user.service';
-import {
-  AssignmentSource,
-  EffectiveSchedule,
-  WeeklySchedule,
-} from '../models/attendance.model';
+import { MemberDirectoryService, OrgMember } from '../../../../core/members/member-directory.service';
+import { AssignmentSource, EffectiveSchedule } from '../models/attendance.model';
 import {
   attendanceSourceLabel,
   dateToYmd,
   formatHours,
   formatTime12h,
 } from '../shared/attendance-settings.util';
-import { ScheduleAssignmentsService } from '../services/schedule-assignments.service';
+import {
+  EMPLOYEE_ASSIGNMENTS_LIST,
+  EmployeeAssignmentRow,
+  ScheduleAssignmentsService,
+  TEAM_ASSIGNMENTS_LIST,
+  TeamAssignmentRow,
+} from '../services/schedule-assignments.service';
 import { WeeklySchedulesService } from '../services/weekly-schedules.service';
 
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
-import { ClientPager } from '../../../../shared/utils/client-pager';
+import { injectListState } from '../../../../shared/data/url-list-state';
+import { pagedList } from '../../../../shared/data/paged-list';
+import { pagedSearch } from '../../../../shared/data/paged-search';
 import { SkeletonModule } from 'primeng/skeleton';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { MessageModule } from 'primeng/message';
-interface TeamRow {
-  id: string;
-  name: string;
-  scheduleId: string | null;
-}
-
-interface EmployeeRow {
-  userId: string;
-  name: string;
-  email: string;
-  scheduleId: string | null;
-}
 
 interface ScheduleOption {
   label: string;
@@ -82,33 +72,31 @@ const SOURCE_LABELS: Record<AssignmentSource, string> = {
   styleUrl: './assignments.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Assignments implements OnInit {
+export class Assignments {
   private readonly assignmentsService = inject(ScheduleAssignmentsService);
   private readonly schedulesService = inject(WeeklySchedulesService);
-  private readonly teamsService = inject(TeamsService);
-  private readonly userService = inject(UserService);
-  private readonly authService = inject(AuthService);
+  private readonly directory = inject(MemberDirectoryService);
 
-  readonly teamRows = signal<TeamRow[]>([]);
-  readonly employeeRows = signal<EmployeeRow[]>([]);
+  /** Two lists on one page; each keeps its page and search in the URL under its own prefix. */
+  readonly teamList = injectListState(TEAM_ASSIGNMENTS_LIST);
+  readonly teams = pagedList({
+    params: () => this.teamList.query(),
+    load: (query) => this.assignmentsService.listTeams(query),
+    refreshOn: ['attendance', 'teams'],
+  });
+  readonly employeeList = injectListState(EMPLOYEE_ASSIGNMENTS_LIST);
+  readonly employees = pagedList({
+    params: () => this.employeeList.query(),
+    load: (query) => this.assignmentsService.listEmployees(query),
+    refreshOn: ['attendance', 'members'],
+  });
 
-  /** Client-side search + paging for the two assignment lists. */
-  readonly teamSearch = signal('');
-  readonly employeeSearch = signal('');
-  private readonly filteredTeamRows = computed(() => {
-    const term = this.teamSearch().trim().toLowerCase();
-    return term ? this.teamRows().filter((row) => row.name.toLowerCase().includes(term)) : this.teamRows();
-  });
-  private readonly filteredEmployeeRows = computed(() => {
-    const term = this.employeeSearch().trim().toLowerCase();
-    return term
-      ? this.employeeRows().filter((row) => `${row.name} ${row.email}`.toLowerCase().includes(term))
-      : this.employeeRows();
-  });
-  readonly teamPager = new ClientPager(this.filteredTeamRows);
-  readonly employeePager = new ClientPager(this.filteredEmployeeRows);
-  readonly schedules = signal<WeeklySchedule[]>([]);
-  readonly isLoading = signal(false);
+  private readonly schedulesResource = rxResource({ stream: () => this.schedulesService.options() });
+  readonly schedules = computed(() => (this.schedulesResource.hasValue() ? this.schedulesResource.value() : []));
+
+  readonly isLoading = computed(() => !this.teams.loaded() || !this.employees.loaded() || this.schedulesResource.isLoading());
+  readonly loadFailed = computed(() => !!this.teams.error() || !!this.employees.error() || !!this.schedulesResource.error());
+  /** Save failures; load failures come from the lists. */
   readonly error = signal<string | null>(null);
 
   /** Ids (teamId / userId) with an assignment request in flight. */
@@ -121,92 +109,57 @@ export class Assignments implements OnInit {
   );
 
   readonly defaultSchedule = computed(() => this.schedules().find((s) => s.isDefault) ?? null);
-
-  readonly assignedEmployeeCount = computed(
-    () => this.employeeRows().filter((row) => row.scheduleId).length,
-  );
+  readonly assignedEmployeeCount = computed(() => this.employees.meta()?.assignedCount ?? 0);
 
   // Effective-schedule preview
+  /** Employee picker for the preview, searched on the server. */
+  readonly previewPeople = pagedSearch<OrgMember>({
+    fetch: (query) => this.directory.list({ ...query, sortField: 'name', sortOrder: 'asc' }),
+  });
+  /** The chosen employee stays an option after the search text changes. */
+  private readonly previewChoice = signal<ScheduleOption | null>(null);
+  readonly previewOptions = computed(() => {
+    const found = this.previewPeople.items().map((member) => ({ label: `${member.displayName} · ${member.user.email}`, value: member.userId }));
+    const choice = this.previewChoice();
+    return choice && !found.some((option) => option.value === choice.value) ? [choice, ...found] : found;
+  });
   readonly previewUserId = signal<string | null>(null);
+
+  selectPreviewUser(userId: string | null): void {
+    this.previewUserId.set(userId);
+    this.previewChoice.set(this.previewOptions().find((option) => option.value === userId) ?? null);
+  }
   readonly previewDate = signal<Date>(new Date());
   readonly previewResult = signal<EffectiveSchedule | null>(null);
   readonly previewLoading = signal(false);
   readonly previewError = signal<string | null>(null);
 
-  readonly employeeSelectOptions = computed(() =>
-    this.employeeRows().map((row) => ({ label: `${row.name} · ${row.email}`, value: row.userId })),
-  );
-
-  ngOnInit(): void {
-    this.load();
+  constructor() {
+    this.teamList.clampToTotal(this.teams);
+    this.employeeList.clampToTotal(this.employees);
   }
 
   load(): void {
-    const organizationId = this.authService.organizationId();
-    if (!organizationId) {
-      this.error.set('No active organization. Please sign in again.');
-      return;
-    }
-    this.isLoading.set(true);
     this.error.set(null);
-    forkJoin({
-      assignments: this.assignmentsService.list(),
-      schedules: this.schedulesService.list(),
-      teams: this.teamsService.getTeams(organizationId),
-      members: this.userService.getUsers(organizationId),
-    }).subscribe({
-      next: ({ assignments, schedules, teams, members }) => {
-        this.schedules.set(schedules);
+    this.teams.reload();
+    this.employees.reload();
+    this.schedulesResource.reload();
+  }
 
-        const teamScheduleByTeam = new Map(
-          assignments.teams.map((a) => [a.teamId, a.weeklyScheduleId]),
-        );
-        this.teamRows.set(
-          teams
-            .filter((team) => !team.isArchived)
-            .map((team) => ({
-              id: team.id,
-              name: team.name,
-              scheduleId: teamScheduleByTeam.get(team.id) ?? null,
-            }))
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        );
+  onTeamSearch(event: Event): void {
+    this.teamList.setSearch((event.target as HTMLInputElement).value);
+  }
 
-        const employeeScheduleByUser = new Map(
-          assignments.employees.map((a) => [a.userId, a.weeklyScheduleId]),
-        );
-        this.employeeRows.set(
-          members
-            .map((member) => ({
-              userId: member.userId,
-              name: member.user.name ?? member.user.email,
-              email: member.user.email,
-              scheduleId: employeeScheduleByUser.get(member.userId) ?? null,
-            }))
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        );
-
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.isLoading.set(false);
-        this.error.set('Failed to load assignments. Please try again.');
-      },
-    });
+  onEmployeeSearch(event: Event): void {
+    this.employeeList.setSearch((event.target as HTMLInputElement).value);
   }
 
   isSaving(id: string): boolean {
     return this.savingIds().has(id);
   }
 
-  scheduleName(id: string | null): string | null {
-    if (!id) return null;
-    const schedule = this.schedules().find((s) => s.id === id);
-    return schedule ? (schedule.isDefault ? `${schedule.name} (default)` : schedule.name) : null;
-  }
-
-  onTeamSchedule(row: TeamRow, scheduleId: string | null): void {
-    if (scheduleId === row.scheduleId || this.isSaving(row.id)) return;
+  onTeamSchedule(row: TeamAssignmentRow, scheduleId: string | null): void {
+    if (scheduleId === row.weeklyScheduleId || this.isSaving(row.id)) return;
     this.setSaving(row.id, true);
     this.error.set(null);
     const request$ = scheduleId
@@ -214,22 +167,20 @@ export class Assignments implements OnInit {
       : this.assignmentsService.clearTeam(row.id);
     request$.subscribe({
       next: () => {
-        this.teamRows.update((rows) =>
-          rows.map((r) => (r.id === row.id ? { ...r, scheduleId } : r)),
-        );
+        this.teams.updateRows((rows) => rows.map((r) => (r.id === row.id ? { ...r, weeklyScheduleId: scheduleId } : r)));
         this.setSaving(row.id, false);
       },
       error: () => {
         this.error.set(`Failed to update the schedule for "${row.name}". Please try again.`);
         this.setSaving(row.id, false);
         // Force the select back to the persisted value.
-        this.teamRows.update((rows) => [...rows]);
+        this.teams.updateRows((rows) => [...rows]);
       },
     });
   }
 
-  onEmployeeSchedule(row: EmployeeRow, scheduleId: string | null): void {
-    if (scheduleId === row.scheduleId || this.isSaving(row.userId)) return;
+  onEmployeeSchedule(row: EmployeeAssignmentRow, scheduleId: string | null): void {
+    if (scheduleId === row.weeklyScheduleId || this.isSaving(row.userId)) return;
     this.setSaving(row.userId, true);
     this.error.set(null);
     const request$ = scheduleId
@@ -237,15 +188,15 @@ export class Assignments implements OnInit {
       : this.assignmentsService.clearEmployee(row.userId);
     request$.subscribe({
       next: () => {
-        this.employeeRows.update((rows) =>
-          rows.map((r) => (r.userId === row.userId ? { ...r, scheduleId } : r)),
+        this.employees.updateRows((rows) =>
+          rows.map((r) => (r.userId === row.userId ? { ...r, weeklyScheduleId: scheduleId } : r)),
         );
         this.setSaving(row.userId, false);
       },
       error: () => {
         this.error.set(`Failed to update the schedule for "${row.name}". Please try again.`);
         this.setSaving(row.userId, false);
-        this.employeeRows.update((rows) => [...rows]);
+        this.employees.updateRows((rows) => [...rows]);
       },
     });
   }

@@ -4,23 +4,26 @@ import {
   DestroyRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { auditTime, debounceTime, distinctUntilChanged, finalize, fromEvent } from 'rxjs';
+import { auditTime, finalize, fromEvent } from 'rxjs';
 
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 
 import { AttendanceService } from '../services/attendance.service';
 import { RosterEntry } from '../models/attendance.model';
 
-import { ListPaginator, ListPageChange } from '../../../../shared/ui/list-paginator/list-paginator';
+import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
+import { injectListState } from '../../../../shared/data/url-list-state';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -38,7 +41,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
     TableModule,
     ButtonModule,
     DatePickerModule,
-    ReactiveFormsModule,
+    FormsModule,
     DatePipe,
   ],
   templateUrl: './roster.html',
@@ -52,9 +55,13 @@ export class Roster implements OnInit {
   private readonly document = inject(DOCUMENT);
 
 
+  /** Page, page size, search and day live in the URL (`rosterPage`, `rosterQ`, `rosterDate`...). */
+  readonly list = injectListState({ pageSize: 10, prefix: 'roster', filters: { date: null as string | null } });
+
   readonly entries = signal<RosterEntry[]>([]);
   readonly totalRecords = signal(0);
-  readonly rows = signal(10);
+  readonly rows = this.list.pageSize;
+  readonly page = this.list.page;
   readonly isLoading = signal(false);
 
   /** Admins/superadmins see the whole roster, so only they get the employee
@@ -62,35 +69,37 @@ export class Roster implements OnInit {
    *  backend resolves the role and returns it as `meta.viewerIsManager`. */
   readonly canSearch = signal(false);
 
-  readonly searchControl = new FormControl('', { nonNullable: true });
-  readonly dateControl = new FormControl<Date>(this.startOfToday(), { nonNullable: true });
-
   /** Future days have no attendance yet, so the picker and next-day step are capped at today. */
   readonly maxDate = this.startOfToday();
-  readonly isToday = signal(true);
-
-  /** Index of the first row on the current page (PrimeNG's `first`). */
-  readonly firstRow = signal(0);
-  /** Current page, 1-based, for the shared list footer. */
-  readonly page = computed(() => Math.floor(this.firstRow() / this.rows()) + 1);
+  /** The chosen day (`?rosterDate=YYYY-MM-DD`), today when unset or in the future. */
+  readonly selectedDate = computed(() => {
+    const value = this.list.filters().date;
+    const date = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : this.maxDate;
+    return Number.isNaN(date.getTime()) || date > this.maxDate ? this.maxDate : date;
+  });
+  readonly isToday = computed(() => this.isSameDay(this.selectedDate(), this.maxDate));
   private requestId = 0;
   private pendingRealtimeRefresh = false;
 
   constructor() {
-    this.searchControl.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.resetToFirstPage());
+    // Any change to the URL state (page, size, search, day) loads that page.
+    effect(() => {
+      this.list.query();
+      this.selectedDate();
+      untracked(() => this.fetchRoster());
+    });
+  }
 
-    this.dateControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((value) => {
-        this.isToday.set(this.isSameDay(value, this.maxDate));
-        this.resetToFirstPage();
-      });
+  onSearch(event: Event): void {
+    this.list.setSearch((event.target as HTMLInputElement).value);
+  }
+
+  setDate(date: Date | null): void {
+    if (!date) return;
+    this.list.setFilter('date', this.isSameDay(date, this.maxDate) ? null : this.toDateParam(date));
   }
 
   ngOnInit(): void {
-    // The lazy p-table fires (onLazyLoad) on init, loading the first page.
 
     fromEvent(this.document, 'visibilitychange')
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -103,7 +112,7 @@ export class Roster implements OnInit {
     this.attendanceService.updates$
       .pipe(auditTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe((update) => {
-        const selectedDate = this.toDateParam(this.dateControl.value);
+        const selectedDate = this.toDateParam(this.selectedDate());
         const targeted = Boolean(update.affected?.length);
         const affectsSelectedDate = update.affected?.some(
           (target) => target.date === selectedDate,
@@ -117,18 +126,6 @@ export class Roster implements OnInit {
       });
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    this.firstRow.set(event.first ?? 0);
-    this.rows.set(event.rows ?? 10);
-    this.fetchRoster();
-  }
-
-  /** Shared list footer: page or page size changed. */
-  onPageChange(change: ListPageChange): void {
-    this.rows.set(change.pageSize);
-    this.firstRow.set(change.first);
-    this.fetchRoster();
-  }
 
   previousDay(): void {
     this.shiftDay(-1);
@@ -146,22 +143,16 @@ export class Roster implements OnInit {
 
   openEmployee(entry: RosterEntry): void {
     this.router.navigate(['/timekeeping/attendance', entry.employeeId], {
-      queryParams: { date: this.toDateParam(this.dateControl.value) },
+      queryParams: { date: this.toDateParam(this.selectedDate()) },
       // Identity for the detail header; the day-summary endpoint only returns times.
       state: { employee: entry },
     });
   }
 
   private shiftDay(deltaDays: number): void {
-    const next = new Date(this.dateControl.value.getTime() + deltaDays * DAY_MS);
+    const next = new Date(this.selectedDate().getTime() + deltaDays * DAY_MS);
     next.setHours(0, 0, 0, 0);
-    this.dateControl.setValue(next);
-  }
-
-  private resetToFirstPage(): void {
-    // Back to page 1; the shared footer and the table both read firstRow.
-    this.firstRow.set(0);
-    this.fetchRoster();
+    this.setDate(next);
   }
 
   /** `silent` skips the loading overlay and keeps current data on failure — used
@@ -174,8 +165,8 @@ export class Roster implements OnInit {
       .getRoster({
         page: this.page(),
         limit: this.rows(),
-        date: this.toDateParam(this.dateControl.value),
-        search: this.searchControl.value.trim() || undefined,
+        date: this.toDateParam(this.selectedDate()),
+        search: this.list.search() || undefined,
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),

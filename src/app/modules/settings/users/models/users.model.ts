@@ -15,11 +15,6 @@ export interface OrganizationMember {
   };
 }
 
-export interface ListMembersResponse {
-  members: OrganizationMember[];
-  total: number;
-}
-
 export interface MemberDetails {
   id: string;
   organizationId: string;
@@ -27,6 +22,8 @@ export interface MemberDetails {
   role: OrganizationMemberRole;
   createdAt: string;
   teamId: string | null;
+  /** The member's team, so the edit form can show it without loading every team. */
+  team?: { id: string; name: string } | null;
   user: {
     id: string;
     name: string | null;

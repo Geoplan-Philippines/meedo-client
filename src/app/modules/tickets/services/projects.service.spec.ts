@@ -1,5 +1,9 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+
 import { Project } from '../models/projects.model';
-import { PROJECT_PICKER_LIMIT, filterProjects, toPickerProject, withCurrentProject } from './projects.service';
+import { ProjectsService, toPickerProject, withCurrentProject } from './projects.service';
 
 const record = (id: string, overrides: Partial<Project> = {}): Project =>
   toPickerProject({
@@ -48,13 +52,30 @@ describe('ticket project picker helpers', () => {
     expect(withCurrentProject(active, { id: '1', customerName: '', workOrderNumber: 'SO-1' })).toBe(active);
     expect(withCurrentProject(active, null)).toBe(active);
   });
+});
 
-  it('filters on name, client and WO number and caps what it renders', () => {
-    const many = Array.from({ length: PROJECT_PICKER_LIMIT + 20 }, (_, i) => record(String(i)));
+describe('ProjectsService.search', () => {
+  let http: HttpTestingController;
+  let service: ProjectsService;
 
-    expect(filterProjects(many, 'so-12')).toEqual({ items: [many[12]], total: 1 });
-    expect(filterProjects(many, 'DENSO').total).toBe(many.length);
-    expect(filterProjects(many, '')).toMatchObject({ total: PROJECT_PICKER_LIMIT + 20 });
-    expect(filterProjects(many, '').items).toHaveLength(PROJECT_PICKER_LIMIT);
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    http = TestBed.inject(HttpTestingController);
+    service = TestBed.inject(ProjectsService);
+  });
+  afterEach(() => http.verify());
+
+  it('asks the server for one page that matches the search, newest reported first', () => {
+    let result: Project[] = [];
+    service.search({ page: 2, limit: 20, search: 'rtls' }).subscribe((page) => (result = page.data));
+    const req = http.expectOne((request) => request.url.endsWith('/maintenance/projects'));
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('limit')).toBe('20');
+    expect(req.request.params.get('search')).toBe('rtls');
+    expect(req.request.params.get('sortField')).toBe('reportedDate');
+    expect(req.request.params.get('sortOrder')).toBe('desc');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ data: [record('7')], meta: { total: 21, page: 2, limit: 20, lastPage: 2 } });
+    expect(result.map((project) => project.label)).toEqual(['Project 7 · Denso · SO-7']);
   });
 });

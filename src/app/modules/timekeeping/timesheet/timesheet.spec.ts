@@ -51,7 +51,7 @@ describe('Timesheet', () => {
           provide: TimesheetService,
           useValue: {
             getEntries: () => of({ ...emptyEntries, data: entriesData }),
-            getProjects: () => of(projects),
+            searchProjects: () => of({ ...emptyEntries, data: projects }),
             getPeriodLock: () => of(unlocked),
             createEntry: (payload: TimesheetEntryPayload) => {
               createCalls += 1;
@@ -88,14 +88,14 @@ describe('Timesheet', () => {
     await fixture.whenStable();
   });
 
-  it('renders and loads project/tag options', () => {
+  it('renders without loading every project; row names come from the week\'s entries', () => {
     expect(component).toBeTruthy();
-    expect(component.projects()[0].workOrderNumber).toBe('WO-001');
+    expect(component.projects()).toEqual([]);
   });
 
   it('adds a project row and a new entry from the cell modal', () => {
     component.openAddProjectModal();
-    component.onAddProjectChange('project-1');
+    component.onAddProjectChange(projects[0]);
     component.confirmAddProject();
 
     expect(component.tableProjectIds()).toEqual(['project-1']);
@@ -114,7 +114,7 @@ describe('Timesheet', () => {
 
   it('adds a second task row to the same project/day cell without duplicating the first', () => {
     component.openAddProjectModal();
-    component.onAddProjectChange('project-1');
+    component.onAddProjectChange(projects[0]);
     component.confirmAddProject();
 
     const day = component.weekDays()[0];
@@ -150,7 +150,7 @@ describe('Timesheet', () => {
   it('does not add a project row when the period is locked', () => {
     component.isLocked.set(true);
     component.openAddProjectModal();
-    component.onAddProjectChange('project-1');
+    component.onAddProjectChange(projects[0]);
     component.confirmAddProject();
 
     expect(component.tableProjectIds()).toEqual([]);
@@ -158,7 +158,7 @@ describe('Timesheet', () => {
 
   it('shows validation by not saving invalid hours', () => {
     component.openAddProjectModal();
-    component.onAddProjectChange('project-1');
+    component.onAddProjectChange(projects[0]);
     component.confirmAddProject();
 
     const day = component.weekDays()[0];

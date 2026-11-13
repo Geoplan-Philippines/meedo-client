@@ -22,7 +22,7 @@ describe('All Notifications page', () => {
   };
   beforeEach(() => {
     vi.clearAllMocks();
-    api.list.mockReturnValue(of({ data: [], meta: { lastPage: 2 } }));
+    api.list.mockReturnValue(of({ data: [], meta: { total: 0, page: 1, limit: 20, lastPage: 0 } }));
     api.read.mockReturnValue(of({}));
     api.readAll.mockReturnValue(of({}));
     TestBed.configureTestingModule({
@@ -33,21 +33,26 @@ describe('All Notifications page', () => {
       ],
     });
   });
-  it('renders empty state, paging and unread filtering', () => {
+  it('renders empty state, paging and unread filtering from the URL', async () => {
     const fixture = TestBed.createComponent(NotificationsPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(
       'No notifications found',
     );
-    expect(api.list).toHaveBeenCalledWith(1, false);
-    fixture.componentInstance.page.set(2);
-    fixture.componentInstance.load();
-    expect(api.list).toHaveBeenLastCalledWith(2, false);
+    expect(api.list).toHaveBeenCalledWith(1, false, 20);
+    await TestBed.inject(Router).navigateByUrl('/?page=2');
+    await fixture.whenStable();
+    expect(api.list).toHaveBeenLastCalledWith(2, false, 20);
     fixture.componentInstance.toggleUnread();
-    expect(api.list).toHaveBeenLastCalledWith(1, true);
+    await fixture.whenStable();
+    expect(api.list).toHaveBeenLastCalledWith(1, true, 20);
   });
-  it('prepends socket arrivals and applies read changes from other tabs', () => {
+  it('prepends socket arrivals and applies read changes from other tabs', async () => {
     const fixture = TestBed.createComponent(NotificationsPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
     api.incoming.next(item);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.unread')).toBeTruthy();
@@ -55,6 +60,7 @@ describe('All Notifications page', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.unread')).toBeNull();
     fixture.componentInstance.toggleUnread();
+    await fixture.whenStable();
     api.incoming.next(item);
     api.reads.next(null);
     expect(fixture.componentInstance.items()).toEqual([]);
@@ -70,7 +76,7 @@ describe('All Notifications page', () => {
     expect(fixture.nativeElement.textContent).toContain('Retry');
   });
 
-  it('renders hostile payloads as text and never follows links for an unknown entity', () => {
+  it('renders hostile payloads as text and never follows links for an unknown entity', async () => {
     const hostile = {
       ...item,
       title: '<script>alert(1)</script>',
@@ -79,8 +85,10 @@ describe('All Notifications page', () => {
       entityId: 'id',
       link: '/tickets/forged',
     };
-    api.list.mockReturnValue(of({ data: [hostile], meta: { lastPage: 1 } }));
+    api.list.mockReturnValue(of({ data: [hostile], meta: { total: 1, page: 1, limit: 20, lastPage: 1 } }));
     const fixture = TestBed.createComponent(NotificationsPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
     const row = fixture.nativeElement.querySelector('.item');
     expect(row.textContent).toContain(hostile.title);
