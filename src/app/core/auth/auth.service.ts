@@ -6,6 +6,14 @@ import { environment } from '../../../environments/environment.dev';
 import { AuthUser } from './auth.types';
 import { isOrganizationAdmin } from './org-admin.guard';
 
+/**
+ * What a fresh session check found. `unknown` means the check itself failed
+ * (network or server error), so it proves nothing either way.
+ */
+export type SessionStatus = 'active' | 'gone' | 'unknown';
+
+const HTTP_UNAUTHORIZED = 401;
+
 type SessionData = {
   session: {
     activeOrganizationId: string | null;
@@ -98,9 +106,34 @@ export class AuthService {
     return { data, error };
   }
 
-  async logout(): Promise<void> {
-    await this.client.signOut();
+  /**
+   * Asks the server whether this browser still has a session. It only reads:
+   * the session is not refreshed and local state is not changed.
+   */
+  async checkSession(): Promise<SessionStatus> {
+    try {
+      const { data, error } = await this.client.getSession({
+        query: { disableRefresh: true, disableCookieCache: true },
+      });
+      if (error) return error.status === HTTP_UNAUTHORIZED ? 'gone' : 'unknown';
+      return data?.session ? 'active' : 'gone';
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  /** Forgets the session in this tab only. The server session is left alone. */
+  clearLocalSession(): void {
     this._session.set(null);
     this._memberRole.set(null);
+  }
+
+  /** The user's own sign-out: ends the session on the server, then here. */
+  async logout(): Promise<void> {
+    try {
+      await this.client.signOut();
+    } finally {
+      this.clearLocalSession();
+    }
   }
 }
