@@ -33,13 +33,12 @@
     </div>
 
   @if (accessDenied()) {
-    <section class="access-denied" role="alert">
-      <i class="pi pi-lock" aria-hidden="true"></i>
-      <div>
-        <p class="access-title">Admins only</p>
-        <p class="access-body">The attendance board is available to organization owners and admins.</p>
-      </div>
-    </section>
+    <app-empty-state
+      role="alert"
+      icon="pi pi-lock"
+      heading="Admins only"
+      description="The attendance board is available to organization owners and admins."
+    />
   } @else {
     <!-- ─── Status summary ─────────────────────────────── -->
     <section class="summary" aria-label="Attendance summary for the day">
@@ -79,16 +78,16 @@
               <button type="button" class="filter-chip" (click)="toggleStatusFilter(active)">
                 {{ active }}
                 <i class="pi pi-times" aria-hidden="true"></i>
-                <span class="sr-only">Clear filter</span>
+                <span class="ds-sr-only">Clear filter</span>
               </button>
             }
           </div>
 
-          <div class="search-box">
-            <i class="pi pi-search search-icon" aria-hidden="true"></i>
+          <p-iconfield class="section-search">
+            <p-inputicon class="pi pi-search" />
             <input
+              pInputText
               type="search"
-              class="search-input"
               placeholder="Search by name or code…"
               aria-label="Search roster"
               [value]="rosterList.searchInput()"
@@ -96,7 +95,7 @@
               autocomplete="off"
               maxlength="100"
             />
-          </div>
+          </p-iconfield>
         </div>
 
         <p-table
@@ -152,10 +151,8 @@
           <ng-template pTemplate="emptymessage">
             <tr>
               <td colspan="6">
-                <div class="empty-state">
-                  <div class="empty-icon" aria-hidden="true"><i class="pi pi-users"></i></div>
-                  <p class="empty-title">No employees to show</p>
-                  <p class="empty-body">
+                <app-empty-state icon="pi pi-users" heading="No employees to show">
+                  <p class="empty-copy">
                     @if (rosterList.search()) {
                       No one matches "{{ rosterList.search() }}". Try different keywords.
                     } @else if (statusFilter()) {
@@ -164,7 +161,7 @@
                       No employees are set up for attendance yet.
                     }
                   </p>
-                </div>
+                </app-empty-state>
               </td>
             </tr>
           </ng-template>
@@ -191,25 +188,21 @@
           </div>
 
           <div class="toolbar-controls">
-            <div class="segmented" role="group" aria-label="Scoreboard period">
-              @for (option of periodOptions; track option.key) {
-                <button
-                  type="button"
-                  class="segmented-btn"
-                  [class.segmented-btn--active]="period() === option.key"
-                  [attr.aria-pressed]="period() === option.key"
-                  (click)="setPeriod(option.key)"
-                >
-                  {{ option.label }}
-                </button>
-              }
-            </div>
+            <p-selectbutton
+              aria-label="Scoreboard period"
+              [options]="periodOptions"
+              optionLabel="label"
+              optionValue="key"
+              [allowEmpty]="false"
+              [ngModel]="period()"
+              (ngModelChange)="setPeriod($event)"
+            />
 
-            <div class="search-box search-box--sm">
-              <i class="pi pi-search search-icon" aria-hidden="true"></i>
+            <p-iconfield class="section-search section-search--sm">
+              <p-inputicon class="pi pi-search" />
               <input
+                pInputText
                 type="search"
-                class="search-input"
                 placeholder="Search employee…"
                 aria-label="Search scoreboard"
                 [value]="tardList.searchInput()"
@@ -217,7 +210,7 @@
                 autocomplete="off"
                 maxlength="100"
               />
-            </div>
+            </p-iconfield>
           </div>
         </div>
 
@@ -269,17 +262,15 @@
           <ng-template pTemplate="emptymessage">
             <tr>
               <td colspan="7">
-                <div class="empty-state">
-                  <div class="empty-icon" aria-hidden="true"><i class="pi pi-verified"></i></div>
-                  <p class="empty-title">No lateness in this window</p>
-                  <p class="empty-body">
+                <app-empty-state icon="pi pi-verified" heading="No lateness in this window">
+                  <p class="empty-copy">
                     @if (tardList.search()) {
                       No one matches "{{ tardList.search() }}".
                     } @else {
                       No attendance was recorded for this period yet.
                     }
                   </p>
-                </div>
+                </app-empty-state>
               </td>
             </tr>
           </ng-template>

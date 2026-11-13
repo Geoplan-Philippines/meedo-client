@@ -1,35 +1,88 @@
-<main>
-  <a routerLink="/crm/newsletter/campaigns">← Campaigns</a>
-  <h1>{{ id ? 'Campaign details' : 'Create campaign' }}</h1>
-  <p>Drafts only. Sending is not available yet.</p>
+<app-page [heading]="id ? 'Campaign details' : 'Create campaign'" subtitle="Drafts only. Sending is not available yet.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
+    <a routerLink="/crm/newsletter/campaigns" class="hover:text-primary transition-colors">Campaigns</a>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">{{ id ? 'Campaign details' : 'Create campaign' }}</span>
+  </nav>
+
+  @if (!loading() && !loadError() && campaign()?.status === 'ARCHIVED') {
+    <p pageMeta class="ds-readonly-note" role="status">
+      <i class="pi pi-lock" aria-hidden="true"></i>
+      Archived. Restore this campaign from the list before editing.
+    </p>
+  }
+
   @if (loading()) {
-    <p role="status">Loading campaign…</p>
-  } @else if (loadError()) {
-    <p role="alert" class="error">{{ loadError() }}</p><button (click)="load()">Retry</button>
-  } @else if (!id && !isAdmin()) {
-    <p role="status">An organization owner or admin can create campaigns.</p>
-  } @else {
-    @if (campaign()?.status === 'ARCHIVED') { <p role="status">Archived. Restore this campaign from the list before editing.</p> }
-    <form [formGroup]="form" (ngSubmit)="save()">
-      @for (field of textFields; track field) {
-        <label [for]="field">{{ field === 'name' ? 'Name' : 'Subject' }} <span>(required)</span></label>
-        <input [id]="field" [formControlName]="field" [attr.maxlength]="limits[field]" [readonly]="!canEdit() || saving()" [attr.aria-invalid]="invalid(field)" [attr.aria-describedby]="field + '-feedback'" required />
-        <div [id]="field + '-feedback'" class="feedback" aria-live="polite">
-          @if (invalid(field)) { <span class="error">{{ field === 'name' ? 'Name' : 'Subject' }} is required and must be at most {{ limits[field] }} characters.</span> }
-          @if (nearLimit(field)) { <span class="counter">{{ length(field) }} / {{ limits[field] }} characters</span> }
+    <div class="form-skeleton" role="status">
+      <span class="ds-sr-only">Loading campaign…</span>
+      @for (row of [1, 2]; track row) {
+        <div class="field" aria-hidden="true">
+          <p-skeleton width="5rem" height="0.875rem" />
+          <p-skeleton width="100%" height="2.5rem" />
         </div>
       }
-      <p id="body-label" class="label">Body <span>(required)</span></p>
-      <app-rich-text-editor campaignBodyAccessibility [invalid]="invalid('body')" [content]="values().body" (contentChange)="bodyChanged($event)" [editable]="canEdit() && !saving()" placeholder="Write campaign content…" />
-      <div id="body-feedback" class="feedback" aria-live="polite">
-        @if (invalid('body')) { <span class="error">Body is required and must be at most {{ limits.body }} characters.</span> }
-        @if (nearLimit('body')) { <span class="counter">{{ length('body') }} / {{ limits.body }} characters (including formatting)</span> }
+      <div class="field" aria-hidden="true">
+        <p-skeleton width="5rem" height="0.875rem" />
+        <p-skeleton width="100%" height="10rem" />
       </div>
-      @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
-      <div class="actions">
-        @if (canEdit()) { <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save draft' }}</button> }
-        <a routerLink="/crm/newsletter/campaigns">{{ canEdit() ? 'Cancel' : 'Back to campaigns' }}</a>
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="loadError()">
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
+  } @else if (!id && !isAdmin()) {
+    <app-empty-state role="status" icon="pi pi-lock" heading="Admins only" description="An organization owner or admin can create campaigns." />
+  } @else {
+    <form class="campaign-form" [formGroup]="form" (ngSubmit)="save()">
+      @for (field of textFields; track field) {
+        <div class="field">
+          <label class="field-label" [for]="field">{{ field === 'name' ? 'Name' : 'Subject' }} <span class="field-hint">(required)</span></label>
+          <input
+            pInputText
+            [id]="field"
+            [formControlName]="field"
+            [attr.maxlength]="limits[field]"
+            [readonly]="!canEdit() || saving()"
+            [invalid]="invalid(field)"
+            [attr.aria-invalid]="invalid(field)"
+            [attr.aria-describedby]="field + '-feedback'"
+            required
+          />
+          <div [id]="field + '-feedback'" class="feedback" aria-live="polite">
+            @if (invalid(field)) { <span class="feedback-error">{{ field === 'name' ? 'Name' : 'Subject' }} is required and must be at most {{ limits[field] }} characters.</span> }
+            @if (nearLimit(field)) { <span class="counter">{{ length(field) }} / {{ limits[field] }} characters</span> }
+          </div>
+        </div>
+      }
+
+      <div class="field">
+        <p id="body-label" class="field-label">Body <span class="field-hint">(required)</span></p>
+        <app-rich-text-editor
+          campaignBodyAccessibility
+          class="campaign-body"
+          [class.campaign-body--invalid]="invalid('body')"
+          [invalid]="invalid('body')"
+          [content]="values().body"
+          (contentChange)="bodyChanged($event)"
+          [editable]="canEdit() && !saving()"
+          placeholder="Write campaign content…"
+        />
+        <div id="body-feedback" class="feedback" aria-live="polite">
+          @if (invalid('body')) { <span class="feedback-error">Body is required and must be at most {{ limits.body }} characters.</span> }
+          @if (nearLimit('body')) { <span class="counter">{{ length('body') }} / {{ limits.body }} characters (including formatting)</span> }
+        </div>
+      </div>
+
+      @if (error()) {
+        <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ error() }}</p-message>
+      }
+
+      <div class="form-actions">
+        @if (canEdit()) {
+          <button pButton type="submit" [label]="saving() ? 'Saving…' : 'Save draft'" [disabled]="saving()"></button>
+        }
+        <a pButton routerLink="/crm/newsletter/campaigns" severity="secondary" [outlined]="true" [label]="canEdit() ? 'Cancel' : 'Back to campaigns'"></a>
       </div>
     </form>
   }
-</main>
+</app-page>

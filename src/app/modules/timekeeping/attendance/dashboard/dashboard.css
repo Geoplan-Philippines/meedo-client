@@ -37,35 +37,6 @@
 :host ::ng-deep .day-nav .p-datepicker { width: 9.5rem; }
 :host ::ng-deep .day-nav .p-datepicker-input { width: 100%; font-size: 0.875rem; }
 
-/* ─── Access denied ────────────────────────────────────── */
-.access-denied {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  padding: 2rem;
-}
-
-.access-denied .pi-lock {
-  font-size: 1.5rem;
-  color: var(--color-muted);
-}
-
-.access-title {
-  font-weight: 600;
-  color: var(--color-heading);
-  margin: 0;
-  font-family: var(--font-heading);
-}
-
-.access-body {
-  font-size: 0.875rem;
-  color: var(--color-body);
-  margin: 0.25rem 0 0;
-}
-
 /* ─── Summary ──────────────────────────────────────────── */
 .summary {
   display: flex;
@@ -230,73 +201,15 @@
   flex-wrap: wrap;
 }
 
-/* Segmented period control. */
-.segmented {
-  display: inline-flex;
-  padding: 0.1875rem;
-  gap: 0.125rem;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
+/* PrimeNG IconField search; .section-search in design-system.css sets the width. */
+.section-search { align-self: center; }
+.section-search--sm { width: 14rem; }
 
-.segmented-btn {
-  padding: 0.3125rem 0.75rem;
-  border: none;
-  background: transparent;
-  border-radius: calc(var(--radius-md) - 2px);
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-muted);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.segmented-btn:hover { color: var(--color-body); }
-
-.segmented-btn--active {
-  background: var(--color-surface);
-  color: var(--color-primary);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-heading) 8%, transparent);
-}
-
-.segmented-btn:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 1px;
-}
-
-/* ─── Search box (shared with roster styling) ──────────── */
-.search-box { position: relative; flex: 1; max-width: 340px; }
-.search-box--sm { max-width: 220px; }
-
-.search-icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-body);
+/* Section toolbar controls match the page toolbar: 36px tall, 14px text. */
+.table-toolbar .p-inputtext { min-height: var(--control-h); }
+:host ::ng-deep .table-toolbar .p-togglebutton {
+  min-height: var(--control-h);
   font-size: 0.875rem;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.5rem 0.875rem 0.5rem 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  color: var(--color-heading);
-  background: var(--color-surface);
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.search-input::placeholder { color: var(--color-muted); }
-.search-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 /* ─── Table (mirrors the roster table treatment) ───────── */
@@ -320,9 +233,9 @@
 
 .time-cell, .hours-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* Availability chip — same pill treatment as the status badges. Available reads
-   green; Unavailable is a readable bordered neutral (there's no light muted-bg
-   token, so a hairline chip on the canvas tint carries it at AA). */
+/* Availability pill, same treatment as the status badges. Available uses the
+   success pair; Unavailable uses the neutral badge pair. Both pairs are tuned
+   for AA in light and dark (styles.css). */
 .avail {
   display: inline-flex;
   align-items: center;
@@ -331,15 +244,13 @@
   font-size: 0.6875rem;
   font-weight: 500;
   white-space: nowrap;
-  background: var(--color-background);
-  color: var(--color-body);
-  border: 1px solid var(--color-border);
+  background: var(--badge-neutral-bg);
+  color: var(--badge-neutral-fg);
 }
 
 .avail--on {
-  background: var(--color-muted-success);
-  color: var(--color-muted-success-foreground);
-  border-color: transparent;
+  background: var(--muted-success);
+  color: var(--muted-success-foreground);
 }
 
 /* Rank badge. */
@@ -366,61 +277,18 @@
 .late-days { font-weight: 600; color: var(--color-heading); }
 .on-time { color: var(--color-muted); }
 
-/* ─── Empty state ──────────────────────────────────────── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 3rem 1rem;
-  text-align: center;
-}
-.empty-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  margin-bottom: 0.375rem;
-  border-radius: var(--pill-radius);
-  background: var(--subtle);
-  color: var(--text-muted);
-}
-.empty-title { margin: 0; font-size: 0.9375rem; font-weight: 600; color: var(--text-heading); }
-.empty-body { margin: 0; font-size: 0.875rem; color: var(--text-muted); }
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 /* ─── Responsive ───────────────────────────────────────── */
-.hide-md { display: table-cell; }
-
-@media (max-width: 992px) {
-  .hide-md { display: none; }
-  .board { padding: 1.25rem 1rem 2.5rem; }
-}
-
 @media (max-width: 768px) {
   .summary-cards { grid-template-columns: 1fr; }
   .seg { border-right: none; border-bottom: 1px solid var(--color-border); }
   .seg:last-child { border-bottom: none; }
   .table-toolbar { flex-direction: column; align-items: stretch; }
   .toolbar-controls { justify-content: space-between; }
-  .search-box, .search-box--sm { max-width: 100%; }
+  .section-search, .section-search--sm { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .live-dot { animation: none; }
-  .dist-seg { transition: none; }
 }
 
 .row-open {
