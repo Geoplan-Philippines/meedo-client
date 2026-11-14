@@ -105,9 +105,8 @@
                 </div>
               } @else {
                 <button type="button" class="reply-open" (click)="startReply(comment)" [attr.aria-label]="'Reply to ' + authorName(comment)">
-                  <span class="avatar" [class]="avatarClass(currentUserName())" aria-hidden="true">{{ initials(currentUserName()) }}</span>
-                  <span class="reply-open-text">Leave a reply…</span>
-                  <i class="pi pi-arrow-up reply-open-icon" aria-hidden="true"></i>
+                  <i class="pi pi-reply" aria-hidden="true"></i>
+                  <span>Reply</span>
                 </button>
               }
             </div>

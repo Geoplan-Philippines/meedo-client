@@ -18,6 +18,15 @@ describe('MarkdownEditor length validation', () => {
     editor = (fixture.componentInstance as unknown as { editor: Editor }).editor;
   }
 
+  it('keeps the textbox free of aria-expanded, which role="textbox" does not allow', async () => {
+    await mount('');
+    const dom = editor.view.dom;
+    expect(dom.getAttribute('role')).toBe('textbox');
+    expect(dom.hasAttribute('aria-expanded')).toBe(false);
+    expect(dom.getAttribute('aria-haspopup')).toBe('listbox');
+    expect(dom.getAttribute('aria-controls')).toBeTruthy();
+  });
+
   it('truncates a large text paste, immediately updates the counter, and saves only bounded source', async () => {
     await mount('');
     const saved = vi.fn(); fixture.componentInstance.contentSave.subscribe(saved);

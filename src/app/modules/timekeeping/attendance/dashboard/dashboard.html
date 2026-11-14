@@ -1,4 +1,4 @@
-<app-page heading="Attendance board" subtitle="Who's in, who's late, who's out, graded against each schedule.">
+<app-page heading="Time overview" subtitle="Who's in, who's late, who's out, graded against each schedule.">
     <div pageActions class="day-nav">
       @if (summary(); as s) {
         <span class="as-of" [class.as-of--live]="isToday()">
@@ -32,70 +32,58 @@
       />
     </div>
 
+  @if (!accessDenied()) {
+    <app-stat-strip pageSummary label="Attendance summary for the day" [items]="summaryStats()" />
+  }
+
   @if (accessDenied()) {
     <app-empty-state
       role="alert"
       icon="pi pi-lock"
       heading="Admins only"
-      description="The attendance board is available to organization owners and admins."
+      description="Time overview is available to organization owners and admins."
     />
   } @else {
-    <!-- ─── Status summary ─────────────────────────────── -->
-    <section class="summary" aria-label="Attendance summary for the day">
-      <div class="summary-cards" role="group" aria-label="Filter roster by status">
-        @for (card of statusCards(); track card.key) {
-          <button
-            type="button"
-            class="seg"
-            [class]="'seg--' + card.tone"
-            [class.seg--active]="statusFilter() === card.key"
-            [attr.aria-pressed]="statusFilter() === card.key"
-            (click)="toggleStatusFilter(card.key)"
-          >
-            <span class="seg-key">
-              <span class="seg-label">
-                <span class="seg-dot" aria-hidden="true"></span>
-                {{ card.label }}
-              </span>
-              @if (card.hint) {
-                <span class="seg-hint">{{ card.hint }}</span>
-              }
-            </span>
-            <span class="seg-count">{{ card.count }}</span>
-          </button>
-        }
-      </div>
-
-    </section>
-
     <!-- ─── Roster ─────────────────────────────────────── -->
     <section class="panel">
       <div class="table-panel">
         <div class="table-toolbar">
           <div class="toolbar-lead">
             <h2 class="panel-title">Employee Status</h2>
-            @if (statusFilter(); as active) {
-              <button type="button" class="filter-chip" (click)="toggleStatusFilter(active)">
-                {{ active }}
-                <i class="pi pi-times" aria-hidden="true"></i>
-                <span class="ds-sr-only">Clear filter</span>
-              </button>
-            }
           </div>
 
-          <p-iconfield class="section-search">
-            <p-inputicon class="pi pi-search" />
-            <input
-              pInputText
-              type="search"
-              placeholder="Search by name or code…"
-              aria-label="Search roster"
-              [value]="rosterList.searchInput()"
-              (input)="onRosterSearch($event)"
-              autocomplete="off"
-              maxlength="100"
-            />
-          </p-iconfield>
+          <div class="toolbar-controls">
+            <p-selectbutton
+              aria-label="Filter roster by status"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="key"
+              [allowEmpty]="false"
+              [ngModel]="statusFilterKey()"
+              (ngModelChange)="setStatusFilter($event)"
+            >
+              <ng-template #item let-option>
+                @if (option.tone) {
+                  <span [class]="'ds-dot ds-dot--' + option.tone" aria-hidden="true"></span>
+                }
+                <span>{{ option.label }}</span>
+              </ng-template>
+            </p-selectbutton>
+
+            <p-iconfield class="section-search section-search--md">
+              <p-inputicon class="pi pi-search" />
+              <input
+                pInputText
+                type="search"
+                placeholder="Search by name or code…"
+                aria-label="Search roster"
+                [value]="rosterList.searchInput()"
+                (input)="onRosterSearch($event)"
+                autocomplete="off"
+                maxlength="100"
+              />
+            </p-iconfield>
+          </div>
         </div>
 
         <p-table

@@ -37,107 +37,6 @@
 :host ::ng-deep .day-nav .p-datepicker { width: 9.5rem; }
 :host ::ng-deep .day-nav .p-datepicker-input { width: 100%; font-size: 0.875rem; }
 
-/* ─── Summary ──────────────────────────────────────────── */
-.summary {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-/* Three status buckets share one surface and read as a filter cluster, not
-   three floating stat tiles. */
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  overflow: hidden;
-}
-
-.seg {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--color-border);
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font-body);
-  transition: background-color 0.15s ease;
-}
-
-.seg:last-child { border-right: none; }
-.seg:hover { background: color-mix(in srgb, var(--color-secondary) 35%, transparent); }
-
-.seg:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: -2px;
-}
-
-.seg-key {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.seg-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-body);
-}
-
-.seg-hint {
-  font-size: 0.6875rem;
-  color: var(--color-muted);
-  padding-left: 1.125rem;
-}
-
-.seg-dot {
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.seg--success .seg-dot { background: var(--color-muted-success-foreground); }
-.seg--warning .seg-dot { background: var(--color-muted-warning-foreground); }
-.seg--destructive .seg-dot { background: var(--color-muted-destructive-foreground); }
-
-.seg-count {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  font-family: var(--font-heading);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Active filter: tint the whole segment in its own tone and mark it with an
-   inset accent bar along the bottom. */
-.seg--active { position: relative; }
-.seg--active::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-}
-.seg--success.seg--active { background: var(--color-muted-success); }
-.seg--success.seg--active::after { background: var(--color-muted-success-foreground); }
-.seg--warning.seg--active { background: var(--color-muted-warning); }
-.seg--warning.seg--active::after { background: var(--color-muted-warning-foreground); }
-.seg--destructive.seg--active { background: var(--color-muted-destructive); }
-.seg--destructive.seg--active::after { background: var(--color-muted-destructive-foreground); }
-
 /* ─── Panels / table cards ─────────────────────────────── */
 .panel { display: flex; flex-direction: column; }
 
@@ -176,24 +75,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.1875rem 0.5rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
-  background: var(--color-secondary);
-  color: var(--color-secondary-foreground);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  cursor: pointer;
-}
-
-.filter-chip:hover { border-color: var(--color-primary); }
-.filter-chip .pi { font-size: 0.625rem; }
-
 .toolbar-controls {
   display: inline-flex;
   align-items: center;
@@ -201,9 +82,13 @@
   flex-wrap: wrap;
 }
 
+/* Status dots inside the roster filter options. */
+:host ::ng-deep .table-toolbar .p-togglebutton-content { gap: 0.375rem; }
+
 /* PrimeNG IconField search; .section-search in design-system.css sets the width. */
 .section-search { align-self: center; }
 .section-search--sm { width: 14rem; }
+.section-search--md { width: 17rem; }
 
 /* Section toolbar controls match the page toolbar: 36px tall, 14px text. */
 .table-toolbar .p-inputtext { min-height: var(--control-h); }
@@ -279,12 +164,9 @@
 
 /* ─── Responsive ───────────────────────────────────────── */
 @media (max-width: 768px) {
-  .summary-cards { grid-template-columns: 1fr; }
-  .seg { border-right: none; border-bottom: 1px solid var(--color-border); }
-  .seg:last-child { border-bottom: none; }
   .table-toolbar { flex-direction: column; align-items: stretch; }
   .toolbar-controls { justify-content: space-between; }
-  .section-search, .section-search--sm { width: 100%; }
+  .section-search, .section-search--sm, .section-search--md { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

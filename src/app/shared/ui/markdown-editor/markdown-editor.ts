@@ -400,8 +400,9 @@ export class MarkdownEditor implements AfterViewInit {
     effect(() => {
       const dom = this.editor?.view.dom;
       if (!dom) return;
+      // role="textbox" does not allow aria-expanded (axe aria-allowed-attr), so the
+      // open menu is announced through aria-activedescendant into the listbox.
       const open = this.slashOpen();
-      dom.setAttribute('aria-expanded', String(open));
       const active = open ? this.filteredItems()[this.activeIndex()] : undefined;
       if (active) dom.setAttribute('aria-activedescendant', this.optionId(active.id));
       else dom.removeAttribute('aria-activedescendant');
@@ -430,7 +431,6 @@ export class MarkdownEditor implements AfterViewInit {
           role: 'textbox',
           'aria-multiline': 'true',
           'aria-haspopup': 'listbox',
-          'aria-expanded': 'false',
           'aria-controls': this.menuId,
           ...(this.ariaLabel() ? { 'aria-label': this.ariaLabel() } : {}),
           ...(this.maxLength() !== null ? { 'aria-describedby': `${this.feedbackId} ${this.noticeId}` } : {}),

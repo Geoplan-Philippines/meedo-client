@@ -39,19 +39,17 @@ import { formatHours, formatLate } from '../shared/attendance-status.util';
 import { PageLayout } from '../../../../shared/ui/page-layout/page-layout';
 import { ListPaginator } from '../../../../shared/ui/list-paginator/list-paginator';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
+import { StatItem, StatStrip, StatTone } from '../../../../shared/ui/stat-strip/stat-strip';
 import { injectListState } from '../../../../shared/data/url-list-state';
 
 const PERIODS: readonly string[] = ['daily', 'weekly', 'monthly'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** A clickable summary card: a status bucket, its count, and its tone. */
-interface StatusCard {
-  key: BoardStatusFilter;
+/** One choice in the roster status filter. `all` clears the filter. */
+interface StatusOption {
+  key: 'all' | BoardStatusFilter;
   label: string;
-  count: number;
-  tone: 'success' | 'warning' | 'destructive';
-  /** Small qualifier under the label, e.g. "incl. 3 late". */
-  hint: string;
+  tone?: StatTone;
 }
 
 interface PeriodOption {
@@ -65,6 +63,7 @@ interface PeriodOption {
     PageLayout,
     ListPaginator,
     EmptyState,
+    StatStrip,
     TableModule,
     ButtonModule,
     DatePickerModule,
@@ -105,19 +104,19 @@ export class AttendanceDashboard implements OnInit {
   readonly summary = signal<BoardSummary | null>(null);
   readonly isLoadingSummary = signal(false);
 
-  readonly statusCards = computed<StatusCard[]>(() => {
+  /** Headline counts for the day. Null values render as "-" while loading. */
+  readonly summaryStats = computed<StatItem[]>(() => {
     const summary = this.summary();
     const late = summary?.late ?? 0;
     return [
       {
-        key: 'present',
         label: 'Present',
-        count: summary?.present ?? 0,
+        value: summary?.present,
         tone: 'success',
-        hint: late > 0 ? `incl. ${late} late` : '',
+        hint: late > 0 ? `incl. ${late} late` : undefined,
       },
-      { key: 'late', label: 'Late', count: late, tone: 'warning', hint: '' },
-      { key: 'absent', label: 'Absent', count: summary?.absent ?? 0, tone: 'destructive', hint: '' },
+      { label: 'Late', value: summary?.late, tone: 'warning' },
+      { label: 'Absent', value: summary?.absent, tone: 'danger' },
     ];
   });
 
@@ -130,6 +129,14 @@ export class AttendanceDashboard implements OnInit {
   readonly isLoadingRoster = signal(false);
   readonly statusFilter = computed(() => this.rosterList.filters().status as BoardStatusFilter | null);
   readonly rosterPage = this.rosterList.page;
+  readonly statusOptions: StatusOption[] = [
+    { key: 'all', label: 'All' },
+    { key: 'present', label: 'Present', tone: 'success' },
+    { key: 'late', label: 'Late', tone: 'warning' },
+    { key: 'absent', label: 'Absent', tone: 'danger' },
+  ];
+  /** SelectButton value: `all` stands in for "no status filter". */
+  readonly statusFilterKey = computed(() => this.statusFilter() ?? 'all');
   private rosterRequestId = 0;
 
   // Tardiness scoreboard.
@@ -228,8 +235,10 @@ export class AttendanceDashboard implements OnInit {
 
   /* ─── Roster ──────────────────────────────────────────── */
 
-  toggleStatusFilter(key: BoardStatusFilter): void {
-    this.rosterList.setFilter('status', this.statusFilter() === key ? null : key);
+  setStatusFilter(key: StatusOption['key']): void {
+    const next = key === 'all' ? null : key;
+    if (this.statusFilter() === next) return;
+    this.rosterList.setFilter('status', next);
   }
 
   private fetchRoster(silent = false): void {
@@ -358,7 +367,7 @@ export class AttendanceDashboard implements OnInit {
       this.accessDenied.set(true);
       return;
     }
-    console.error('Attendance board request failed:', err);
+    console.error('Time overview request failed:', err);
   }
 
   private shiftDay(deltaDays: number): void {

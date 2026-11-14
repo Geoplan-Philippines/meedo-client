@@ -8,6 +8,8 @@ export interface StatItem {
   value: string | number | null | undefined;
   /** Optional status dot before the label. */
   tone?: StatTone;
+  /** Optional muted qualifier after the value, e.g. "incl. 2 late". */
+  hint?: string;
 }
 
 /**
@@ -31,6 +33,9 @@ export interface StatItem {
               <span aria-hidden="true">-</span><span class="ds-sr-only">No data</span>
             } @else {
               {{ item.value }}
+            }
+            @if (item.hint) {
+              <span class="stat-hint">{{ item.hint }}</span>
             }
           </dd>
         </div>
@@ -73,6 +78,12 @@ export interface StatItem {
       font-weight: 600;
       color: var(--text-heading);
       font-variant-numeric: tabular-nums;
+    }
+    .stat-hint {
+      margin-left: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--text-muted);
     }
     @media (max-width: 767.98px) {
       .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
