@@ -35,9 +35,9 @@ describe('Settings', () => {
   it('leaves workspace navigation (Users, Teams, Projects, Customers) to the sidebar', () => {
     const element = fixture.nativeElement as HTMLElement;
     const groups = [...element.querySelectorAll('.settings-group > h2')].map((heading) => heading.textContent?.trim());
-    expect(groups).toEqual(['General', 'Timekeeping', 'Tickets']);
+    expect(groups).toEqual(['General', 'Timekeeping', 'Tickets', 'Website']);
     const cards = [...element.querySelectorAll('.settings-group a h3')].map((heading) => heading.textContent?.trim());
-    expect(cards).toEqual(['Organization', 'Attendance', 'Categories', 'Statuses']);
+    expect(cards).toEqual(['Organization', 'Attendance', 'Categories', 'Statuses', 'Lead fields']);
     for (const route of ['users', 'teams', 'projects', 'customers']) {
       expect(element.querySelector(`a[href$="/${route}"]`)).toBeNull();
     }

@@ -33,6 +33,16 @@ export const settingsRoutes: Routes = [
     component: Users,
     canActivate: [orgAdminGuard],
   },
+  {
+    path: 'website/lead-fields',
+    data: {
+      collection: 'lead',
+      heading: 'Lead fields',
+      subtitle: 'Standard and custom fields collected from website lead forms.',
+    },
+    loadComponent: () =>
+      import('./website/field-definitions/field-definitions').then((m) => m.FieldDefinitionsSettings),
+  },
   // Flat projects list. No longer in Settings or the sidebar, but project notifications and old links open it.
   {
     path: 'projects',

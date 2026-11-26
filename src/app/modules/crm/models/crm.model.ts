@@ -1,5 +1,7 @@
 export type LeadStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'LOST';
 
+export const LEAD_STATUSES: readonly LeadStatus[] = ['NEW', 'CONTACTED', 'QUALIFIED', 'LOST'];
+
 export interface LeadsStats {
   total: number;
   new: number;
@@ -16,8 +18,11 @@ export interface Lead {
   phoneNumber?: string;
   company?: string;
   message?: string;
+  source?: string;
   status?: LeadStatus;
   isArchived?: boolean;
+  values?: Record<string, unknown>;
+  receivedAt?: string;
   createdAt: string;
 }
 

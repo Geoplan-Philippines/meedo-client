@@ -59,6 +59,12 @@ export class Settings implements OnInit {
         { label: 'Statuses', description: 'Lifecycle statuses for tickets', route: 'statuses', icon: 'pi-flag' },
       ],
     },
+    {
+      label: 'Website',
+      cards: [
+        { label: 'Lead fields', description: 'Fields collected from website lead forms', route: 'website/lead-fields', icon: 'pi-list' },
+      ],
+    },
   ]);
 
   ngOnInit(): void {

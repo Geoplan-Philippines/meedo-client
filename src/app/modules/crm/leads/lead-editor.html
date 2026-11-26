@@ -1,0 +1,95 @@
+<app-page [heading]="heading()" [subtitle]="creating ? 'Create a lead in this workspace.' : 'Review and update this lead.'">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
+    <a routerLink="/crm/leads" class="hover:text-primary transition-colors">Leads</a>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">{{ creating ? 'Add lead' : heading() }}</span>
+  </nav>
+
+  @if (!creating && lead()) {
+    <div pageMeta class="lead-meta">
+      @if (lead()?.isArchived) {
+        <app-archived-tag />
+      }
+      <p-tag
+        [value]="(lead()?.status || 'new') | titlecase"
+        [rounded]="true"
+        [severity]="lead()?.status === 'QUALIFIED' ? 'success' : lead()?.status === 'LOST' ? 'danger' : lead()?.status === 'CONTACTED' ? 'info' : 'warn'"
+      />
+      @if (receivedAt()) {
+        <span class="ds-muted">Received {{ receivedAt() | date: 'mediumDate' }}</span>
+      }
+    </div>
+  }
+  @if (!creating && lead()) {
+    <div pageActions class="page-actions-row">
+      @if (sourceLink()) {
+        <a pButton [href]="sourceLink()!" target="_blank" rel="noopener noreferrer" severity="secondary" [outlined]="true" icon="pi pi-external-link" label="Open source"></a>
+      }
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [label]="lead()?.isArchived ? 'Restore' : 'Archive'"
+        [disabled]="statusBusy()"
+        (click)="toggleArchive()"
+      ></button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="form-skeleton" role="status">
+      <span class="ds-sr-only">Loading lead…</span>
+      @for (row of [1, 2, 3]; track row) {
+        <div class="field-skel">
+          <p-skeleton width="5rem" height="0.875rem" />
+          <p-skeleton width="100%" height="2.5rem" />
+        </div>
+      }
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="loadError()">
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
+  } @else {
+    @if (!creating) {
+      <div class="status-row">
+        <label class="field-label" for="lead-status">Status</label>
+        <p-select
+          inputId="lead-status"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="lead()?.status ?? 'NEW'"
+          [options]="statusOptions"
+          [disabled]="statusBusy() || !canEdit()"
+          (ngModelChange)="changeStatus($event)"
+        />
+      </div>
+    }
+
+    @if (!canEdit()) {
+      <p class="ds-readonly-note" role="status">
+        <i class="pi pi-lock" aria-hidden="true"></i>
+        Archived. Restore this lead before editing.
+      </p>
+    }
+
+    <app-record-values-form
+      [definitions]="definitions()"
+      [initial]="initialValues()"
+      [disabled]="!canEdit() || saving()"
+      [submitted]="submitted()"
+    />
+
+    @if (error()) {
+      <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ error() }}</p-message>
+    }
+
+    <div class="form-actions">
+      @if (canEdit()) {
+        <button pButton type="button" [label]="saving() ? 'Saving…' : (creating ? 'Create lead' : 'Save')" [disabled]="saving()" (click)="save()"></button>
+      }
+      <a pButton routerLink="/crm/leads" severity="secondary" [outlined]="true" [label]="canEdit() ? 'Cancel' : 'Back to leads'"></a>
+    </div>
+  }
+</app-page>

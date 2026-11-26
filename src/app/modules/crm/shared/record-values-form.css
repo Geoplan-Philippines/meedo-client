@@ -1,0 +1,29 @@
+.values-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 40rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.field-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.field-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.field .p-inputtext,
+.field textarea {
+  width: 100%;
+}

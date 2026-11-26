@@ -10,16 +10,18 @@ import { Lead } from '../models/crm.model';
 const page = (data: Lead[], total = data.length) => of({ data, meta: { total, page: 1, limit: 25, lastPage: Math.ceil(total / 25) } });
 
 describe('Leads', () => {
-  const crm = { listLeads: vi.fn(), getLeadsStats: vi.fn() };
+  const crm = { listLeads: vi.fn(), getLeadsStats: vi.fn(), exportLeads: vi.fn() };
   let component: Leads;
   let fixture: ComponentFixture<Leads>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    localStorage.clear();
     crm.listLeads.mockReturnValue(page([]));
     crm.getLeadsStats.mockReturnValue(of({ data: { total: 4, new: 1, contacted: 1, qualified: 1, lost: 1 } }));
+    crm.exportLeads.mockReturnValue(of({ body: new Blob(['email\n']), headers: { get: () => 'attachment; filename="leads.csv"' } }));
     await TestBed.configureTestingModule({
-      imports: [Leads], providers: [provideRouter([]), { provide: CrmService, useValue: crm }],
+      imports: [Leads], providers: [provideRouter([{ path: 'crm/leads/new', children: [] }]), { provide: CrmService, useValue: crm }],
     }).compileComponents();
   });
 
@@ -44,7 +46,7 @@ describe('Leads', () => {
   it('asks the API for one page, newest first, and shows its total', async () => {
     crm.listLeads.mockReturnValue(page([{ id: '1', firstName: 'Example', lastName: 'Lead', email: 'lead@example.test', createdAt: '2026-10-29' }], 60));
     await render();
-    expect(crm.listLeads).toHaveBeenCalledWith({ page: 1, limit: 25, sortField: 'createdAt', sortOrder: 'desc', status: null });
+    expect(crm.listLeads).toHaveBeenCalledWith({ page: 1, limit: 25, sortField: 'createdAt', sortOrder: 'desc', status: null, archived: false });
     expect(fixture.nativeElement.textContent).toContain('Showing 1 to 25 of 60 leads');
   });
 
@@ -52,8 +54,31 @@ describe('Leads', () => {
     crm.listLeads.mockReturnValue(page([], 100));
     await TestBed.inject(Router).navigateByUrl('/?page=2&size=10&sort=email&dir=asc&q=jane');
     await render();
-    expect(crm.listLeads).toHaveBeenLastCalledWith({ page: 2, limit: 10, search: 'jane', sortField: 'email', sortOrder: 'asc', status: null });
+    expect(crm.listLeads).toHaveBeenLastCalledWith({ page: 2, limit: 10, search: 'jane', sortField: 'email', sortOrder: 'asc', status: null, archived: false });
     expect(component.list.searchInput()).toBe('jane');
+  });
+
+  it('filters by status tab and archived view', async () => {
+    await render();
+    component.setTab('NEW');
+    await fixture.whenStable();
+    expect(crm.listLeads).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'NEW', archived: false }));
+    component.setTab('ARCHIVED');
+    await fixture.whenStable();
+    expect(crm.listLeads).toHaveBeenLastCalledWith(expect.objectContaining({ status: null, archived: true }));
+  });
+
+  it('exports the current filters as CSV', async () => {
+    crm.exportLeads.mockReturnValue(of({ body: null, headers: { get: () => null } }));
+    await render();
+    component.exportCsv();
+    expect(crm.exportLeads).toHaveBeenCalledWith(expect.objectContaining({ archived: false }));
+  });
+
+  it('links Add Lead to the create page', async () => {
+    await render();
+    const add = (fixture.nativeElement as HTMLElement).querySelector('a[href]');
+    expect(add?.textContent).toContain('Add Lead');
   });
 
   it('applies the themed badge class for uppercase API statuses', async () => {

@@ -15,6 +15,7 @@ import { WorkspaceService } from '../../modules/clients/services/workspace.servi
 import { USERS_LIST } from '../../modules/settings/users/services/user.service';
 import { TEAMS_LIST, TeamsService } from '../../modules/settings/teams/services/teams.service';
 import { CrmService, LEADS_LIST, SUBSCRIBERS_LIST } from '../../modules/crm/services/crm.service';
+import { FieldDefinitionsService } from '../../modules/crm/services/field-definitions.service';
 import { CAMPAIGNS_LIST, CampaignsService } from '../../modules/crm/services/campaigns.service';
 import { MY_TICKETS_QUERY_PARAMS } from '../../modules/tickets/tickets.constants';
 
@@ -96,6 +97,17 @@ export const ROUTE_PREFETCHERS: readonly DataPrefetcher[] = [
       const crm = injector.get(CrmService);
       warm(crm.listLeads(defaultListQuery(LEADS_LIST)));
       warm(crm.getLeadsStats());
+    },
+  },
+  {
+    match: path('crm', 'leads', 'new'),
+    prefetch: (injector) => warm(injector.get(FieldDefinitionsService).list('lead')),
+  },
+  {
+    match: (segments) => segments.length === 3 && segments[0] === 'crm' && segments[1] === 'leads' && segments[2] !== 'new',
+    prefetch: (injector, _url, segments) => {
+      warm(injector.get(CrmService).getLead(segments[2]));
+      warm(injector.get(FieldDefinitionsService).list('lead'));
     },
   },
   {

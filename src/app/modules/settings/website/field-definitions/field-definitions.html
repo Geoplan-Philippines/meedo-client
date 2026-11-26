@@ -1,0 +1,144 @@
+<app-page [heading]="heading" [subtitle]="subtitle">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
+    <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">{{ heading }}</span>
+  </nav>
+  @if (isAdmin()) {
+    <button pageActions pButton type="button" icon="pi pi-plus" label="Add field" (click)="openCreate()"></button>
+  }
+
+  @if (error() || loadError()) {
+    <p-message severity="error" styleClass="ds-message">
+      <span>{{ error() || loadError() }}</span>
+      @if (loadError()) {
+        <button pButton type="button" severity="danger" [text]="true" size="small" label="Retry" (click)="load()"></button>
+      }
+    </p-message>
+  }
+
+  @if (loading()) {
+    <div class="ds-table-skeleton" role="status">
+      <span class="ds-sr-only">Loading fields…</span>
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="skeleton-row">
+          <p-skeleton width="8rem" height="0.75rem" />
+          <p-skeleton width="6rem" height="0.75rem" />
+        </div>
+      }
+    </div>
+  } @else if (!loadError()) {
+    <section aria-labelledby="system-fields-heading">
+      <h2 id="system-fields-heading" class="ds-section-title">System</h2>
+      <p class="ds-section-sub">Built in. Keys stay locked so website forms keep working.</p>
+      <p-table class="ds-table" [value]="systemFields()" dataKey="id">
+        <ng-template pTemplate="header">
+          <tr>
+            <th scope="col">Label</th>
+            <th scope="col">Key</th>
+            <th scope="col">Type</th>
+            <th scope="col">Required</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-field>
+          <tr>
+            <td>{{ field.label }}</td>
+            <td><code class="field-key">{{ field.key }}</code></td>
+            <td>{{ typeLabel(field.type) }}</td>
+            <td>{{ field.isRequired ? 'Yes' : 'No' }}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4">
+              <app-empty-state heading="No system fields" description="The server has not seeded system fields for this workspace yet." />
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+
+    <section class="custom-section" aria-labelledby="custom-fields-heading">
+      <h2 id="custom-fields-heading" class="ds-section-title">Custom</h2>
+      <p class="ds-section-sub">Fields you add for this organization. Deleting one removes stored values.</p>
+      <p-table class="ds-table" [value]="customFields()" dataKey="id">
+        <ng-template pTemplate="header">
+          <tr>
+            <th scope="col">Label</th>
+            <th scope="col">Key</th>
+            <th scope="col">Type</th>
+            <th scope="col">Required</th>
+            <th scope="col" class="actions-col"><span class="ds-sr-only">Actions</span></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-field>
+          <tr>
+            <td>{{ field.label }}</td>
+            <td><code class="field-key">{{ field.key }}</code></td>
+            <td>{{ typeLabel(field.type) }}</td>
+            <td>{{ field.isRequired ? 'Yes' : 'No' }}</td>
+            <td class="actions">
+              @if (isAdmin()) {
+                <button pButton type="button" severity="secondary" [text]="true" size="small" icon="pi pi-arrow-up" [disabled]="busyId() !== null" aria-label="Move up" (click)="move(field, -1)"></button>
+                <button pButton type="button" severity="secondary" [text]="true" size="small" icon="pi pi-arrow-down" [disabled]="busyId() !== null" aria-label="Move down" (click)="move(field, 1)"></button>
+                <button pButton type="button" severity="secondary" [text]="true" size="small" label="Edit" (click)="openEdit(field)"></button>
+                <button pButton type="button" severity="danger" [text]="true" size="small" label="Delete" [disabled]="busyId() !== null" (click)="remove(field)"></button>
+              } @else {
+                <p-tag value="Locked" icon="pi pi-lock" severity="secondary" [rounded]="true" />
+              }
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5">
+              <app-empty-state heading="No custom fields" description="Add a field to collect extra information from the website." />
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  }
+
+  <p-dialog
+    [header]="creating() ? 'Add field' : 'Edit field'"
+    [visible]="dialogOpen()"
+    (visibleChange)="dialogOpen.set($event)"
+    [modal]="true"
+    [dismissableMask]="true"
+    styleClass="field-dialog"
+  >
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <div class="field">
+        <label class="field-label" for="field-key">Key</label>
+        <input pInputText id="field-key" formControlName="key" [attr.maxlength]="keyMax" autocomplete="off" />
+        <p class="field-help">Starts with a lowercase letter. Letters and numbers only. Cannot change later.</p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="field-label">Label</label>
+        <input pInputText id="field-label" formControlName="label" maxlength="80" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="field-type">Type</label>
+        <p-select inputId="field-type" formControlName="type" [options]="types" optionLabel="label" optionValue="value" [fluid]="true" />
+      </div>
+      <label class="ds-toggle" for="field-required">
+        <p-toggleswitch inputId="field-required" formControlName="isRequired" />
+        Required
+      </label>
+      @if (selectType()) {
+        <div class="field">
+          <label class="field-label" for="field-options">Options</label>
+          <textarea id="field-options" formControlName="optionsText" rows="5" class="options-input" placeholder="One option per line"></textarea>
+        </div>
+      }
+      @if (error()) {
+        <p class="feedback-error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-actions">
+        <button pButton type="submit" [label]="saving() ? 'Saving…' : 'Save'" [disabled]="saving()"></button>
+        <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="dialogOpen.set(false)"></button>
+      </div>
+    </form>
+  </p-dialog>
+</app-page>

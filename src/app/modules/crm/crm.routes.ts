@@ -4,6 +4,8 @@ import { Routes } from '@angular/router';
 export const crmRoutes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'leads' },
   { path: 'leads', data: { preload: true }, loadComponent: () => import('./leads/leads').then(m => m.Leads) },
+  { path: 'leads/new', loadComponent: () => import('./leads/lead-editor').then(m => m.LeadEditor) },
+  { path: 'leads/:id', loadComponent: () => import('./leads/lead-editor').then(m => m.LeadEditor) },
   { path: 'newsletter', loadComponent: () => import('./newsletter/newsletter').then(m => m.Newsletter) },
   { path: 'newsletter/subscribers', data: { preload: true }, loadComponent: () => import('./newsletter/subscribers/subscribers').then(m => m.Subscribers) },
   { path: 'newsletter/campaigns', data: { preload: true }, loadComponent: () => import('./newsletter/campaign/campaign-list').then(m => m.CampaignList) },
