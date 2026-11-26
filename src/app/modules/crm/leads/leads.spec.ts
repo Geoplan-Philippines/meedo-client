@@ -17,7 +17,7 @@ describe('Leads', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     crm.listLeads.mockReturnValue(page([]));
-    crm.getLeadsStats.mockReturnValue(of({ data: { total: 4, pending: 1, contacted: 1, qualified: 1, lost: 1 } }));
+    crm.getLeadsStats.mockReturnValue(of({ data: { total: 4, new: 1, contacted: 1, qualified: 1, lost: 1 } }));
     await TestBed.configureTestingModule({
       imports: [Leads], providers: [provideRouter([]), { provide: CrmService, useValue: crm }],
     }).compileComponents();
@@ -35,8 +35,10 @@ describe('Leads', () => {
     await render();
     expect(crm.getLeadsStats).toHaveBeenCalled();
     expect(component.statItems().map((item) => item.value)).toEqual([4, 1, 1, 1, 1]);
+    expect(fixture.nativeElement.textContent).toContain('New');
     expect(fixture.nativeElement.textContent).toContain('Contacted');
     expect(fixture.nativeElement.textContent).toContain('Lost');
+    expect(fixture.nativeElement.textContent).not.toContain('Pending');
   });
 
   it('asks the API for one page, newest first, and shows its total', async () => {
@@ -55,13 +57,13 @@ describe('Leads', () => {
   });
 
   it('applies the themed badge class for uppercase API statuses', async () => {
-    crm.listLeads.mockReturnValue(page(['PENDING', 'CONTACTED', 'QUALIFIED', 'LOST'].map((status, index) => ({
+    crm.listLeads.mockReturnValue(page((['NEW', 'CONTACTED', 'QUALIFIED', 'LOST'] as const).map((status, index) => ({
       id: String(index), firstName: 'Example', lastName: status, email: `example${index}@example.test`, status, createdAt: '2026-10-29',
     }))));
     await render();
     const badges = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.status-badge')];
     expect(badges.map(badge => [...badge.classList].find(name => name.startsWith('status-') && name !== 'status-badge')))
-      .toEqual(['pending', 'contacted', 'qualified', 'lost'].map(status => `status-${status}`));
+      .toEqual(['new', 'contacted', 'qualified', 'lost'].map(status => `status-${status}`));
     expect(badges.map(badge => [...badge.classList].find(name => name.startsWith('p-tag-') && name !== 'p-tag-rounded')))
       .toEqual(['p-tag-warn', 'p-tag-info', 'p-tag-success', 'p-tag-danger']);
   });

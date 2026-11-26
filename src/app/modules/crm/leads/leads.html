@@ -86,9 +86,9 @@
             </td>
             <td>
               <p-tag
-                [class]="'status-badge status-' + (lead.status || 'PENDING').toLowerCase()"
+                [class]="'status-badge status-' + (lead.status || 'NEW').toLowerCase()"
                 [severity]="statusSeverity(lead.status)"
-                [value]="(lead.status || 'pending') | titlecase"
+                [value]="(lead.status || 'new') | titlecase"
                 [rounded]="true"
               />
             </td>

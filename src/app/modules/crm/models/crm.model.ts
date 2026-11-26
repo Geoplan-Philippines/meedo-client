@@ -1,6 +1,8 @@
+export type LeadStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'LOST';
+
 export interface LeadsStats {
   total: number;
-  pending: number;
+  new: number;
   contacted: number;
   qualified: number;
   lost: number;
@@ -14,7 +16,8 @@ export interface Lead {
   phoneNumber?: string;
   company?: string;
   message?: string;
-  status?: string;
+  status?: LeadStatus;
+  isArchived?: boolean;
   createdAt: string;
 }
 

@@ -20,7 +20,7 @@ import { injectListState } from '../../../shared/data/url-list-state';
 import { pagedList } from '../../../shared/data/paged-list';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary';
-const LEAD_SEVERITY: Record<string, TagSeverity> = { PENDING: 'warn', CONTACTED: 'info', QUALIFIED: 'success', LOST: 'danger' };
+const LEAD_SEVERITY: Record<string, TagSeverity> = { NEW: 'warn', CONTACTED: 'info', QUALIFIED: 'success', LOST: 'danger' };
 
 @Component({
   selector: 'app-leads',
@@ -53,7 +53,7 @@ export class Leads {
     const stats = this.stats.hasValue() ? this.stats.value() : null;
     return [
       { label: 'Total leads', value: stats?.total },
-      { label: 'Pending', value: stats?.pending, tone: 'warning' },
+      { label: 'New', value: stats?.new, tone: 'warning' },
       { label: 'Contacted', value: stats?.contacted, tone: 'info' },
       { label: 'Qualified', value: stats?.qualified, tone: 'success' },
       { label: 'Lost', value: stats?.lost, tone: 'danger' },
@@ -65,7 +65,7 @@ export class Leads {
   }
 
   statusSeverity(status: string | undefined): TagSeverity {
-    return LEAD_SEVERITY[(status || 'PENDING').toUpperCase()] ?? 'secondary';
+    return LEAD_SEVERITY[(status || 'NEW').toUpperCase()] ?? 'secondary';
   }
 
   getInitials(lead: Lead): string {
