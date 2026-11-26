@@ -1,0 +1,101 @@
+<app-page heading="Webhooks" subtitle="Meedo signs each delivery with HMAC-SHA256 so your site can trust the payload.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
+    <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Webhooks</span>
+  </nav>
+  @if (canWrite()) {
+    <button pageActions pButton type="button" icon="pi pi-plus" label="Add webhook" (click)="openCreate()"></button>
+  }
+
+  @if (error() && !dialogOpen()) {
+    <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ error() }}</p-message>
+  }
+
+  @if (revealedSecret()) {
+    <app-secret-reveal heading="This is the webhook signing secret." [value]="revealedSecret()" />
+  }
+
+  @if (loading()) {
+    <div class="ds-table-skeleton" role="status">
+      <span class="ds-sr-only">Loading webhooks…</span>
+      @for (row of [1, 2, 3]; track row) {
+        <div class="skeleton-row">
+          <p-skeleton width="18rem" height="0.75rem" />
+          <p-skeleton width="8rem" height="0.75rem" />
+        </div>
+      }
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="loadError()">
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
+  } @else {
+    <p-table class="ds-table" [value]="webhooks()" dataKey="id" [rowHover]="true" [tableStyle]="{ width: '100%' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th scope="col">URL</th>
+          <th scope="col">Events</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-webhook>
+        <tr class="ds-row-link" tabindex="0" (click)="open(webhook)" (keydown.enter)="open(webhook)">
+          <td class="url-cell">{{ webhook.url }}</td>
+          <td>{{ eventsLabel(webhook) }}</td>
+          <td>
+            <p-tag [value]="webhook.enabled ? 'Enabled' : 'Paused'" [severity]="webhook.enabled ? 'success' : 'secondary'" [rounded]="true" />
+          </td>
+          <td>{{ webhook.createdAt | date: 'mediumDate' }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="4">
+            <app-empty-state heading="No webhooks" description="Add an endpoint to hear about new leads, new subscribers, and unsubscribes." />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+
+  <p-dialog
+    header="Add webhook"
+    [visible]="dialogOpen()"
+    (visibleChange)="dialogOpen.set($event)"
+    [modal]="true"
+    [dismissableMask]="true"
+    styleClass="field-dialog"
+  >
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <div class="field">
+        <label class="field-label" for="webhook-url">Endpoint URL</label>
+        <input pInputText id="webhook-url" formControlName="url" maxlength="2048" autocomplete="off" />
+        <p class="field-help">Must start with http:// or https://. Meedo waits 5 seconds and retries up to three times.</p>
+      </div>
+      <fieldset class="events">
+        <legend class="field-label">Events</legend>
+        <label class="ds-toggle">
+          <input type="checkbox" formControlName="leadCreated" />
+          Lead created
+        </label>
+        <label class="ds-toggle">
+          <input type="checkbox" formControlName="subscriberCreated" />
+          Subscriber created
+        </label>
+        <label class="ds-toggle">
+          <input type="checkbox" formControlName="subscriberUnsubscribed" />
+          Subscriber unsubscribed
+        </label>
+      </fieldset>
+      @if (error() && dialogOpen()) {
+        <p class="feedback-error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-actions">
+        <button pButton type="submit" [label]="saving() ? 'Saving…' : 'Save'" [disabled]="saving()"></button>
+        <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" (click)="dialogOpen.set(false)"></button>
+      </div>
+    </form>
+  </p-dialog>
+</app-page>

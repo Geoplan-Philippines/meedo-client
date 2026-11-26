@@ -59,6 +59,15 @@ export class Settings implements OnInit {
         { label: 'Statuses', description: 'Lifecycle statuses for tickets', route: 'statuses', icon: 'pi-flag' },
       ],
     },
+    {
+      label: 'Website',
+      cards: [
+        { label: 'Lead fields', description: 'Fields collected from website lead forms', route: 'website/lead-fields', icon: 'pi-list' },
+        { label: 'Subscriber fields', description: 'Fields collected from newsletter sign-up forms', route: 'website/subscriber-fields', icon: 'pi-inbox' },
+        { label: 'Integration key', description: 'Website key for submitting leads and subscribers', route: 'website/integration-key', icon: 'pi-key' },
+        { label: 'Webhooks', description: 'Signed event deliveries to your site', route: 'website/webhooks', icon: 'pi-send' },
+      ],
+    },
   ]);
 
   ngOnInit(): void {

@@ -41,7 +41,7 @@ describe('Sidebar', () => {
       'Clients', 'Users', 'Teams',
       'Ticket overview', 'Tickets',
       'Time overview', 'Attendance', 'Timesheet', 'Approvals',
-      'Leads', 'Subscribers', 'Campaigns',
+      'Leads', 'Subscribers', 'Campaigns', 'Developers',
     ]);
     const text = element().textContent ?? '';
     expect(text).not.toMatch(/Dashboard|CRM|See all|Projects|New project/);
@@ -73,6 +73,7 @@ describe('Sidebar', () => {
     expect(link('Leads').getAttribute('href')).toBe('/crm/leads');
     expect(link('Subscribers').getAttribute('href')).toBe('/crm/newsletter/subscribers');
     expect(link('Campaigns').getAttribute('href')).toBe('/crm/newsletter/campaigns');
+    expect(link('Developers').getAttribute('href')).toBe('/crm/developers');
   });
 
   it('gives every item its own icon', () => {
@@ -89,7 +90,7 @@ describe('Sidebar', () => {
       'Clients', 'Teams',
       'Ticket overview', 'Tickets',
       'Attendance', 'Timesheet',
-      'Leads', 'Subscribers', 'Campaigns',
+      'Leads', 'Subscribers', 'Campaigns', 'Developers',
     ]);
   });
 
@@ -114,6 +115,7 @@ describe('Sidebar', () => {
     ['/crm/leads', 'Leads'],
     ['/crm/newsletter/subscribers', 'Subscribers'],
     ['/crm/newsletter/campaigns/new', 'Campaigns'],
+    ['/crm/developers', 'Developers'],
   ])('lights only the matching item on %s', async (url, label) => {
     await router.navigateByUrl(url);
     fixture.detectChanges();

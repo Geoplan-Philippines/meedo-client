@@ -15,6 +15,8 @@ import { WorkspaceService } from '../../modules/clients/services/workspace.servi
 import { USERS_LIST } from '../../modules/settings/users/services/user.service';
 import { TEAMS_LIST, TeamsService } from '../../modules/settings/teams/services/teams.service';
 import { CrmService, LEADS_LIST, SUBSCRIBERS_LIST } from '../../modules/crm/services/crm.service';
+import { FieldDefinitionsService } from '../../modules/crm/services/field-definitions.service';
+import { IntegrationService, WEBHOOK_DELIVERIES_LIST } from '../../modules/crm/services/integration.service';
 import { CAMPAIGNS_LIST, CampaignsService } from '../../modules/crm/services/campaigns.service';
 import { MY_TICKETS_QUERY_PARAMS } from '../../modules/tickets/tickets.constants';
 
@@ -99,8 +101,58 @@ export const ROUTE_PREFETCHERS: readonly DataPrefetcher[] = [
     },
   },
   {
+    match: path('crm', 'leads', 'new'),
+    prefetch: (injector) => warm(injector.get(FieldDefinitionsService).list('lead')),
+  },
+  {
+    match: (segments) => segments.length === 3 && segments[0] === 'crm' && segments[1] === 'leads' && segments[2] !== 'new',
+    prefetch: (injector, _url, segments) => {
+      warm(injector.get(CrmService).getLead(segments[2]));
+      warm(injector.get(FieldDefinitionsService).list('lead'));
+    },
+  },
+  {
     match: path('crm', 'newsletter', 'subscribers'),
-    prefetch: (injector) => warm(injector.get(CrmService).listSubscribers(defaultListQuery(SUBSCRIBERS_LIST))),
+    prefetch: (injector) => {
+      const crm = injector.get(CrmService);
+      warm(crm.listSubscribers(defaultListQuery(SUBSCRIBERS_LIST)));
+      warm(crm.getSubscriberStats());
+    },
+  },
+  {
+    match: path('crm', 'newsletter', 'subscribers', null),
+    prefetch: (injector, _url, segments) => {
+      warm(injector.get(CrmService).getSubscriber(segments[3]));
+      warm(injector.get(FieldDefinitionsService).list('subscriber'));
+    },
+  },
+  {
+    match: path('settings', 'website', 'subscriber-fields'),
+    prefetch: (injector) => warm(injector.get(FieldDefinitionsService).list('subscriber')),
+  },
+  {
+    match: path('settings', 'website', 'integration-key'),
+    prefetch: (injector) => warm(injector.get(IntegrationService).getWebsite()),
+  },
+  {
+    match: path('settings', 'website', 'webhooks'),
+    prefetch: (injector) => warm(injector.get(IntegrationService).listWebhooks()),
+  },
+  {
+    match: path('settings', 'website', 'webhooks', null),
+    prefetch: (injector, _url, segments) => {
+      const integrations = injector.get(IntegrationService);
+      warm(integrations.getWebhook(segments[3]));
+      warm(integrations.listDeliveries(segments[3], defaultListQuery(WEBHOOK_DELIVERIES_LIST)));
+    },
+  },
+  {
+    match: path('crm', 'developers'),
+    prefetch: (injector) => {
+      const integrations = injector.get(IntegrationService);
+      warm(integrations.getWebsite());
+      warm(integrations.getGuide());
+    },
   },
   {
     match: path('crm', 'newsletter', 'campaigns'),

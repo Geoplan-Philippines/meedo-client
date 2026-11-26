@@ -6,18 +6,27 @@ import { AuthService } from '../../core/auth/auth.service';
 import { crmRoutes } from './crm.routes';
 import { CrmService } from './services/crm.service';
 import { CampaignsService } from './services/campaigns.service';
+import { IntegrationService } from './services/integration.service';
 
 describe('Website lazy routing', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [
     provideRouter([{ path: 'crm', children: crmRoutes }]),
     { provide: AuthService, useValue: { isAdmin: () => false } },
-    { provide: CrmService, useValue: { getLeads: () => of({ data: [] }), getLeadsStats: () => of({ data: { total: 0, pending: 0, contacted: 0, qualified: 0, lost: 0 } }), getSubscribers: () => of({ data: [] }) } },
+    { provide: CrmService, useValue: { listLeads: () => of({ data: [], meta: { total: 0, page: 1, limit: 25, lastPage: 0 } }), getLeadsStats: () => of({ data: { total: 0, new: 0, contacted: 0, qualified: 0, lost: 0 } }), listSubscribers: () => of({ data: [], meta: { total: 0, page: 1, limit: 25, lastPage: 0 } }), getSubscriberStats: () => of({ data: { total: 0, newThisMonth: 0, unsubscribed: 0 } }) } },
     { provide: CampaignsService, useValue: { list: () => of({ data: [], meta: { total: 0, lastPage: 0 } }) } },
+    { provide: IntegrationService, useValue: {
+      apiBaseUrl: 'http://localhost:8000/api/v1',
+      docsUrl: 'http://localhost:8000/api/v1/docs/integration.md',
+      getWebsite: () => of({ slug: 'geoplan', hasKey: false, prefix: null, createdAt: null, lastUsedAt: null }),
+      getOrganizationSlug: () => of('geoplan'),
+      getGuide: () => of(''),
+    } },
   ] }));
   it.each([
     ['/crm/leads', 'app-leads'],
     ['/crm/newsletter/subscribers', 'app-subscribers'],
     ['/crm/newsletter/campaigns', 'app-campaign-list'],
+    ['/crm/developers', 'app-developers'],
   ])('renders %s without a top tab bar', async (url, selector) => {
     const harness = await RouterTestingHarness.create(url);
     expect(harness.routeNativeElement?.matches(selector)).toBe(true);

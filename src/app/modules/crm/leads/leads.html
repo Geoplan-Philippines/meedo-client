@@ -1,7 +1,15 @@
 <app-page heading="Leads" subtitle="Track and manage your sales pipeline">
-  <button pageActions pButton type="button" class="coming-soon" icon="pi pi-plus" label="Add Lead" aria-disabled="true" title="Coming soon"></button>
+  <a pageActions pButton routerLink="new" icon="pi pi-plus" label="Add Lead"></a>
 
   <app-stat-strip pageSummary label="Lead statistics" [items]="statItems()" />
+
+  <p-tabs pageTabs [value]="activeTab()" (valueChange)="setTab($any($event))" [scrollable]="true" [showNavigators]="false">
+    <p-tablist aria-label="Lead status">
+      @for (tab of tabs; track tab.value) {
+        <p-tab [value]="tab.value">{{ tab.label }}</p-tab>
+      }
+    </p-tablist>
+  </p-tabs>
 
   <p-iconfield pageToolbar class="ds-search">
     <p-inputicon class="pi pi-search" />
@@ -16,8 +24,22 @@
       (input)="onSearch($event)"
     />
   </p-iconfield>
-  <button pageToolbarEnd pButton type="button" class="coming-soon" severity="secondary" [outlined]="true" icon="pi pi-filter" label="Filter" aria-disabled="true" title="Coming soon"></button>
-  <button pageToolbarEnd pButton type="button" class="coming-soon" severity="secondary" [outlined]="true" icon="pi pi-download" label="Export" aria-disabled="true" title="Coming soon"></button>
+  <app-column-chooser pageToolbarEnd [columns]="columns" [selected]="visible()" (selectedChange)="setVisible($event)" />
+  <button
+    pageToolbarEnd
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    icon="pi pi-download"
+    [label]="exporting() ? 'Exporting…' : 'Export'"
+    [disabled]="exporting()"
+    (click)="exportCsv()"
+  ></button>
+
+  @if (exportError()) {
+    <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ exportError() }}</p-message>
+  }
 
   <div>
     @if (!leads.loaded()) {
@@ -47,60 +69,83 @@
       >
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="firstName" scope="col">Name <p-sortIcon field="firstName" /></th>
-            <th pSortableColumn="email" scope="col">Email <p-sortIcon field="email" /></th>
-            <th pSortableColumn="phoneNumber" scope="col" class="hide-md">Phone <p-sortIcon field="phoneNumber" /></th>
-            <th pSortableColumn="company" scope="col" class="hide-md">Company <p-sortIcon field="company" /></th>
-            <th scope="col" class="hide-lg">Message</th>
-            <th pSortableColumn="status" scope="col">Status <p-sortIcon field="status" /></th>
+            @if (show('name')) { <th pSortableColumn="firstName" scope="col">Name <p-sortIcon field="firstName" /></th> }
+            @if (show('email')) { <th pSortableColumn="email" scope="col">Email <p-sortIcon field="email" /></th> }
+            @if (show('phoneNumber')) { <th pSortableColumn="phoneNumber" scope="col" class="hide-md">Phone <p-sortIcon field="phoneNumber" /></th> }
+            @if (show('company')) { <th pSortableColumn="company" scope="col" class="hide-md">Company <p-sortIcon field="company" /></th> }
+            @if (show('message')) { <th scope="col" class="hide-lg">Message</th> }
+            @if (show('source')) { <th pSortableColumn="source" scope="col" class="hide-lg">Source <p-sortIcon field="source" /></th> }
+            @if (show('status')) { <th pSortableColumn="status" scope="col">Status <p-sortIcon field="status" /></th> }
+            @if (show('createdAt')) { <th pSortableColumn="createdAt" scope="col" class="hide-md">Received <p-sortIcon field="createdAt" /></th> }
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-lead>
-          <tr>
-            <td>
-              <div class="lead-identity">
-                <span [class]="getAvatarClass(lead)" aria-hidden="true">{{ getInitials(lead) }}</span>
-                <span class="lead-name">{{ lead.firstName }} {{ lead.lastName }}</span>
-              </div>
-            </td>
-            <td>
-              <a class="lead-email" [href]="'mailto:' + lead.email">{{ lead.email }}</a>
-            </td>
-            <td class="lead-phone hide-md">
-              @if (lead.phoneNumber) { {{ lead.phoneNumber }} } @else { <span class="ds-muted">None</span> }
-            </td>
-            <td class="hide-md">
-              @if (lead.company) {
-                <span class="company">{{ lead.company }}</span>
-              } @else {
-                <span class="ds-muted">None</span>
-              }
-            </td>
-            <td class="hide-lg">
-              @if (lead.message) {
-                <span class="lead-message" [title]="lead.message">{{ lead.message }}</span>
-              } @else {
-                <span class="ds-muted">None</span>
-              }
-            </td>
-            <td>
-              <p-tag
-                [class]="'status-badge status-' + (lead.status || 'PENDING').toLowerCase()"
-                [severity]="statusSeverity(lead.status)"
-                [value]="(lead.status || 'pending') | titlecase"
-                [rounded]="true"
-              />
-            </td>
+          <tr class="ds-row-link" tabindex="0" (click)="openLead(lead)" (keydown.enter)="openLead(lead)">
+            @if (show('name')) {
+              <td>
+                <div class="lead-identity">
+                  <span [class]="getAvatarClass(lead)" aria-hidden="true">{{ getInitials(lead) }}</span>
+                  <span class="lead-name">{{ lead.firstName }} {{ lead.lastName }}</span>
+                  @if (lead.isArchived) { <app-archived-tag /> }
+                </div>
+              </td>
+            }
+            @if (show('email')) {
+              <td>
+                <a class="lead-email" [href]="'mailto:' + lead.email" (click)="$event.stopPropagation()">{{ lead.email }}</a>
+              </td>
+            }
+            @if (show('phoneNumber')) {
+              <td class="lead-phone hide-md">
+                @if (lead.phoneNumber) { {{ lead.phoneNumber }} } @else { <span class="ds-muted">None</span> }
+              </td>
+            }
+            @if (show('company')) {
+              <td class="hide-md">
+                @if (lead.company) {
+                  <span class="company">{{ lead.company }}</span>
+                } @else {
+                  <span class="ds-muted">None</span>
+                }
+              </td>
+            }
+            @if (show('message')) {
+              <td class="hide-lg">
+                @if (lead.message) {
+                  <span class="lead-message" [title]="lead.message">{{ lead.message }}</span>
+                } @else {
+                  <span class="ds-muted">None</span>
+                }
+              </td>
+            }
+            @if (show('source')) {
+              <td class="hide-lg">
+                @if (lead.source) { {{ lead.source }} } @else { <span class="ds-muted">None</span> }
+              </td>
+            }
+            @if (show('status')) {
+              <td>
+                <p-tag
+                  [class]="'status-badge status-' + statusLabel(lead.status)"
+                  [severity]="statusSeverity(lead.status)"
+                  [value]="(lead.status || 'new') | titlecase"
+                  [rounded]="true"
+                />
+              </td>
+            }
+            @if (show('createdAt')) {
+              <td class="ds-num hide-md">{{ receivedAt(lead) | date: 'MMM d, y' }}</td>
+            }
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="6">
+            <td [attr.colspan]="columnCount()">
               <app-empty-state
                 heading="No leads found"
-                [description]="list.search() ? 'No leads match your search. Try different keywords.' : 'Get started by adding your first lead.'"
+                [description]="list.search() ? 'No leads match your search. Try different keywords.' : (list.filters().archived ? 'There are no archived leads.' : 'Get started by adding your first lead.')"
               />
             </td>
           </tr>

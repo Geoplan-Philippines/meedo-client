@@ -1,7 +1,13 @@
 <app-page heading="Subscribers" subtitle="Manage your newsletter audience">
-  <button pageActions pButton type="button" class="coming-soon" severity="secondary" [outlined]="true" icon="pi pi-download" label="Export" aria-disabled="true" title="Coming soon"></button>
-
   <app-stat-strip pageSummary label="Subscriber statistics" [items]="statItems()" />
+
+  <p-tabs pageTabs [value]="activeTab()" (valueChange)="setTab($any($event))" [scrollable]="true" [showNavigators]="false">
+    <p-tablist aria-label="Subscriber status">
+      @for (tab of tabs; track tab.value) {
+        <p-tab [value]="tab.value">{{ tab.label }}</p-tab>
+      }
+    </p-tablist>
+  </p-tabs>
 
   <p-iconfield pageToolbar class="ds-search">
     <p-inputicon class="pi pi-search" />
@@ -16,7 +22,22 @@
       (input)="onSearch($event)"
     />
   </p-iconfield>
-  <button pageToolbarEnd pButton type="button" class="coming-soon" severity="secondary" [outlined]="true" icon="pi pi-filter" label="Filter" aria-disabled="true" title="Coming soon"></button>
+  <app-column-chooser pageToolbarEnd [columns]="columns" [selected]="visible()" (selectedChange)="setVisible($event)" />
+  <button
+    pageToolbarEnd
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    icon="pi pi-download"
+    [label]="exporting() ? 'Exporting…' : 'Export'"
+    [disabled]="exporting()"
+    (click)="exportCsv()"
+  ></button>
+
+  @if (exportError()) {
+    <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ exportError() }}</p-message>
+  }
 
   <div>
     @if (!subscribers.loaded()) {
@@ -45,33 +66,56 @@
       >
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="name" scope="col">Name <p-sortIcon field="name" /></th>
-            <th pSortableColumn="email" scope="col">Email <p-sortIcon field="email" /></th>
-            <th pSortableColumn="createdAt" scope="col">Subscribed on <p-sortIcon field="createdAt" /></th>
+            @if (show('name')) { <th pSortableColumn="name" scope="col">Name <p-sortIcon field="name" /></th> }
+            @if (show('email')) { <th pSortableColumn="email" scope="col">Email <p-sortIcon field="email" /></th> }
+            @if (show('source')) { <th pSortableColumn="source" scope="col" class="hide-lg">Source <p-sortIcon field="source" /></th> }
+            @if (show('status')) { <th pSortableColumn="status" scope="col">Status <p-sortIcon field="status" /></th> }
+            @if (show('createdAt')) { <th pSortableColumn="createdAt" scope="col">Subscribed on <p-sortIcon field="createdAt" /></th> }
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-subscriber>
-          <tr>
-            <td>
-              <div class="subscriber-identity">
-                <span [class]="getAvatarClass(subscriber)" aria-hidden="true">{{ getInitials(subscriber) }}</span>
-                <span class="subscriber-name" [class.ds-muted]="!subscriber.name">{{ subscriber.name || 'No name' }}</span>
-              </div>
-            </td>
-            <td>
-              <a class="subscriber-email" [href]="'mailto:' + subscriber.email">{{ subscriber.email }}</a>
-            </td>
-            <td class="subscriber-date">{{ subscriber.createdAt | date: 'MMM d, y' }}</td>
+          <tr class="ds-row-link" tabindex="0" (click)="openSubscriber(subscriber)" (keydown.enter)="openSubscriber(subscriber)">
+            @if (show('name')) {
+              <td>
+                <div class="subscriber-identity">
+                  <span [class]="getAvatarClass(subscriber)" aria-hidden="true">{{ getInitials(subscriber) }}</span>
+                  <span class="subscriber-name" [class.ds-muted]="!subscriber.name">{{ subscriber.name || 'No name' }}</span>
+                  @if (subscriber.isArchived) { <app-archived-tag /> }
+                </div>
+              </td>
+            }
+            @if (show('email')) {
+              <td>
+                <a class="subscriber-email" [href]="'mailto:' + subscriber.email" (click)="$event.stopPropagation()">{{ subscriber.email }}</a>
+              </td>
+            }
+            @if (show('source')) {
+              <td class="hide-lg">
+                @if (subscriber.source) { {{ subscriber.source }} } @else { <span class="ds-muted">None</span> }
+              </td>
+            }
+            @if (show('status')) {
+              <td>
+                <p-tag
+                  [severity]="statusSeverity(subscriber.status)"
+                  [value]="(subscriber.status || 'subscribed') | titlecase"
+                  [rounded]="true"
+                />
+              </td>
+            }
+            @if (show('createdAt')) {
+              <td class="subscriber-date">{{ subscriber.createdAt | date: 'MMM d, y' }}</td>
+            }
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="3">
+            <td [attr.colspan]="columnCount()">
               <app-empty-state
                 heading="No subscribers found"
-                [description]="list.search() ? 'No subscribers match your search. Try different keywords.' : 'Your newsletter has no subscribers yet.'"
+                [description]="list.search() ? 'No subscribers match your search. Try different keywords.' : (list.filters().archived ? 'There are no archived subscribers.' : 'Your newsletter has no subscribers yet.')"
               />
             </td>
           </tr>

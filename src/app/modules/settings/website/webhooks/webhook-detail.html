@@ -1,0 +1,125 @@
+<app-page [heading]="heading()" subtitle="Signed deliveries use the X-Meedo-Signature header.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
+    <a routerLink="/settings/website/webhooks" class="hover:text-primary transition-colors">Webhooks</a>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Endpoint</span>
+  </nav>
+  @if (canWrite()) {
+    <div pageActions class="page-actions-row">
+      <button pButton type="button" severity="secondary" [outlined]="true" label="Rotate secret" [disabled]="busy()" (click)="rotateSecret()"></button>
+      <button pButton type="button" severity="danger" [outlined]="true" label="Delete" [disabled]="busy()" (click)="remove()"></button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="form-skeleton" role="status">
+      <span class="ds-sr-only">Loading webhook…</span>
+      <p-skeleton width="8rem" height="0.875rem" />
+      <p-skeleton width="100%" height="2.5rem" />
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="loadError()">
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
+  } @else {
+    @if (!isAdmin()) {
+      <p class="ds-readonly-note" role="status">
+        <i class="pi pi-lock" aria-hidden="true"></i>
+        Only admins can change this endpoint.
+      </p>
+    }
+
+    @if (revealedSecret()) {
+      <app-secret-reveal heading="This is the new signing secret." [value]="revealedSecret()" />
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="webhook-form">
+      <div class="field">
+        <label class="field-label" for="webhook-url">Endpoint URL</label>
+        <input pInputText id="webhook-url" formControlName="url" maxlength="2048" autocomplete="off" />
+      </div>
+      <label class="ds-toggle" for="webhook-enabled">
+        <p-toggleswitch inputId="webhook-enabled" formControlName="enabled" />
+        Enabled
+      </label>
+      <fieldset class="events">
+        <legend class="field-label">Events</legend>
+        <label class="ds-toggle">
+          <input type="checkbox" formControlName="leadCreated" />
+          Lead created
+        </label>
+        <label class="ds-toggle">
+          <input type="checkbox" formControlName="subscriberCreated" />
+          Subscriber created
+        </label>
+        <label class="ds-toggle">
+          <input type="checkbox" formControlName="subscriberUnsubscribed" />
+          Subscriber unsubscribed
+        </label>
+      </fieldset>
+      @if (error()) {
+        <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ error() }}</p-message>
+      }
+      @if (canWrite()) {
+        <div class="form-actions">
+          <button pButton type="submit" [label]="saving() ? 'Saving…' : 'Save'" [disabled]="saving()"></button>
+          <a pButton routerLink="/settings/website/webhooks" severity="secondary" [outlined]="true" label="Back"></a>
+        </div>
+      }
+    </form>
+
+    <section class="deliveries" aria-labelledby="deliveries-heading">
+      <h2 id="deliveries-heading" class="ds-section-title">Delivery log</h2>
+      <p class="ds-section-sub">Each request is signed as <code>X-Meedo-Signature: sha256=&lt;hex HMAC-SHA256 of raw body&gt;</code>.</p>
+
+      @if (!deliveries.loaded()) {
+        <div class="ds-table-skeleton" role="status">
+          <span class="ds-sr-only">Loading deliveries…</span>
+          @for (row of [1, 2, 3]; track row) {
+            <div class="skeleton-row">
+              <p-skeleton width="10rem" height="0.75rem" />
+              <p-skeleton width="4rem" height="0.75rem" />
+            </div>
+          }
+        </div>
+      } @else {
+        <p-table class="ds-table" [value]="deliveries.rows()" dataKey="id" [tableStyle]="{ width: '100%' }">
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col">Event</th>
+              <th scope="col">Result</th>
+              <th scope="col">Status</th>
+              <th scope="col">Attempt</th>
+              <th scope="col">When</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr>
+              <td>{{ eventLabel(row.event) }}</td>
+              <td>
+                <p-tag [value]="row.success ? 'Delivered' : 'Failed'" [severity]="row.success ? 'success' : 'danger'" [rounded]="true" />
+              </td>
+              <td>{{ row.statusCode ?? '—' }}</td>
+              <td>{{ row.attempt ?? 1 }}</td>
+              <td>{{ row.createdAt | date: 'medium' }}</td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="5">
+                <app-empty-state heading="No deliveries yet" description="Meedo logs each attempt here after an event is sent." />
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+        <app-list-paginator
+          [total]="deliveries.total()"
+          [page]="list.page()"
+          [pageSize]="list.pageSize()"
+          itemLabel="deliveries"
+          (pageChange)="list.onPage($event)"
+        />
+      }
+    </section>
+  }
+</app-page>

@@ -5,6 +5,10 @@
   min-width: 0;
 }
 
+.subscriber-identity app-archived-tag {
+  flex-shrink: 0;
+}
+
 .subscriber-name {
   font-weight: 500;
   color: var(--text-heading);

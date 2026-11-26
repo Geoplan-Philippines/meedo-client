@@ -1,0 +1,60 @@
+<form class="values-form" [formGroup]="form" (submit)="$event.preventDefault()">
+  @for (field of writable(); track field.key) {
+    <div class="field">
+      <label class="field-label" [for]="'field-' + field.key">
+        {{ field.label }}
+        @if (field.isRequired) {
+          <span class="field-hint">(required)</span>
+        }
+      </label>
+
+      @switch (field.type) {
+        @case ('long_text') {
+          <textarea
+            pTextarea
+            [id]="'field-' + field.key"
+            [formControlName]="field.key"
+            [attr.maxlength]="longTextMax"
+            rows="5"
+            [attr.aria-invalid]="invalid(field.key)"
+          ></textarea>
+        }
+        @case ('select') {
+          <p-select
+            [inputId]="'field-' + field.key"
+            [formControlName]="field.key"
+            [options]="field.options"
+            [showClear]="!field.isRequired"
+            placeholder="Choose…"
+            [fluid]="true"
+          />
+        }
+        @case ('number') {
+          <input
+            pInputText
+            [id]="'field-' + field.key"
+            [formControlName]="field.key"
+            inputmode="decimal"
+            [attr.aria-invalid]="invalid(field.key)"
+          />
+        }
+        @case ('date') {
+          <input pInputText [id]="'field-' + field.key" type="date" [formControlName]="field.key" />
+        }
+        @case ('datetime') {
+          <input pInputText [id]="'field-' + field.key" type="datetime-local" [formControlName]="field.key" />
+        }
+        @default {
+          <input
+            pInputText
+            [id]="'field-' + field.key"
+            [formControlName]="field.key"
+            [attr.maxlength]="maxlength(field)"
+            [type]="field.type === 'url' ? 'url' : 'text'"
+            [attr.aria-invalid]="invalid(field.key)"
+          />
+        }
+      }
+    </div>
+  }
+</form>

@@ -1,0 +1,84 @@
+<app-page [heading]="heading()" subtitle="Review and update this subscriber.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
+    <a routerLink="/crm/newsletter/subscribers" class="hover:text-primary transition-colors">Subscribers</a>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">{{ heading() }}</span>
+  </nav>
+
+  @if (subscriber()) {
+    <div pageMeta class="subscriber-meta">
+      @if (subscriber()?.isArchived) { <app-archived-tag /> }
+      <p-tag
+        [value]="(subscriber()?.status || 'subscribed') | titlecase"
+        [rounded]="true"
+        [severity]="subscriber()?.status === 'UNSUBSCRIBED' ? 'danger' : 'success'"
+      />
+      @if (subscriber()?.createdAt) {
+        <span class="ds-muted">Subscribed {{ subscriber()?.createdAt | date: 'mediumDate' }}</span>
+      }
+      @if (subscriber()?.consentAt) {
+        <span class="ds-muted">Consent {{ subscriber()?.consentAt | date: 'mediumDate' }}</span>
+      }
+      @if (subscriber()?.unsubscribedAt) {
+        <span class="ds-muted">Unsubscribed {{ subscriber()?.unsubscribedAt | date: 'mediumDate' }}</span>
+      }
+    </div>
+  }
+  @if (subscriber()) {
+    <div pageActions class="page-actions-row">
+      @if (sourceLink()) {
+        <a pButton [href]="sourceLink()!" target="_blank" rel="noopener noreferrer" severity="secondary" [outlined]="true" icon="pi pi-external-link" label="Open source"></a>
+      }
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [label]="subscriber()?.isArchived ? 'Restore' : 'Archive'"
+        [disabled]="busy()"
+        (click)="toggleArchive()"
+      ></button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="form-skeleton" role="status">
+      <span class="ds-sr-only">Loading subscriber…</span>
+      @for (row of [1, 2, 3]; track row) {
+        <div class="field-skel">
+          <p-skeleton width="5rem" height="0.875rem" />
+          <p-skeleton width="100%" height="2.5rem" />
+        </div>
+      }
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="loadError()">
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
+  } @else {
+    @if (!canEdit()) {
+      <p class="ds-readonly-note" role="status">
+        <i class="pi pi-lock" aria-hidden="true"></i>
+        Archived. Restore this subscriber before editing.
+      </p>
+    }
+
+    <app-record-values-form
+      [definitions]="definitions()"
+      [initial]="initialValues()"
+      [disabled]="!canEdit() || saving()"
+      [submitted]="submitted()"
+    />
+
+    @if (error()) {
+      <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ error() }}</p-message>
+    }
+
+    <div class="form-actions">
+      @if (canEdit()) {
+        <button pButton type="button" [label]="saving() ? 'Saving…' : 'Save'" [disabled]="saving()" (click)="save()"></button>
+      }
+      <a pButton routerLink="/crm/newsletter/subscribers" severity="secondary" [outlined]="true" [label]="canEdit() ? 'Cancel' : 'Back to subscribers'"></a>
+    </div>
+  }
+</app-page>

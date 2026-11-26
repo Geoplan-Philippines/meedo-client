@@ -52,11 +52,30 @@ describe('authInterceptor', () => {
   /** Lets the session check and navigation promises run. */
   const settle = () => new Promise((resolve) => setTimeout(resolve));
 
-  it('sends cookies with every request', () => {
+  it('sends cookies with authenticated API requests', () => {
     send(MEMBERS_URL);
     const request = backend.expectOne(MEMBERS_URL);
     expect(request.request.withCredentials).toBe(true);
     request.flush([]);
+  });
+
+  it('skips cookies on public API calls so CORS * is allowed', () => {
+    const url = `${API}/public/unsubscribe/tok-1`;
+    http.post(url, {}).subscribe();
+    const request = backend.expectOne(url);
+    expect(request.request.withCredentials).toBe(false);
+    request.flush({});
+  });
+
+  it('does not treat a public 401 as session expiry', async () => {
+    const url = `${API}/public/unsubscribe/tok-1`;
+    const errors: HttpErrorResponse[] = [];
+    http.post(url, {}).subscribe({ error: (error: HttpErrorResponse) => errors.push(error) });
+    backend.expectOne(url).flush(null, UNAUTHORIZED);
+    await settle();
+    expect(auth.checkSession).not.toHaveBeenCalled();
+    expect(auth.clearLocalSession).not.toHaveBeenCalled();
+    expect(errors.map((error) => error.status)).toEqual([401]);
   });
 
   it('clears the local session and opens login, without signing out on the server, when the session is gone', async () => {
