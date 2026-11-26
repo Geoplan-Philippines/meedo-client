@@ -112,7 +112,22 @@ export const ROUTE_PREFETCHERS: readonly DataPrefetcher[] = [
   },
   {
     match: path('crm', 'newsletter', 'subscribers'),
-    prefetch: (injector) => warm(injector.get(CrmService).listSubscribers(defaultListQuery(SUBSCRIBERS_LIST))),
+    prefetch: (injector) => {
+      const crm = injector.get(CrmService);
+      warm(crm.listSubscribers(defaultListQuery(SUBSCRIBERS_LIST)));
+      warm(crm.getSubscriberStats());
+    },
+  },
+  {
+    match: path('crm', 'newsletter', 'subscribers', null),
+    prefetch: (injector, _url, segments) => {
+      warm(injector.get(CrmService).getSubscriber(segments[3]));
+      warm(injector.get(FieldDefinitionsService).list('subscriber'));
+    },
+  },
+  {
+    match: path('settings', 'website', 'subscriber-fields'),
+    prefetch: (injector) => warm(injector.get(FieldDefinitionsService).list('subscriber')),
   },
   {
     match: path('crm', 'newsletter', 'campaigns'),

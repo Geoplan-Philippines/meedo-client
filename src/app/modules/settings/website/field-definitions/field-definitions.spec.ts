@@ -61,6 +61,24 @@ describe('FieldDefinitionsSettings', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Delete');
   });
 
+  it('loads the subscriber collection when the route asks for it', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [FieldDefinitionsSettings],
+      providers: [
+        provideRouter([]),
+        { provide: FieldDefinitionsService, useValue: api },
+        { provide: AuthService, useValue: { isAdmin } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { collection: 'subscriber', heading: 'Subscriber fields', subtitle: 'Newsletter fields' } } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(FieldDefinitionsSettings);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(api.list).toHaveBeenCalledWith('subscriber');
+    expect(fixture.nativeElement.textContent).toContain('Subscriber fields');
+  });
+
   it('deletes a custom field after confirm', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     api.remove.mockReturnValue(of(undefined));

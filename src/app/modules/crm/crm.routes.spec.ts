@@ -11,7 +11,7 @@ describe('Website lazy routing', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [
     provideRouter([{ path: 'crm', children: crmRoutes }]),
     { provide: AuthService, useValue: { isAdmin: () => false } },
-    { provide: CrmService, useValue: { listLeads: () => of({ data: [], meta: { total: 0, page: 1, limit: 25, lastPage: 0 } }), getLeadsStats: () => of({ data: { total: 0, new: 0, contacted: 0, qualified: 0, lost: 0 } }), listSubscribers: () => of({ data: [], meta: { total: 0, page: 1, limit: 25, lastPage: 0 } }) } },
+    { provide: CrmService, useValue: { listLeads: () => of({ data: [], meta: { total: 0, page: 1, limit: 25, lastPage: 0 } }), getLeadsStats: () => of({ data: { total: 0, new: 0, contacted: 0, qualified: 0, lost: 0 } }), listSubscribers: () => of({ data: [], meta: { total: 0, page: 1, limit: 25, lastPage: 0 } }), getSubscriberStats: () => of({ data: { total: 0, newThisMonth: 0, unsubscribed: 0 } }) } },
     { provide: CampaignsService, useValue: { list: () => of({ data: [], meta: { total: 0, lastPage: 0 } }) } },
   ] }));
   it.each([

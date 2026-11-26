@@ -7,7 +7,7 @@ import { ApiResponse } from '../../../shared/interface/api-response.interface';
 import { PaginatedApiResponse } from '../../../shared/interface/paginated-response.interface';
 import { toHttpParams } from '../../../shared/data/page-query';
 import { ListQuery, ListStateConfig } from '../../../shared/data/url-list-state';
-import { Lead, LeadStatus, LeadsStatsResponse, Subscriber } from '../models/crm.model';
+import { Lead, LeadStatus, LeadsStatsResponse, Subscriber, SubscriberStatsResponse } from '../models/crm.model';
 
 export const LEAD_SORT_FIELDS = ['createdAt', 'receivedAt', 'firstName', 'lastName', 'email', 'company', 'phoneNumber', 'status', 'source'] as const;
 export const LEADS_LIST: ListStateConfig<{ status: string | null; archived: boolean }> = {
@@ -19,12 +19,14 @@ export const LEADS_LIST: ListStateConfig<{ status: string | null; archived: bool
 };
 export type LeadsQuery = ListQuery<{ status: string | null; archived: boolean }>;
 
-export const SUBSCRIBERS_LIST: ListStateConfig = {
+export const SUBSCRIBERS_LIST: ListStateConfig<{ status: string | null; archived: boolean }> = {
   pageSize: 25,
   sortField: 'createdAt',
   sortOrder: 'desc',
-  sortFields: ['createdAt', 'email', 'name'],
+  sortFields: ['createdAt', 'email', 'name', 'status', 'source'],
+  filters: { status: null, archived: false },
 };
+export type SubscribersQuery = ListQuery<{ status: string | null; archived: boolean }>;
 
 @Injectable({
   providedIn: 'root',
@@ -95,10 +97,50 @@ export class CrmService {
     });
   }
 
-  listSubscribers(query: ListQuery): Observable<PaginatedApiResponse<Subscriber>> {
+  listSubscribers(query: SubscribersQuery): Observable<PaginatedApiResponse<Subscriber>> {
     return this.http.get<PaginatedApiResponse<Subscriber>>(this.subscribersUrl, {
       params: toHttpParams(query),
       context: cacheContext('crm'),
+      withCredentials: true,
+    });
+  }
+
+  getSubscriberStats(): Observable<SubscriberStatsResponse> {
+    return this.http.get<SubscriberStatsResponse>(`${this.subscribersUrl}/stats`, {
+      context: cacheContext('crm'),
+      withCredentials: true,
+    });
+  }
+
+  getSubscriber(id: string): Observable<Subscriber> {
+    return this.http
+      .get<ApiResponse<Subscriber>>(`${this.subscribersUrl}/${id}`, { context: cacheContext('crm'), withCredentials: true })
+      .pipe(map((response) => response.data));
+  }
+
+  updateSubscriber(id: string, values: Record<string, unknown>): Observable<Subscriber> {
+    return this.http
+      .patch<ApiResponse<Subscriber>>(`${this.subscribersUrl}/${id}`, { values }, { withCredentials: true })
+      .pipe(map((response) => response.data));
+  }
+
+  archiveSubscriber(id: string): Observable<Subscriber> {
+    return this.http
+      .patch<ApiResponse<Subscriber>>(`${this.subscribersUrl}/${id}/archive`, {}, { withCredentials: true })
+      .pipe(map((response) => response.data));
+  }
+
+  restoreSubscriber(id: string): Observable<Subscriber> {
+    return this.http
+      .patch<ApiResponse<Subscriber>>(`${this.subscribersUrl}/${id}/restore`, {}, { withCredentials: true })
+      .pipe(map((response) => response.data));
+  }
+
+  exportSubscribers(query: SubscribersQuery) {
+    return this.http.get(`${this.subscribersUrl}/export`, {
+      params: toHttpParams(query),
+      responseType: 'blob',
+      observe: 'response',
       withCredentials: true,
     });
   }

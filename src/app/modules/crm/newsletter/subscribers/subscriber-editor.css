@@ -1,0 +1,26 @@
+.subscriber-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 40rem;
+}
+
+.field-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--toolbar-gap);
+  margin-top: 1rem;
+}

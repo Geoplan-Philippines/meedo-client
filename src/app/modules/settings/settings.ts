@@ -63,6 +63,7 @@ export class Settings implements OnInit {
       label: 'Website',
       cards: [
         { label: 'Lead fields', description: 'Fields collected from website lead forms', route: 'website/lead-fields', icon: 'pi-list' },
+        { label: 'Subscriber fields', description: 'Fields collected from newsletter sign-up forms', route: 'website/subscriber-fields', icon: 'pi-inbox' },
       ],
     },
   ]);

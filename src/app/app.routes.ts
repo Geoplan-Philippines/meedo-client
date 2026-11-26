@@ -58,6 +58,11 @@ export const routes: Routes = [
   },
 
   {
+    path: 'unsubscribe/:token',
+    loadComponent: () =>
+      import('./modules/public/unsubscribe/unsubscribe').then((m) => m.UnsubscribePage),
+  },
+  {
     path: '404',
     loadComponent: () =>
       import('./modules/not-found/not-found').then((m) => m.NotFound),

@@ -43,6 +43,16 @@ export const settingsRoutes: Routes = [
     loadComponent: () =>
       import('./website/field-definitions/field-definitions').then((m) => m.FieldDefinitionsSettings),
   },
+  {
+    path: 'website/subscriber-fields',
+    data: {
+      collection: 'subscriber',
+      heading: 'Subscriber fields',
+      subtitle: 'Standard and custom fields collected from newsletter sign-up forms.',
+    },
+    loadComponent: () =>
+      import('./website/field-definitions/field-definitions').then((m) => m.FieldDefinitionsSettings),
+  },
   // Flat projects list. No longer in Settings or the sidebar, but project notifications and old links open it.
   {
     path: 'projects',

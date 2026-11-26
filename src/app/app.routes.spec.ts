@@ -46,4 +46,10 @@ describe('root redirect after session initialization', () => {
       routes.find((route) => route.path === 'clients')?.canActivate,
     ).toContain(authGuard);
   });
+
+  it('leaves the one-click unsubscribe page public', () => {
+    const route = routes.find((entry) => entry.path === 'unsubscribe/:token');
+    expect(route).toBeTruthy();
+    expect(route?.canActivate).toBeUndefined();
+  });
 });
