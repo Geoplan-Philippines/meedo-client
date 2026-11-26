@@ -1,0 +1,80 @@
+<app-page heading="Integration key" subtitle="The website uses this key to submit leads and subscribers. It cannot read lists or change settings.">
+  <nav pageBreadcrumb class="text-muted" aria-label="Breadcrumb">
+    <a routerLink="/settings" class="hover:text-primary transition-colors">Settings</a>
+    <span class="mx-2 opacity-60" aria-hidden="true">/</span>
+    <span class="text-heading" aria-current="page">Integration key</span>
+  </nav>
+  @if (canWrite() && !loading() && !loadError()) {
+    <div pageActions class="page-actions-row">
+      @if (!site()?.hasKey) {
+        <button pButton type="button" icon="pi pi-plus" label="Create key" [disabled]="busy()" (click)="create()"></button>
+      } @else {
+        <button pButton type="button" severity="secondary" [outlined]="true" label="Rotate" [disabled]="busy()" (click)="rotate()"></button>
+        <button pButton type="button" severity="danger" [outlined]="true" label="Revoke" [disabled]="busy()" (click)="revoke()"></button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="form-skeleton" role="status">
+      <span class="ds-sr-only">Loading integration key…</span>
+      <p-skeleton width="12rem" height="0.875rem" />
+      <p-skeleton width="100%" height="2.5rem" />
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="loadError()">
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
+  } @else {
+    @if (!canWrite()) {
+      <p class="ds-readonly-note" role="status">
+        <i class="pi pi-lock" aria-hidden="true"></i>
+        Only admins can create, rotate, or revoke this key.
+      </p>
+    }
+
+    @if (error()) {
+      <p-message severity="error" icon="pi pi-exclamation-circle" styleClass="ds-message">{{ error() }}</p-message>
+    }
+
+    @if (revealedKey()) {
+      <app-secret-reveal heading="This is the full website key." [value]="revealedKey()" />
+    }
+
+    @if (site()?.hasKey) {
+      <dl class="key-facts">
+        <div>
+          <dt>Prefix</dt>
+          <dd>
+            <code>{{ site()?.prefix }}</code>
+            <button pButton type="button" severity="secondary" [text]="true" size="small" [label]="copiedPrefix() ? 'Copied' : 'Copy'" (click)="copyPrefix()"></button>
+          </dd>
+        </div>
+        @if (site()?.createdAt) {
+          <div>
+            <dt>Created</dt>
+            <dd>{{ site()?.createdAt | date: 'medium' }}</dd>
+          </div>
+        }
+        @if (site()?.lastUsedAt) {
+          <div>
+            <dt>Last used</dt>
+            <dd>{{ site()?.lastUsedAt | date: 'medium' }}</dd>
+          </div>
+        } @else {
+          <div>
+            <dt>Last used</dt>
+            <dd class="ds-muted">Never</dd>
+          </div>
+        }
+      </dl>
+      <p class="ds-muted">The full key is stored as a SHA-256 hash. Meedo keeps only this prefix after you leave this page.</p>
+    } @else {
+      <app-empty-state
+        icon="pi pi-key"
+        heading="No website key yet"
+        description="Create a key to let the Geoplan website submit leads and subscribers into this workspace."
+      />
+    }
+  }
+</app-page>

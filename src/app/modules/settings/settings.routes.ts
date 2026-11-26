@@ -53,6 +53,21 @@ export const settingsRoutes: Routes = [
     loadComponent: () =>
       import('./website/field-definitions/field-definitions').then((m) => m.FieldDefinitionsSettings),
   },
+  {
+    path: 'website/integration-key',
+    loadComponent: () =>
+      import('./website/integration-key/integration-key').then((m) => m.IntegrationKeySettings),
+  },
+  {
+    path: 'website/webhooks',
+    loadComponent: () =>
+      import('./website/webhooks/webhooks').then((m) => m.WebhooksSettings),
+  },
+  {
+    path: 'website/webhooks/:id',
+    loadComponent: () =>
+      import('./website/webhooks/webhook-detail').then((m) => m.WebhookDetail),
+  },
   // Flat projects list. No longer in Settings or the sidebar, but project notifications and old links open it.
   {
     path: 'projects',

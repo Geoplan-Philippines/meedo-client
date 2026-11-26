@@ -12,4 +12,5 @@ export const crmRoutes: Routes = [
   { path: 'newsletter/campaigns', data: { preload: true }, loadComponent: () => import('./newsletter/campaign/campaign-list').then(m => m.CampaignList) },
   { path: 'newsletter/campaigns/new', loadComponent: () => import('./newsletter/campaign/campaign-form').then(m => m.CampaignForm) },
   { path: 'newsletter/campaigns/:id', loadComponent: () => import('./newsletter/campaign/campaign-form').then(m => m.CampaignForm) },
+  { path: 'developers', data: { preload: true }, loadComponent: () => import('./developers/developers').then(m => m.Developers) },
 ];

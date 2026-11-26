@@ -1,0 +1,67 @@
+<app-page heading="Developers" subtitle="Connect the Geoplan website to this workspace.">
+  @if (loading()) {
+    <div class="form-skeleton" role="status">
+      <span class="ds-sr-only">Loading developer details…</span>
+      <p-skeleton width="8rem" height="0.875rem" />
+      <p-skeleton width="100%" height="6rem" />
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state role="alert" icon="pi pi-exclamation-circle" [heading]="loadError()">
+      <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-refresh" label="Retry" (click)="load()"></button>
+    </app-empty-state>
+  } @else {
+    <dl class="facts">
+      <div>
+        <dt>Base URL</dt>
+        <dd>
+          <code>{{ baseUrl }}</code>
+          <button pButton type="button" severity="secondary" [text]="true" size="small" [label]="copiedBase() ? 'Copied' : 'Copy'" (click)="copy('base')"></button>
+        </dd>
+      </div>
+      <div>
+        <dt>Organization slug</dt>
+        <dd>
+          @if (slug()) {
+            <code>{{ slug() }}</code>
+            <button pButton type="button" severity="secondary" [text]="true" size="small" [label]="copiedSlug() ? 'Copied' : 'Copy'" (click)="copy('slug')"></button>
+          } @else {
+            <span class="ds-muted">Not available yet</span>
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Key prefix</dt>
+        <dd>
+          @if (prefix()) {
+            <code>{{ prefix() }}</code>
+            <button pButton type="button" severity="secondary" [text]="true" size="small" [label]="copiedPrefix() ? 'Copied' : 'Copy'" (click)="copy('prefix')"></button>
+          } @else {
+            <span class="ds-muted">No key yet.</span>
+            <a routerLink="/settings/website/integration-key">Create one in Settings</a>
+          }
+        </dd>
+      </div>
+    </dl>
+
+    <p class="links">
+      <a routerLink="/settings/website/integration-key">Integration key</a>
+      <a routerLink="/settings/website/webhooks">Webhooks</a>
+    </p>
+
+    <div class="blocks">
+      <app-copy-block heading="Paste this to your AI agent" [text]="agentPrompt()" />
+      <app-copy-block heading="Submit a lead" [text]="leadCurl()" />
+      <app-copy-block heading="Submit a subscriber" [text]="subscriberCurl()" />
+      <app-copy-block heading="Webhook payload" [text]="payloadSample()" />
+      <app-copy-block heading="Check the signature" [text]="signatureSnippet()" />
+    </div>
+
+    @if (guide()) {
+      <section class="guide" aria-labelledby="guide-heading">
+        <h2 id="guide-heading" class="ds-section-title">Integration guide</h2>
+        <p class="ds-section-sub">From <code>GET {{ docsUrl }}</code></p>
+        <pre>{{ guide() }}</pre>
+      </section>
+    }
+  }
+</app-page>

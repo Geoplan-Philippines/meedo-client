@@ -111,6 +111,7 @@ export class Sidebar {
             { label: 'Campaigns', route: '/crm/newsletter/campaigns', icon: 'pi-megaphone' },
           ],
         },
+        { label: 'Developers', route: '/crm/developers', icon: 'pi-code' },
       ],
     },
   ]);

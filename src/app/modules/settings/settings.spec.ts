@@ -37,7 +37,7 @@ describe('Settings', () => {
     const groups = [...element.querySelectorAll('.settings-group > h2')].map((heading) => heading.textContent?.trim());
     expect(groups).toEqual(['General', 'Timekeeping', 'Tickets', 'Website']);
     const cards = [...element.querySelectorAll('.settings-group a h3')].map((heading) => heading.textContent?.trim());
-    expect(cards).toEqual(['Organization', 'Attendance', 'Categories', 'Statuses', 'Lead fields', 'Subscriber fields']);
+    expect(cards).toEqual(['Organization', 'Attendance', 'Categories', 'Statuses', 'Lead fields', 'Subscriber fields', 'Integration key', 'Webhooks']);
     for (const route of ['users', 'teams', 'projects', 'customers']) {
       expect(element.querySelector(`a[href$="/${route}"]`)).toBeNull();
     }
